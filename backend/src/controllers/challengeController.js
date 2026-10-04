@@ -58,16 +58,43 @@ function sanitizePublicChallenge(challengeDoc, visibleTests = null) {
 }
 
 exports.getChallenges = asyncHandler(async (req, res) => {
-  const challenges = await Challenge.find({
+  let challenges = await Challenge.find({
     isActive: true,
     status: 'Published',
     sequenceOrder: { $in: [1, 2, 3] },
   })
     .sort({ sequenceOrder: 1 })
     .select('-sourceCode');
-  const sanitized = challenges.map((c) => sanitizePublicChallenge(c));
+
+  if (challenges.length === 0) {
+    challenges = await Challenge.find({
+      isActive: true,
+      status: 'Published',
+      slug: { $in: ['ch-05', 'ch-06', 'ch-07'] },
+    }).select('-sourceCode');
+
+    const order = { 'ch-05': 1, 'ch-06': 2, 'ch-07': 3, easy: 1, medium: 2, hard: 3 };
+    challenges.sort((a, b) => {
+      const aVal = order[a.slug] || order[a.difficulty?.toLowerCase()] || 99;
+      const bVal = order[b.slug] || order[b.difficulty?.toLowerCase()] || 99;
+      return aVal - bVal;
+    });
+  }
+
+  if (challenges.length === 0) {
+    challenges = await Challenge.find({ isActive: true, status: 'Published' })
+      .limit(3)
+      .select('-sourceCode');
+  }
+
+  const sanitized = challenges.map((c, idx) => {
+    const s = sanitizePublicChallenge(c);
+    if (!s.sequenceOrder) s.sequenceOrder = idx + 1;
+    return s;
+  });
   res.json({ success: true, challenges: sanitized });
 });
+
 
 exports.getUserProgress = asyncHandler(async (req, res) => {
   const result = await getProgressForUser(req.user?._id, req.user);

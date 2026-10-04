@@ -46,8 +46,9 @@ export default function Leaderboard() {
           <span>TOURNAMENT STANDINGS</span>
         </div>
         <h1 className="text-3xl font-black text-slate-900">Live Leaderboard</h1>
-        <p className="text-xs text-slate-600">
-          Rankings computed dynamically based on accepted tests and elapsed time
+        <p className="text-xs text-slate-600 max-w-xl mx-auto">
+          Centrally managed across 3 Challenges (Easy, Medium, Hard • 15 mins each). Participants start at 0 points.
+          <strong className="text-orange-600 ml-1">Winner: Completed all 3 challenges with minimum negative points!</strong>
         </p>
         <div className="text-[11px] text-slate-500 flex items-center justify-center gap-2 pt-1">
           <span>Auto-sync: {lastRefreshed.toLocaleTimeString()}</span>
@@ -70,7 +71,9 @@ export default function Leaderboard() {
           <span className="flex items-center gap-1.5 font-bold">
             <Users className="w-4 h-4 text-[#F28C0F]" /> Total Ranked Participants: {rankings.length}
           </span>
-          <span>Rank formula: Score desc → Total Time asc → Earliest Acceptance</span>
+          <span className="text-[11px] text-slate-500">
+            Rank Rule: Solved (3/3 first) → Minimum Negative Points → Total Time
+          </span>
         </div>
         <LeaderboardTable
           rankings={rankings}

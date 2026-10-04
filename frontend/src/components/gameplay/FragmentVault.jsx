@@ -19,7 +19,7 @@ export default function FragmentVault({
 
   // In ASSEMBLE phase show shuffled vault order; in HUNT show collection order
   const displayIds = phase === 'ASSEMBLE'
-    ? shuffledOrder
+    ? (shuffledOrder?.length > 0 ? shuffledOrder : collectedIds)
     : collectedIds;
 
   const fragmentMap = Object.fromEntries(fragments.map((f) => [f.id, f]));

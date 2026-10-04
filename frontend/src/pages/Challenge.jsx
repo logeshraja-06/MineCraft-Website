@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useParticipant } from '../context/ParticipantContext';
 import { useChallenge } from '../hooks/useChallenge';
@@ -27,13 +27,14 @@ import MissionStepper from '../components/challenge/MissionStepper';
 import TaskPanel from '../components/gameplay/TaskPanel';
 
 import {
-  User, Blocks, BookOpen, Terminal, RotateCcw, Shuffle,
+  User, Blocks, BookOpen, Terminal, RotateCcw, Shuffle, Trash2,
 } from 'lucide-react';
 import { USE_MOCK_JUDGE } from '../utils/constants';
 
 export default function Challenge() {
-  const { participant } = useParticipant();
+  const { participant, logoutAndDeleteParticipant } = useParticipant();
   const navigate = useNavigate();
+
   const [searchParams] = useSearchParams();
   const urlId = searchParams.get('id') || searchParams.get('challengeId');
 
@@ -77,6 +78,11 @@ export default function Challenge() {
     penaltySeconds,
     quizAttempts,
     submissionAttempts,
+    points,
+    currentScore,
+    taskAttemptsCount,
+    revealedAnswerInfo,
+    dismissRevealedAnswer,
 
     // execution
     executeCode,
@@ -210,32 +216,70 @@ export default function Challenge() {
 
   const { secondsRemaining, timerState } = useTimer(
     startTime,
-    challenge.duration || 1200,
+    challenge.duration || 900,
     handleTimeExpired,
     finalResult?.status === 'ACCEPTED'
   );
 
-  // ── quiz answer handler ──
+  // ── Real-time points & penalties calculation (including live elapsed minute penalty) ──
+  const elapsedSeconds = Math.max(0, (challenge.duration || 900) - secondsRemaining);
+  const liveElapsedMinutes = Math.floor(elapsedSeconds / 60);
+  const liveTimePenalty = liveElapsedMinutes * 10;
+
+  const livePoints = useMemo(() => {
+    const baseTask = points?.taskPenaltyPoints ?? 0;
+    const baseRun = points?.runPenaltyPoints ?? 0;
+    const baseTime = Math.max(points?.timePenaltyPoints ?? 0, liveTimePenalty);
+    const prevPenalties = points?.previousChallengesPenalty ?? 0;
+    const currentChallengePenalty = baseTask + baseRun + baseTime;
+    const totalPenalty = prevPenalties + currentChallengePenalty;
+
+    return {
+      ...points,
+      taskPenaltyPoints: baseTask,
+      runPenaltyPoints: baseRun,
+      timePenaltyPoints: baseTime,
+      timeMinutesExhausted: Math.max(points?.timeMinutesExhausted ?? 0, liveElapsedMinutes),
+      totalPenaltyPoints: currentChallengePenalty,
+      currentScore: -currentChallengePenalty,
+      previousChallengesPenalty: prevPenalties,
+      overallTotalPenaltyPoints: totalPenalty,
+      overallScore: -totalPenalty,
+    };
+  }, [points, liveTimePenalty, liveElapsedMinutes]);
+
+  // ── quiz answer handler with 3-attempt reveal & -20 pts penalty ──
   const handleQuizAnswer = useCallback(async (answer) => {
     if (isTimeExpired) return { correct: false, explain: '' };
     const result = await submitQuizAnswer(answer);
     if (result?.correct) {
-      showToast('✅ Correct! Code block unlocked.', 'success');
+      showToast('✅ Correct! Code fragment unlocked.', 'success');
+    } else if (result?.answerRevealed) {
+      showToast(`⚠️ 3 wrong attempts reached! Correct answer revealed: ${result.revealedAnswer}. Fragment unlocked!`, 'info');
     } else if (result?.penalty) {
-      showToast(`❌ Wrong answer (+${result.penalty}s penalty applied). Try again!`, 'error');
+      const remaining = result.attemptsRemaining ?? Math.max(0, 3 - (taskAttemptsCount + 1));
+      showToast(`❌ Wrong answer (-20 pts penalty applied, ${remaining} attempts left). Try again!`, 'error');
     }
     return result;
-  }, [submitQuizAnswer, isTimeExpired, showToast]);
+  }, [submitQuizAnswer, isTimeExpired, taskAttemptsCount, showToast]);
 
-  // ── run code ──
+  // ── run code with 3 free runs, -10 pts after 3 ──
   const handleRunCode = useCallback(async () => {
     if (isTimeExpired) { showToast('Time expired. Execution locked.', 'error'); return; }
     if (!assembledCode.trim()) { showToast('No code assembled yet. Arrange fragments first.', 'warning'); return; }
     const res = await executeCode();
     if (res.status === 'success' || res.status === 'Accepted' || res.success) {
-      showToast('✅ Compilation successful! Check output.', 'success');
+      if (res.runPenaltyApplied > 0) {
+        showToast(`⚠️ Compilation successful! Extra run #${res.runCount} (-10 pts penalty applied).`, 'warning');
+      } else {
+        showToast(`✅ Compilation successful! (${res.runsRemainingFree ?? 3} free runs remaining).`, 'success');
+      }
     } else {
-      showToast(res.message || 'Execution returned an error. Check output panel.', 'info');
+      if (res.runPenaltyApplied > 0) {
+        showToast(`⚠️ Execution returned error. Run #${res.runCount} (-10 pts applied). Check output.`, 'warning');
+      } else {
+        showToast(res.message || 'Execution returned an error. Check output panel.', 'info');
+      }
     }
   }, [isTimeExpired, assembledCode, executeCode, showToast]);
 
@@ -354,7 +398,11 @@ export default function Challenge() {
             <MissionStepper progress={userProgress} compact />
           </div>
 
-          <LanguagePicker language={language} onSelect={selectLanguage} locked={languageLocked} />
+          <LanguagePicker
+            language={language}
+            onSelect={selectLanguage}
+            locked={languageLocked || phase !== 'SETUP' || Boolean(startTime)}
+          />
 
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
             <User className="w-3.5 h-3.5 text-orange-400" />
@@ -362,7 +410,27 @@ export default function Challenge() {
             <span className="text-slate-800 font-bold">{participant?.name || 'Registered Participant'} {participant?.participantId ? `(${participant.participantId})` : ''}</span>
           </div>
 
+          {participant && (
+            <button
+              onClick={async () => {
+                if (window.confirm(`Delete participant "${participant.name}" (${participant.participantId}) and reset all challenge progress to test again fresh?`)) {
+                  if (logoutAndDeleteParticipant) {
+                    await logoutAndDeleteParticipant();
+                  }
+                  navigate('/register');
+                }
+              }}
+              title="Delete participant details and reset for testing"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all shadow-sm active:scale-95"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span className="hidden sm:inline">Delete Details & Exit</span>
+              <span className="sm:hidden">Reset</span>
+            </button>
+          )}
+
           <Timer secondsRemaining={secondsRemaining} timerState={timerState} />
+
         </div>
       </div>
 
@@ -422,6 +490,7 @@ export default function Challenge() {
             penaltySeconds={penaltySeconds}
             quizAttempts={quizAttempts}
             phase={phase}
+            points={livePoints}
           />
         </div>
 
@@ -482,6 +551,10 @@ export default function Challenge() {
                   lastResult={lastQuizCorrect}
                   lastExplain={lastQuizExplain}
                   isSubmitting={taskSubmitting}
+                  attemptsCount={taskAttemptsCount}
+                  maxAttempts={3}
+                  revealedAnswerInfo={revealedAnswerInfo}
+                  onDismissReveal={dismissRevealedAnswer}
                 />
               )}
 
@@ -575,6 +648,24 @@ export default function Challenge() {
                   isLoading={isValidating}
                   disabled={isTimeExpired || !assembledCode.trim()}
                 />
+              </div>
+
+              {/* Run count & free run counter indicator */}
+              <div className="flex items-center justify-between text-[11px] font-mono px-1 py-1 rounded bg-slate-100/80 border border-slate-200">
+                <span>
+                  {(points?.runsRemainingFree ?? 3) > 0 ? (
+                    <span className="text-emerald-700 font-bold">
+                      {(points?.runsRemainingFree ?? 3)}/3 Free Runs Left
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 font-bold">
+                      Extra run: -10 pts each
+                    </span>
+                  )}
+                </span>
+                <span className="text-slate-500 font-bold">
+                  Runs: {points?.runCount ?? 0}
+                </span>
               </div>
 
               <div className="flex items-center justify-between text-xs pt-1">

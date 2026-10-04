@@ -32,6 +32,8 @@ router.get('/participants', adminController.getParticipants);
 router.get('/participants/:id', adminController.getParticipantById);
 router.put('/participants/:id/status', adminController.toggleParticipantStatus);
 router.post('/participants/:id/reset', adminController.resetParticipant);
+router.delete('/participants/:id', adminController.deleteParticipant);
+
 
 // Live Sessions
 router.get('/sessions', adminController.getSessions);

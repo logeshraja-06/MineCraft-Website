@@ -4,7 +4,7 @@ import { sessionApi } from '../services/sessionApi';
 import { qrApi } from '../services/qrApi';
 import { runCode as apiRunCode, submitSolution as apiSubmitSolution } from '../services/api';
 import { clearCompetitionStorage } from '../utils/constants';
-import { combineFragments, seededShuffle } from '../utils/assembly';
+import { combineFragments, seededShuffle, getThoroughlyMixedOrder } from '../utils/assembly';
 
 const ChallengeContext = createContext(null);
 
@@ -42,10 +42,25 @@ export function ChallengeProvider({ children }) {
   const [lastQuizCorrect, setLastQuizCorrect] = useState(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
 
-  // ── Scoring & Attempts ──
+  // ── Scoring & Points System (0 initial, negative penalties) ──
   const [penaltySeconds, setPenaltySeconds] = useState(0);
   const [quizAttempts, setQuizAttempts] = useState(0);
   const [submissionAttempts, setSubmissionAttempts] = useState(0);
+  const [taskAttemptsCount, setTaskAttemptsCount] = useState(0);
+  const [revealedAnswerInfo, setRevealedAnswerInfo] = useState(null);
+  const [points, setPoints] = useState({
+    currentScore: 0,
+    totalPenaltyPoints: 0,
+    taskPenaltyPoints: 0,
+    runPenaltyPoints: 0,
+    timePenaltyPoints: 0,
+    runCount: 0,
+    runsRemainingFree: 3,
+    timeMinutesExhausted: 0,
+    previousChallengesPenalty: 0,
+    overallTotalPenaltyPoints: 0,
+    overallScore: 0,
+  });
 
   // ── Execution state ──
   const [isCompiling, setIsCompiling] = useState(false);
@@ -96,25 +111,6 @@ export function ChallengeProvider({ children }) {
           setActiveChallengeInfo(res.challenge);
           const tasks = res.challenge.tasks || [];
           setTotalTasks(tasks.length);
-          if (tasks.length > 0 && !currentTask) {
-            const firstTask = tasks[0];
-            const quiz = firstTask.quizPool?.[0] || null;
-            if (quiz) {
-              setCurrentTask({
-                taskId: firstTask.taskId,
-                title: firstTask.title,
-                description: firstTask.description,
-                order: firstTask.order,
-                quiz: {
-                  quizId: quiz.quizId,
-                  type: quiz.type,
-                  prompt: quiz.prompt,
-                  options: quiz.options || [],
-                  concept: quiz.concept || '',
-                },
-              });
-            }
-          }
         }
       } catch (err) {
         console.warn('[ChallengeContext] Failed to load challenge details:', err.message);
@@ -166,6 +162,10 @@ export function ChallengeProvider({ children }) {
             setAssemblyOrder(sess.assemblyOrder);
           }
 
+          if (sess.points) {
+            setPoints(sess.points);
+          }
+
           // Fetch current task state if in progress
           try {
             const taskData = await challengeApi.getCurrentTask(challengeId);
@@ -174,6 +174,8 @@ export function ChallengeProvider({ children }) {
               if (taskData.totalTasks) setTotalTasks(taskData.totalTasks);
               if (taskData.completedTaskIds) setCompletedTaskIds(taskData.completedTaskIds);
               if (taskData.currentTaskIndex !== undefined) setCurrentTaskIndex(taskData.currentTaskIndex);
+              if (taskData.points) setPoints(taskData.points);
+              if (taskData.attemptsCount !== undefined) setTaskAttemptsCount(taskData.attemptsCount);
               if (taskData.allTasksCompleted) {
                 setAllTasksCompleted(true);
                 setPhase('ASSEMBLE');
@@ -255,19 +257,6 @@ export function ChallengeProvider({ children }) {
     );
   }, [activeChallengeInfo, collectedFragments.length]);
 
-  // ── Shuffle vault when entering ASSEMBLE phase ──
-  useEffect(() => {
-    if (phase !== 'ASSEMBLE' && phase !== 'DONE') return;
-    const canonicalIds = collectedFragmentIds;
-    if (canonicalIds.length === 0) return;
-    if (assemblyOrder.length > 0) return; // preserve server-restored order
-
-    const seed = startTime ? new Date(startTime).getTime() % 99991 : 12345;
-    const shuffled = seededShuffle([...canonicalIds], seed);
-    setShuffledVaultOrder(shuffled);
-    setAssemblyOrder(shuffled);
-  }, [phase, collectedFragmentIds, startTime, assemblyOrder.length]);
-
   // ── Debounced save assembly to server ──
   const syncAssemblyToServer = useCallback((order, code) => {
     if (!challengeId) return;
@@ -285,12 +274,38 @@ export function ChallengeProvider({ children }) {
     }, 600);
   }, [challengeId]);
 
+  // ── Thoroughly mix fragments when entering ASSEMBLE phase ──
+  useEffect(() => {
+    if (phase !== 'ASSEMBLE' && phase !== 'DONE') return;
+    const canonicalIds = collectedFragmentIds;
+    if (canonicalIds.length === 0) return;
+
+    const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
+    const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
+
+    // Check if assemblyOrder is already thoroughly scrambled.
+    // If it accidentally equals or resembles the canonical correct program order, thoroughly mix it!
+    const matchesCanonical =
+      assemblyOrder.length > 1 &&
+      correctOrder.length === assemblyOrder.length &&
+      assemblyOrder.every((id, idx) => id === correctOrder[idx]);
+
+    if (assemblyOrder.length > 0 && !matchesCanonical) return;
+
+    const mixed = getThoroughlyMixedOrder(canonicalIds, correctOrder);
+    setShuffledVaultOrder(mixed);
+    setAssemblyOrder(mixed);
+    const newFragments = mixed.map((id) => fragmentMap[id]).filter(Boolean);
+    const newCode = combineFragments(newFragments);
+    syncAssemblyToServer(mixed, newCode);
+  }, [phase, collectedFragmentIds, assemblyOrder, activeChallengeInfo, language, fragmentMap, syncAssemblyToServer]);
+
   // ── Actions ──
 
   const selectLanguage = useCallback((lang) => {
-    if (languageLocked) return;
+    if (languageLocked || phase !== 'SETUP' || serverSession) return;
     setLanguage(lang);
-  }, [languageLocked]);
+  }, [languageLocked, phase, serverSession]);
 
   const startChallenge = useCallback(async (selectedChalId) => {
     const targetId = selectedChalId || challengeId;
@@ -302,7 +317,8 @@ export function ChallengeProvider({ children }) {
         setChallengeId(targetId);
         setServerSession(res.session);
         setStartTime(res.session.startTime);
-        setLanguageLocked(false);
+        setLanguageLocked(true);
+        setPhase('HUNT');
         setCollectedFragments(res.session.scannedBlocks || []);
         setCollectedFragmentIds((res.session.scannedBlocks || []).map((b) => b.blockId || b._id));
         setShuffledVaultOrder([]);
@@ -310,6 +326,18 @@ export function ChallengeProvider({ children }) {
         setPenaltySeconds(0);
         setQuizAttempts(0);
         setSubmissionAttempts(0);
+        setTaskAttemptsCount(0);
+        setRevealedAnswerInfo(null);
+        setPoints(res.session.points || {
+          currentScore: 0,
+          totalPenaltyPoints: 0,
+          taskPenaltyPoints: 0,
+          runPenaltyPoints: 0,
+          timePenaltyPoints: 0,
+          runCount: 0,
+          runsRemainingFree: 3,
+          timeMinutesExhausted: 0,
+        });
         setFinalResult(null);
         setCompileOutput(null);
         setIsTimeExpired(false);
@@ -323,6 +351,7 @@ export function ChallengeProvider({ children }) {
             if (taskRes.completedTaskIds) setCompletedTaskIds(taskRes.completedTaskIds);
             if (taskRes.currentTaskIndex !== undefined) setCurrentTaskIndex(taskRes.currentTaskIndex);
             if (taskRes.allTasksCompleted) setAllTasksCompleted(true);
+            if (taskRes.points) setPoints(taskRes.points);
           }
         } catch (tErr) {
           console.warn('[ChallengeContext] Task progression notice:', tErr.message);
@@ -384,15 +413,25 @@ export function ChallengeProvider({ children }) {
     setTaskSubmitting(true);
     setLastQuizCorrect(null);
     setLastQuizExplain('');
+    setRevealedAnswerInfo(null);
 
     try {
       const res = await challengeApi.submitTaskAnswer(challengeId, answer);
       setQuizAttempts((prev) => prev + 1);
 
+      if (res.points) {
+        setPoints(res.points);
+      }
+      if (res.attemptsCount !== undefined) {
+        setTaskAttemptsCount(res.attemptsCount);
+      }
+
       if (res.correct) {
         if (!languageLocked) setLanguageLocked(true);
         setLastQuizCorrect(true);
         setLastQuizExplain(res.explain || '');
+        setRevealedAnswerInfo(null);
+        setTaskAttemptsCount(0);
 
         if (res.unlockedBlock) {
           setCollectedFragments((prev) => {
@@ -412,22 +451,96 @@ export function ChallengeProvider({ children }) {
         setPenaltySeconds(res.totalPenaltySeconds || 0);
 
         if (res.allTasksCompleted) {
-          if (res.unlockedBlocks) {
-            setCollectedFragments(res.unlockedBlocks);
-            setCollectedFragmentIds(res.unlockedBlocks.map((b) => b.blockId || b._id));
-          }
+          const unlocked = res.unlockedBlocks || collectedFragments;
+          setCollectedFragments(unlocked);
+          const unlockedIds = unlocked.map((b) => b.blockId || b._id);
+          setCollectedFragmentIds(unlockedIds);
+
+          const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
+          const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
+          const mixedOrder = getThoroughlyMixedOrder(unlockedIds, correctOrder);
+
+          setShuffledVaultOrder(mixedOrder);
+          setAssemblyOrder(mixedOrder);
+          const newFragments = mixedOrder.map((id) => fragmentMap[id]).filter(Boolean);
+          const newCode = combineFragments(newFragments);
+          syncAssemblyToServer(mixedOrder, newCode);
+
           setTimeout(() => setPhase('ASSEMBLE'), 600);
         }
 
-        return { correct: true, explain: res.explain || '', unlockedBlock: res.unlockedBlock };
+        return { correct: true, explain: res.explain || '', unlockedBlock: res.unlockedBlock, points: res.points };
+      } else if (res.answerRevealed) {
+        // 3 wrong attempts reached -> answer revealed, block unlocked, advance
+        if (!languageLocked) setLanguageLocked(true);
+        setLastQuizCorrect(false);
+        setLastQuizExplain(res.explain || '');
+        const prevTaskTitle = currentTask?.title || `Task ${currentTaskIndex + 1}`;
+        setRevealedAnswerInfo({
+          revealed: true,
+          forTaskId: currentTask?.taskId,
+          forTaskTitle: prevTaskTitle,
+          answer: res.revealedAnswer,
+          explain: res.explain || '',
+        });
+        setTaskAttemptsCount(0);
+
+        if (res.unlockedBlock) {
+          setCollectedFragments((prev) => {
+            if (prev.find((f) => (f.blockId || f._id) === (res.unlockedBlock.blockId || res.unlockedBlock._id))) return prev;
+            return [...prev, res.unlockedBlock];
+          });
+          setCollectedFragmentIds((prev) => {
+            const id = res.unlockedBlock.blockId || res.unlockedBlock._id;
+            return prev.includes(id) ? prev : [...prev, id];
+          });
+        }
+
+        setCompletedTaskIds(res.completedTaskIds || []);
+        setCurrentTaskIndex(res.currentTaskIndex || 0);
+        setCurrentTask(res.nextTask || null);
+        setAllTasksCompleted(res.allTasksCompleted || false);
+        setPenaltySeconds(res.totalPenaltySeconds || 0);
+
+        if (res.allTasksCompleted) {
+          const unlocked = res.unlockedBlocks || collectedFragments;
+          setCollectedFragments(unlocked);
+          const unlockedIds = unlocked.map((b) => b.blockId || b._id);
+          setCollectedFragmentIds(unlockedIds);
+
+          const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
+          const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
+          const mixedOrder = getThoroughlyMixedOrder(unlockedIds, correctOrder);
+
+          setShuffledVaultOrder(mixedOrder);
+          setAssemblyOrder(mixedOrder);
+          const newFragments = mixedOrder.map((id) => fragmentMap[id]).filter(Boolean);
+          const newCode = combineFragments(newFragments);
+          syncAssemblyToServer(mixedOrder, newCode);
+
+          setTimeout(() => setPhase('ASSEMBLE'), 1200);
+        }
+
+        return {
+          correct: false,
+          answerRevealed: true,
+          revealedAnswer: res.revealedAnswer,
+          explain: res.explain || '',
+          penalty: res.penalty || 20,
+          unlockedBlock: res.unlockedBlock,
+          points: res.points,
+        };
       } else {
         setLastQuizCorrect(false);
         setLastQuizExplain(res.explain || 'Incorrect answer. Please review logic and try again.');
         setPenaltySeconds(res.totalPenaltySeconds ?? (penaltySeconds + (res.penalty || 20)));
         return {
           correct: false,
+          answerRevealed: false,
+          attemptsRemaining: res.attemptsRemaining,
           explain: res.explain || 'Incorrect answer. Please review logic and try again.',
           penalty: res.penalty || 20,
+          points: res.points,
         };
       }
     } catch (err) {
@@ -438,7 +551,10 @@ export function ChallengeProvider({ children }) {
     } finally {
       setTaskSubmitting(false);
     }
-  }, [challengeId, taskSubmitting, taskCooldownRemaining, languageLocked, penaltySeconds]);
+  }, [challengeId, taskSubmitting, taskCooldownRemaining, languageLocked, penaltySeconds, currentTask, currentTaskIndex]);
+  const dismissRevealedAnswer = useCallback(() => {
+    setRevealedAnswerInfo(null);
+  }, []);
 
   const reorderAssembly = useCallback((sourceIdx, destIdx) => {
     setAssemblyOrder((prev) => {
@@ -459,12 +575,17 @@ export function ChallengeProvider({ children }) {
   }, [fragmentMap, syncAssemblyToServer]);
 
   const resetAssemblyOrder = useCallback(() => {
-    const next = [...shuffledVaultOrder];
-    setAssemblyOrder(next);
-    const newFragments = next.map((id) => fragmentMap[id]).filter(Boolean);
+    const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
+    const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
+    const baseIds = collectedFragmentIds.length > 0 ? collectedFragmentIds : shuffledVaultOrder;
+    const mixed = getThoroughlyMixedOrder(baseIds, correctOrder);
+
+    setShuffledVaultOrder(mixed);
+    setAssemblyOrder(mixed);
+    const newFragments = mixed.map((id) => fragmentMap[id]).filter(Boolean);
     const newCode = combineFragments(newFragments);
-    syncAssemblyToServer(next, newCode);
-  }, [shuffledVaultOrder, fragmentMap, syncAssemblyToServer]);
+    syncAssemblyToServer(mixed, newCode);
+  }, [activeChallengeInfo, language, collectedFragmentIds, shuffledVaultOrder, fragmentMap, syncAssemblyToServer]);
 
   // ── Execution (Real backend / Judge0) ──
 
@@ -473,8 +594,24 @@ export function ChallengeProvider({ children }) {
     setCompileOutput(null);
     try {
       const inputToUse = customInput ?? challenge.sampleInput ?? '';
-      const apiRes = await apiRunCode(language, assembledCode, inputToUse);
+      const apiRes = await apiRunCode(language, assembledCode, inputToUse, challengeId);
       setCompileOutput(apiRes);
+      if (apiRes && apiRes.runCount !== undefined) {
+        setPoints((prev) => ({
+          ...prev,
+          runCount: apiRes.runCount,
+          runsRemainingFree: apiRes.runsRemainingFree ?? Math.max(0, 3 - apiRes.runCount),
+          runPenaltyApplied: apiRes.runPenaltyApplied ?? 0,
+          runPenaltyPoints: apiRes.runPenaltyPoints ?? prev.runPenaltyPoints,
+          taskPenaltyPoints: apiRes.taskPenaltyPoints ?? prev.taskPenaltyPoints,
+          timePenaltyPoints: apiRes.timePenaltyPoints ?? prev.timePenaltyPoints,
+          totalPenaltyPoints: apiRes.totalPenaltyPoints ?? prev.totalPenaltyPoints,
+          currentScore: apiRes.currentScore ?? prev.currentScore,
+          previousChallengesPenalty: apiRes.previousChallengesPenalty ?? prev.previousChallengesPenalty,
+          overallTotalPenaltyPoints: apiRes.overallTotalPenaltyPoints ?? prev.overallTotalPenaltyPoints,
+          overallScore: apiRes.overallScore ?? prev.overallScore,
+        }));
+      }
       return apiRes;
     } catch (err) {
       if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
@@ -494,7 +631,7 @@ export function ChallengeProvider({ children }) {
     } finally {
       setIsCompiling(false);
     }
-  }, [language, assembledCode, challenge.sampleInput]);
+  }, [language, assembledCode, challenge.sampleInput, challengeId]);
 
   const submitSolution = useCallback(async (participant) => {
     if (submittingRef.current) return null;
@@ -513,11 +650,25 @@ export function ChallengeProvider({ children }) {
       const outcome = await apiSubmitSolution(language, assembledCode, challengeId);
       const isAccepted = outcome.status === 'ACCEPTED' || outcome.success;
 
+      if (outcome && outcome.totalPenaltyPoints !== undefined) {
+        setPoints((prev) => ({
+          ...prev,
+          taskPenaltyPoints: outcome.taskPenaltyPoints ?? prev.taskPenaltyPoints,
+          runPenaltyPoints: outcome.runPenaltyPoints ?? prev.runPenaltyPoints,
+          timePenaltyPoints: outcome.timePenaltyPoints ?? prev.timePenaltyPoints,
+          totalPenaltyPoints: outcome.totalPenaltyPoints ?? prev.totalPenaltyPoints,
+          currentScore: outcome.currentScore ?? outcome.score ?? prev.currentScore,
+          previousChallengesPenalty: outcome.previousChallengesPenalty ?? prev.previousChallengesPenalty,
+          overallTotalPenaltyPoints: outcome.overallTotalPenaltyPoints ?? prev.overallTotalPenaltyPoints,
+          overallScore: outcome.overallScore ?? prev.overallScore,
+        }));
+      }
+
       const record = {
         ...outcome,
         passed: isAccepted,
-        finalScore: outcome.score || (isAccepted ? challenge.points : 0),
-        score: outcome.score || (isAccepted ? challenge.points : 0),
+        finalScore: outcome.score !== undefined ? outcome.score : (isAccepted ? challenge.points : 0),
+        score: outcome.score !== undefined ? outcome.score : (isAccepted ? challenge.points : 0),
         participantName: participant?.name || '',
         participantId: participant?.participantId || '',
         challengeId,
@@ -570,6 +721,18 @@ export function ChallengeProvider({ children }) {
     setPenaltySeconds(0);
     setQuizAttempts(0);
     setSubmissionAttempts(0);
+    setTaskAttemptsCount(0);
+    setRevealedAnswerInfo(null);
+    setPoints({
+      currentScore: 0,
+      totalPenaltyPoints: 0,
+      taskPenaltyPoints: 0,
+      runPenaltyPoints: 0,
+      timePenaltyPoints: 0,
+      runCount: 0,
+      runsRemainingFree: 3,
+      timeMinutesExhausted: 0,
+    });
     setFinalResult(null);
     setCompileOutput(null);
     setIsTimeExpired(false);
@@ -602,6 +765,18 @@ export function ChallengeProvider({ children }) {
     setPenaltySeconds(0);
     setQuizAttempts(0);
     setSubmissionAttempts(0);
+    setTaskAttemptsCount(0);
+    setRevealedAnswerInfo(null);
+    setPoints({
+      currentScore: 0,
+      totalPenaltyPoints: 0,
+      taskPenaltyPoints: 0,
+      runPenaltyPoints: 0,
+      timePenaltyPoints: 0,
+      runCount: 0,
+      runsRemainingFree: 3,
+      timeMinutesExhausted: 0,
+    });
     setFinalResult(null);
     setCompileOutput(null);
     setIsTimeExpired(false);
@@ -655,6 +830,14 @@ export function ChallengeProvider({ children }) {
         lastQuizExplain,
         lastQuizCorrect,
         taskSubmitting,
+        taskAttemptsCount,
+        revealedAnswerInfo,
+        setRevealedAnswerInfo,
+        dismissRevealedAnswer,
+
+        // points & scoring
+        points,
+        currentScore: points.currentScore,
 
         // fragments
         collectedFragments,

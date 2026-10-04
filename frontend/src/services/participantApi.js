@@ -13,4 +13,13 @@ export const participantApi = {
     const { data } = await api.get('/participants/status');
     return data;
   },
+  deleteMe: async (params = {}) => {
+    const { data } = await api.delete('/participants/me', { data: params });
+    return data;
+  },
+  logoutAndDelete: async (params = {}) => {
+    const { data } = await api.post('/participants/logout-delete', params);
+    return data;
+  },
 };
+

@@ -80,6 +80,7 @@ export const AuthProvider = ({ children }) => {
   const handleLogout = () => {
     localStorage.removeItem('mindcraft_token');
     localStorage.removeItem('mindcraft_user');
+    localStorage.removeItem('mindcraft_participant');
     setToken(null);
     setUser(null);
     setError(null);
@@ -87,7 +88,7 @@ export const AuthProvider = ({ children }) => {
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && (k.startsWith('mc_') || k.startsWith('mindcraft_game_'))) {
+        if (k && (k.startsWith('mc_') || k.startsWith('mindcraft_') || k.startsWith('challenge_') || k.startsWith('timer_'))) {
           keysToRemove.push(k);
         }
       }

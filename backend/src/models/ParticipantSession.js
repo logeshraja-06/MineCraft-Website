@@ -8,6 +8,7 @@ const participantSessionSchema = new mongoose.Schema(
     // Language & progression
     selectedLanguage: { type: String, default: 'python' },
     completedTaskIds: [{ type: String }],
+    taskOrder: [{ type: String }],                         // Shuffled task IDs sequence for this session
     currentTaskIndex: { type: Number, default: 0 },
     currentQuizIndex: { type: Number, default: 0 },
     taskAttempts: [
@@ -18,6 +19,7 @@ const participantSessionSchema = new mongoose.Schema(
         penaltySeconds: { type: Number, default: 0 },
         completedAt: { type: Date },
         cooldownUntil: { type: Date },
+        answerRevealed: { type: Boolean, default: false },
       },
     ],
 
@@ -36,10 +38,20 @@ const participantSessionSchema = new mongoose.Schema(
       },
     ],
 
+    // Assembly execution / run count tracking
+    runCount: { type: Number, default: 0 },                // total test runs in assembly
+    runPenaltyPoints: { type: Number, default: 0 },        // -10 pts per run after first 3 free runs
+
+    // Points system (0 initially, negative penalties)
+    taskPenaltyPoints: { type: Number, default: 0 },       // -20 pts per wrong MCQ / fill blank
+    timePenaltyPoints: { type: Number, default: 0 },       // -10 pts per 1 min exhausted
+    totalPenaltyPoints: { type: Number, default: 0 },      // total negative points accumulated
+    currentScore: { type: Number, default: 0 },            // 0 - totalPenaltyPoints
+
     // Timing (server-authoritative)
     startTime: { type: Date, default: Date.now },
     endTime: { type: Date },
-    durationSeconds: { type: Number, default: 1200 },
+    durationSeconds: { type: Number, default: 900 },       // 15 minutes = 900 seconds
     isCompleted: { type: Boolean, default: false },
     scoreAwarded: { type: Number, default: 0 },
     penaltyCount: { type: Number, default: 0 },

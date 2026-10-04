@@ -74,6 +74,11 @@ export const adminApi = {
     const { data } = await api.post(`/admin/participants/${id}/reset`);
     return data;
   },
+  deleteParticipant: async (id) => {
+    const { data } = await api.delete(`/admin/participants/${id}`);
+    return data;
+  },
+
 
   // Live Sessions
   getSessions: async () => {

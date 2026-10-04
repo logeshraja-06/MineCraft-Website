@@ -15,6 +15,7 @@ import {
   Clock,
   Layers,
   Calendar,
+  Trash2,
 } from 'lucide-react';
 import { adminApi } from '../../services/adminApi';
 
@@ -99,6 +100,23 @@ export default function AdminParticipants() {
       setToast({ message: 'Reset failed', type: 'error' });
     }
   };
+
+  const handleDeleteParticipant = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE participant "${name}"? This will delete their account and all test progress from the database.`)) return;
+    try {
+      const res = await adminApi.deleteParticipant(id);
+      if (res.success) {
+        setToast({ message: `Participant "${name}" deleted successfully`, type: 'success' });
+        if (selectedParticipant?._id === id) {
+          setSelectedParticipant(null);
+        }
+        fetchParticipants();
+      }
+    } catch (err) {
+      setToast({ message: 'Delete failed', type: 'error' });
+    }
+  };
+
 
   // Sorting
   const sortedParticipants = [...participants].sort((a, b) => {
@@ -287,10 +305,19 @@ export default function AdminParticipants() {
                           <button
                             onClick={() => handleResetParticipant(p._id, p.name)}
                             title="Reset Session Progress"
-                            className="p-1.5 text-amber-400 hover:bg-amber-950/40 rounded-lg transition"
+                            className="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg transition"
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
+
+                          <button
+                            onClick={() => handleDeleteParticipant(p._id, p.name)}
+                            title="Delete Participant Permanently"
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
                         </div>
                       </td>
                     </tr>
@@ -408,14 +435,25 @@ export default function AdminParticipants() {
 
               {/* Actions Footer */}
               <div className="flex items-center justify-between pt-3 border-t border-slate-200 text-xs">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  icon={RotateCcw}
-                  onClick={() => handleResetParticipant(selectedParticipant._id, selectedParticipant.name)}
-                >
-                  Reset Participant Progress
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon={Trash2}
+                    onClick={() => handleDeleteParticipant(selectedParticipant._id, selectedParticipant.name)}
+                  >
+                    Delete Participant
+                  </Button>
+
+                  <Button
+                    variant="warning"
+                    size="sm"
+                    icon={RotateCcw}
+                    onClick={() => handleResetParticipant(selectedParticipant._id, selectedParticipant.name)}
+                  >
+                    Reset Progress
+                  </Button>
+                </div>
 
                 <Button
                   variant="outline"
