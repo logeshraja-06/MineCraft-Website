@@ -91,6 +91,9 @@ const challengeSchema = new mongoose.Schema(
     // ── NEW: Per-language block definitions ──────────────────────────────
     languageConfigs: [langBlockConfigSchema],
 
+    // ── Canonical sequence position (1 = Easy, 2 = Medium, 3 = Hard) ──
+    sequenceOrder: { type: Number, min: 1, max: 3, default: null },
+
     blockConfig: {
       totalBlocks: { type: Number, default: 0 },
       initialVisibleCount: { type: Number, default: 3 },
@@ -105,6 +108,12 @@ const challengeSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+// Unique partial index: only one challenge can hold each sequenceOrder value
+challengeSchema.index(
+  { sequenceOrder: 1 },
+  { unique: true, partialFilterExpression: { sequenceOrder: { $type: 'number' } } }
 );
 
 // Keep isActive in sync with status

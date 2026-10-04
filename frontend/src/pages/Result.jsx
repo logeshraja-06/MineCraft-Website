@@ -1,80 +1,191 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useParticipant } from '../context/ParticipantContext';
 import { useChallenge } from '../hooks/useChallenge';
+import { challengeApi } from '../services/challengeApi';
 import Button from '../components/common/Button';
-import { Trophy, Clock, CheckCircle2, RotateCcw, Award } from 'lucide-react';
+import { Trophy, Award, ArrowRight, CheckCircle2, RotateCcw } from 'lucide-react';
 
 export default function Result() {
   const navigate = useNavigate();
   const { participant } = useParticipant();
-  const { challenge, finalResult, isTimeExpired, startChallenge } = useChallenge();
+  const { challenge, finalResult, isTimeExpired, startChallenge, selectChallenge } = useChallenge();
+
+  const [nextChallenge, setNextChallenge] = useState(null);
+  const [allCompleted, setAllCompleted] = useState(false);
+
+  useEffect(() => {
+    if (!participant) {
+      navigate('/register', { replace: true });
+    }
+  }, [participant, navigate]);
 
   const isAccepted = finalResult?.status === 'ACCEPTED';
+  const passedTests = finalResult?.passedCount ?? (isAccepted ? (finalResult?.totalCount || 3) : 0);
+  const totalTests = finalResult?.totalCount ?? 3;
+
+  useEffect(() => {
+    if (!isAccepted) return;
+    let cancelled = false;
+
+    async function loadProgression() {
+      try {
+        const res = await challengeApi.getProgress();
+        if (cancelled) return;
+        if (res.success && Array.isArray(res.progress)) {
+          const allDone = res.allCompleted || (res.progress.length > 0 && res.progress.every((p) => p.status === 'COMPLETED'));
+          setAllCompleted(allDone);
+
+          const currentId = String(challenge?.id || challenge?.slug || '').toLowerCase();
+          const currentItem = res.progress.find(
+            (p) =>
+              String(p.challengeId).toLowerCase() === currentId ||
+              String(p.slug || '').toLowerCase() === currentId
+          );
+          const currentSeq = currentItem ? (currentItem.sequenceOrder || currentItem.tier || 1) : 1;
+
+          // Find the next sequence challenge
+          const next = res.progress.find((p) => (p.sequenceOrder || p.tier) === currentSeq + 1);
+          if (next) {
+            setNextChallenge(next);
+            sessionStorage.setItem('just_unlocked_tier', next.difficulty);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load progress in Result.jsx:', err);
+      }
+    }
+
+    loadProgression();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAccepted, challenge?.id, challenge?.slug]);
+
+  if (!participant) {
+    return null;
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-16 text-center space-y-8 font-mono">
       <div className="space-y-4">
         <div
-          className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-2xl ${
+          className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-xl ${
             isAccepted
-              ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 shadow-emerald-500/20'
-              : 'bg-rose-500/20 border-2 border-rose-400 text-rose-400 shadow-rose-500/20'
+              ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-600 shadow-emerald-500/10'
+              : 'bg-rose-50 border-2 border-rose-500 text-rose-600 shadow-rose-500/10'
           }`}
         >
-          {isAccepted ? <Trophy className="w-10 h-10 animate-bounce" /> : <Award className="w-10 h-10" />}
+          {isAccepted ? <Trophy className="w-10 h-10 animate-bounce text-[#F28C0F]" /> : <Award className="w-10 h-10" />}
         </div>
 
-        <h1 className="text-3xl font-black text-slate-800">
+        <h1 className="text-3xl font-black text-slate-900">
           {isAccepted ? '🏆 CHALLENGE COMPLETED' : isTimeExpired ? '⌛ TIME EXPIRED' : 'NOT ACCEPTED'}
         </h1>
         <p className="text-xs text-slate-600 max-w-md mx-auto">
           {isAccepted
             ? 'All test cases verified! Your solution and completion duration have been committed to the live leaderboard.'
-            : 'Challenge session concluded. Review official rankings below.'}
+            : 'Challenge session concluded. Review official rankings or retry your current challenge below.'}
         </p>
+
+        {isAccepted && allCompleted && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-800 font-bold text-sm inline-flex items-center gap-2 shadow-sm">
+            <span>🏆</span>
+            <span>ALL CHALLENGES COMPLETED</span>
+          </div>
+        )}
       </div>
 
       {/* RESULT METRICS CARD */}
-      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+      <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Participant</span>
-          <p className="text-sm font-bold text-slate-700 truncate mt-1">{participant?.name || 'Anthony'}</p>
+          <p className="text-sm font-bold text-slate-800 truncate mt-1">{participant?.name || 'Participant'}</p>
+          {participant?.participantId && (
+            <span className="text-[10px] text-[#F28C0F] block">{participant.participantId}</span>
+          )}
         </div>
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Challenge</span>
-          <p className="text-sm font-bold text-orange-400 truncate mt-1">{challenge?.title || 'Find the Sum'}</p>
+          <p className="text-sm font-bold text-[#F28C0F] truncate mt-1">{challenge?.title || 'Active Challenge'}</p>
         </div>
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Status</span>
-          <p className={`text-sm font-bold mt-1 ${isAccepted ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {isAccepted ? 'ACCEPTED' : 'UNFINISHED'}
+          <p className={`text-sm font-bold mt-1 ${isAccepted ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {isAccepted ? 'ACCEPTED' : (isTimeExpired ? 'TIME EXPIRED' : 'UNFINISHED')}
           </p>
         </div>
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Tests Passed</span>
           <p className="text-sm font-bold text-slate-800 mt-1">
-            {isAccepted ? '3 / 3' : '0 / 3'}
+            {passedTests} / {totalTests}
           </p>
         </div>
       </div>
 
+      {/* ACTIONS */}
       <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={() => {
-            startChallenge();
-            navigate('/challenge');
-          }}
-        >
-          RESTART CHALLENGE
-        </Button>
-        <Link to="/leaderboard">
-          <Button variant="secondary" size="lg">
-            VIEW LEADERBOARD →
+        {/* On ACCEPTED: show NEXT CHALLENGE if not all completed */}
+        {isAccepted && nextChallenge && !allCompleted && (
+          <Button
+            variant="primary"
+            size="lg"
+            className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
+            onClick={() => {
+              const nextId = nextChallenge.slug || nextChallenge.challengeId;
+              selectChallenge(nextId);
+              navigate(`/challenge?id=${nextId}`);
+            }}
+          >
+            NEXT CHALLENGE ({nextChallenge.difficulty?.toUpperCase()}) →
+          </Button>
+        )}
+
+        {/* On ACCEPTED and ALL completed: primary button is View Leaderboard */}
+        {isAccepted && allCompleted && (
+          <Link to="/leaderboard">
+            <Button
+              variant="primary"
+              size="lg"
+              className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
+            >
+              VIEW LEADERBOARD 🏆
+            </Button>
+          </Link>
+        )}
+
+        {/* Roadmap button */}
+        <Link to="/challenges">
+          <Button variant="outline" size="lg">
+            MISSION ROADMAP
           </Button>
         </Link>
+
+        {/* Not all completed leaderboard link */}
+        {!allCompleted && (
+          <Link to="/leaderboard">
+            <Button variant="secondary" size="lg">
+              LEADERBOARD →
+            </Button>
+          </Link>
+        )}
+
+        {/* RETRY button only when NOT accepted (no restart when accepted) */}
+        {!isAccepted && (
+          <Button
+            variant="primary"
+            size="lg"
+            className="bg-rose-500 hover:bg-rose-600 text-white font-bold"
+            onClick={async () => {
+              try {
+                if (startChallenge) await startChallenge();
+              } catch (_) {}
+              navigate(`/challenge?id=${challenge?.slug || challenge?.id}`);
+            }}
+          >
+            <RotateCcw className="w-4 h-4 mr-1.5" /> RETRY CHALLENGE
+          </Button>
+        )}
       </div>
     </div>
   );

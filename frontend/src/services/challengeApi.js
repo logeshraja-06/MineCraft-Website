@@ -42,9 +42,18 @@ export const challengeApi = {
     return data;
   },
 
-  /** Get full session progress (for recovery / reload) */
+  /** Get full session progress (if challengeId provided) or participant tier progression */
   getProgress: async (challengeId) => {
+    if (!challengeId) {
+      const { data } = await api.get('/challenges/progress');
+      return data;
+    }
     const { data } = await api.get(`/challenges/${challengeId}/progress`);
+    return data;
+  },
+  /** Get participant tier progression across all challenges */
+  getUserProgression: async () => {
+    const { data } = await api.get('/challenges/progress');
     return data;
   },
 };

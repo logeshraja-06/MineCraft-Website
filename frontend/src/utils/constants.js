@@ -1,7 +1,7 @@
 export const APP_NAME = "MIND CRAFT";
 export const APP_SUBTITLE = "Quiz Hunt & Code Assembly Platform";
 
-export const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+export const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const DEFAULT_DURATION_SECONDS = 20 * 60; // 20 minutes
 
@@ -55,3 +55,20 @@ export const STATUS_TYPES = {
 
 /** Whether to use mock judge instead of real Judge0 backend */
 export const USE_MOCK_JUDGE = import.meta.env.VITE_USE_MOCK_JUDGE === 'true';
+
+/**
+ * Clears ALL mc_* and temporary gameplay session keys from localStorage
+ * so the next user never sees the previous user's name/progress/prefill.
+ */
+export function clearCompetitionStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith('mc_') || key.startsWith('mindcraft_game_'))) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
+

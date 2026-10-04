@@ -7,11 +7,11 @@ Mind Craft is an interactive hybrid competitive coding and puzzle-solving platfo
 ## 🚀 Key Features
 
 - **QR-Driven Code Discovery:** Physical or digital QR codes decode into encrypted blocks with language tags, order hints, and logic fragments.
-- **Drag-and-Drop Assembly Board:** Visual canvas where participants reorder code snippets into coherent programs.
-- **Live Code Editor & Runner:** Monaco/Ace-ready multi-language editor connected to a self-hosted Judge0 compiler/sandbox.
-- **Timed Challenges & Sessions:** Real-time event countdown, session management, and automated anti-cheating tracking.
-- **Live Leaderboard:** Real-time rank calculation based on test cases passed, execution duration, and penalty scores.
-- **Admin Control Center:** Comprehensive dashboard for challenge authoring, QR code printing, session monitoring, and test runners.
+- **Drag-and-Drop Assembly Board:** Visual canvas where participants reorder code snippets into coherent programs, backed by server-authoritative state synchronization (`PUT /api/sessions/assembly`).
+- **Live Code Editor & Runner:** Multi-language editor connected to a self-hosted Judge0 compiler sandbox (`POST /api/submissions/run` and `POST /api/submissions/submit`).
+- **Timed Challenges & Sessions:** Real-time event countdown, server-authoritative session management (`POST /api/sessions/start`), and automated session expiration tracking.
+- **Live Leaderboard & Tiebreaker Scoring:** Real-time rank calculation based on challenge points, a +300 second (5-minute) penalty per failed attempt before acceptance, and CSV/XLSX export with formula injection sanitization.
+- **Admin Control Center:** Comprehensive dashboard for challenge authoring, printable QR matrix generation, participant monitoring, session controls, and settings.
 
 ---
 
@@ -21,10 +21,10 @@ Mind Craft is an interactive hybrid competitive coding and puzzle-solving platfo
 ├── frontend/          # React (Vite) + Tailwind CSS + Redux Toolkit SPA
 ├── backend/           # Node.js + Express REST API + MongoDB / Redis
 ├── judge0/            # Sandboxed multi-language code execution infrastructure
-├── infrastructure/    # Azure VM setup guides, Nginx reverse proxy configs
+├── infrastructure/    # Azure VM setup guides, cgroup v1 configuration
 ├── docs/              # Comprehensive API, architecture, and event runbooks
-├── tests/             # Backend, frontend, and load testing suites
-└── scripts/           # Challenge creation, QR generation, and DB seed utilities
+├── tests/             # Backend, frontend, and verification suites
+└── scripts/           # Challenge creation, QR generation, verification, and DB seed utilities
 ```
 
 ---
@@ -36,7 +36,17 @@ Mind Craft is an interactive hybrid competitive coding and puzzle-solving platfo
 - Docker & Docker Compose
 - MongoDB & Redis (or run via Docker Compose)
 
-### 1. Backend Setup
+### 1. Database Seeding
+```bash
+# Seed master admin user from env credentials
+cd backend
+npm run seed
+
+# Seed official challenges (5 challenges across Python, C, C++, Java)
+npm run seed:challenges
+```
+
+### 2. Backend Setup
 ```bash
 cd backend
 cp .env.example .env
@@ -44,7 +54,7 @@ npm install
 npm run dev
 ```
 
-### 2. Frontend Setup
+### 3. Frontend Setup
 ```bash
 cd frontend
 cp .env.example .env
@@ -52,7 +62,21 @@ npm install
 npm run dev
 ```
 
-### 3. Full Stack Docker Compose
+### 4. Running Automated Tests
+```bash
+# Frontend Vitest suite (Registration validation, empty states, no demo data)
+cd frontend
+npm test
+
+# Backend Jest suite (Registration, duplicate check, auth guards, session flow, scoring penalty, CSV escaping)
+cd backend
+npm test -- tests/backendSuite.test.js
+
+# Multi-language compiler & edge-case test suite (Python, C, C++, Java Main)
+node scripts/verify-compiler.js
+```
+
+### 5. Full Stack Docker Compose
 ```bash
 docker-compose up --build
 ```

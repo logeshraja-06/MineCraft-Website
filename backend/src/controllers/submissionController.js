@@ -10,6 +10,9 @@ const { getLanguageId, isSupportedLanguage } = require('../utils/languageMap');
 const { executeCode } = require('../services/judge0Service');
 const { getHiddenTests } = require('../config/challenges');
 
+const { checkIfSessionExpired } = require('../services/session/timerService');
+const { checkChallengeLock } = require('../services/challenge/progressionService');
+
 /**
  * Normalizes output string for comparison
  */
@@ -17,6 +20,33 @@ function normalizeOutput(str = '') {
   return String(str || '')
     .replace(/\r\n/g, '\n')
     .trim();
+}
+
+function normalizeCode(str = '') {
+  return String(str || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
+function getAssembledCodeFromSession(session) {
+  if (!session) return null;
+  if (session.assembledCode && session.assembledCode.trim()) {
+    return session.assembledCode;
+  }
+  if (!session.assemblyOrder || !session.assemblyOrder.length) {
+    return null;
+  }
+  const blockMap = new Map();
+  (session.scannedBlocks || []).forEach((b) => {
+    const bId = String(b.blockId || b._id);
+    blockMap.set(bId, b.code || b.codeSnippet || '');
+  });
+  const parts = session.assemblyOrder
+    .map((id) => blockMap.get(String(id)))
+    .filter((code) => code !== undefined && code !== null);
+  if (parts.length === 0) return null;
+  return parts.join('\n\n');
 }
 
 /**
@@ -27,6 +57,12 @@ exports.runCode = asyncHandler(async (req, res) => {
   const language = req.body?.language;
   const sourceCode = req.body?.sourceCode !== undefined ? req.body.sourceCode : req.body?.code;
   const stdin = req.body?.stdin !== undefined ? req.body.stdin : (req.body?.input !== undefined ? req.body.input : '');
+  const challengeId = req.body?.challengeId;
+
+  if (challengeId) {
+    const isUnlocked = await checkChallengeLock(req, res, challengeId);
+    if (!isUnlocked) return;
+  }
 
   if (!language || typeof language !== 'string') {
     return res.status(400).json({
@@ -47,6 +83,38 @@ exports.runCode = asyncHandler(async (req, res) => {
       success: false,
       message: 'Source code cannot be empty',
     });
+  }
+
+  // If challengeId is provided, enforce session active/expiry check
+  if (challengeId && req.user) {
+    let challenge = null;
+    if (/^[0-9a-fA-F]{24}$/.test(challengeId)) {
+      challenge = await Challenge.findById(challengeId);
+    }
+    if (!challenge) {
+      challenge = await Challenge.findOne({
+        $or: [{ slug: challengeId }, { slug: String(challengeId).toLowerCase() }],
+      });
+    }
+    const targetChallengeId = challenge ? challenge._id : challengeId;
+
+    const session = await ParticipantSession.findOne({
+      userId: req.user._id,
+      challengeId: targetChallengeId,
+      isCompleted: false,
+    });
+
+    if (session && checkIfSessionExpired(session.startTime, session.durationSeconds)) {
+      session.status = 'EXPIRED';
+      session.isCompleted = true;
+      session.endTime = new Date();
+      await session.save();
+      return res.status(403).json({
+        success: false,
+        message: 'Your challenge session has expired. Running code is disabled.',
+        isExpired: true,
+      });
+    }
   }
 
   try {
@@ -125,7 +193,49 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     });
   }
 
-  // 2. Fetch test cases from MongoDB or fallback to static hidden tests
+  const targetChallengeId = challenge ? challenge._id : challengeId;
+
+  // Enforce sequential tier progression
+  const isProgressionUnlocked = await checkChallengeLock(req, res, challenge || challengeId);
+  if (!isProgressionUnlocked) return;
+
+  // 2. Fetch participant session and enforce session checks
+  let session = null;
+  if (req.user && targetChallengeId) {
+    try {
+      session = await ParticipantSession.findOne({
+        userId: req.user._id,
+        challengeId: targetChallengeId,
+      });
+
+      if (session && checkIfSessionExpired(session.startTime, session.durationSeconds)) {
+        session.status = 'EXPIRED';
+        session.isCompleted = true;
+        session.endTime = new Date();
+        await session.save();
+        return res.status(403).json({
+          success: false,
+          message: 'Your challenge session has expired. Submissions are disabled.',
+          isExpired: true,
+        });
+      }
+
+      // Server-side check that submitted code matches assembled blocks in saved order
+      if (session && (session.assemblyOrder?.length > 0 || (session.assembledCode && session.assembledCode.trim()))) {
+        const expectedCode = getAssembledCodeFromSession(session);
+        if (expectedCode && normalizeCode(sourceCode) !== normalizeCode(expectedCode)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Submitted code does not match your assembled session blocks.',
+          });
+        }
+      }
+    } catch (sessionErr) {
+      console.warn('[SubmissionController.submitSolution] Session check warning:', sessionErr.message);
+    }
+  }
+
+  // 3. Fetch test cases from MongoDB or fallback to static hidden tests
   let testCases = [];
   if (challenge && challenge._id) {
     testCases = await TestCase.find({ challengeId: challenge._id, isEnabled: true });
@@ -143,35 +253,12 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     }));
   }
 
-  // 3. Evaluate test cases
+  // 4. Evaluate test cases
   const evalResult = await evaluateAllTestCases({
     sourceCode,
     language,
     testCases,
   });
-
-  // 4. Fetch or update participant session
-  let session = null;
-  const targetChallengeId = challenge ? challenge._id : challengeId;
-
-  if (req.user && targetChallengeId) {
-    try {
-      session = await ParticipantSession.findOne({
-        userId: req.user._id,
-        challengeId: targetChallengeId,
-      });
-      if (!session) {
-        session = await ParticipantSession.create({
-          userId: req.user._id,
-          challengeId: targetChallengeId,
-          revealedBlockIds: [],
-          revealsCount: 0,
-        });
-      }
-    } catch (sessionErr) {
-      console.warn('[SubmissionController.submitSolution] Session lookup skipped:', sessionErr.message);
-    }
-  }
 
   const isAccepted = evalResult.overallStatus === 'ACCEPTED';
   const wrongAttempts = (session?.wrongAttemptsCount || 0) + (isAccepted ? 0 : 1);
@@ -185,6 +272,19 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     wrongAttemptsCount: wrongAttempts,
   });
 
+  // Calculate server-authoritative timeTakenSeconds and attemptNumber
+  const sessionStart = session?.startTime ? new Date(session.startTime).getTime() : Date.now();
+  const timeTakenSeconds = Math.max(0, Math.floor((Date.now() - sessionStart) / 1000));
+
+  let attemptNumber = 1;
+  if (req.user && targetChallengeId) {
+    const prevAttempts = await Submission.countDocuments({
+      userId: req.user._id,
+      challengeId: targetChallengeId,
+    });
+    attemptNumber = prevAttempts + 1;
+  }
+
   // 6. Record submission in DB
   let sub = null;
   if (targetChallengeId) {
@@ -194,10 +294,15 @@ exports.submitSolution = asyncHandler(async (req, res) => {
         challengeId: targetChallengeId,
         code: sourceCode,
         language,
-        assembledBlockIds: Array.isArray(assembledBlockIds) ? assembledBlockIds : [],
+        assembledBlockIds: session?.assemblyOrder || (Array.isArray(assembledBlockIds) ? assembledBlockIds : []),
         status: evalResult.overallStatus,
         testCasesPassed: evalResult.passedCount,
         totalTestCases: evalResult.totalCount,
+        timeTakenSeconds,
+        attemptNumber,
+        executionTimeMs: evalResult.executionTimeMs || 0,
+        memoryKb: evalResult.memoryKb || 0,
+        compileOutput: evalResult.compileOutput || '',
         score: scoreBreakdown.finalScore,
         revealPenalty: scoreBreakdown.revealPenalty,
         wrongSubmissionPenalty: scoreBreakdown.wrongSubmissionPenalty,

@@ -5,30 +5,32 @@ services:
     image: judge0/judge0:1.13.0
     container_name: judge0-server
     restart: always
+    command: ["./scripts/server"]
     ports:
       - "2358:2358"
     volumes:
       - ./judge0.conf:/judge0.conf:ro
     environment:
-      - REDIS_URL=redis://judge0-redis:6379
-      - POSTGRES_URL=postgresql://judge0:judge0password@judge0-db:5432/judge0
+      - AUTH_TOKEN=judge0_secret_api_key_2026
     depends_on:
       - judge0-db
       - judge0-redis
+    networks:
+      - mindcraft-network
 
   judge0-workers:
     image: judge0/judge0:1.13.0
     container_name: judge0-workers
     restart: always
     privileged: true
+    command: ["./scripts/workers"]
     volumes:
       - ./judge0.conf:/judge0.conf:ro
-    environment:
-      - REDIS_URL=redis://judge0-redis:6379
-      - POSTGRES_URL=postgresql://judge0:judge0password@judge0-db:5432/judge0
     depends_on:
       - judge0-db
       - judge0-redis
+    networks:
+      - mindcraft-network
 
   judge0-db:
     image: postgres:13-alpine
@@ -40,6 +42,8 @@ services:
       - POSTGRES_DB=judge0
     volumes:
       - judge0-postgres-data:/var/lib/postgresql/data
+    networks:
+      - mindcraft-network
 
   judge0-redis:
     image: redis:6-alpine
@@ -47,7 +51,14 @@ services:
     restart: always
     volumes:
       - judge0-redis-data:/data
+    networks:
+      - mindcraft-network
 
 volumes:
   judge0-postgres-data:
   judge0-redis-data:
+
+networks:
+  mindcraft-network:
+    name: mindcraft-network
+    external: true

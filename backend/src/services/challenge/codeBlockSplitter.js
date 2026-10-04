@@ -258,6 +258,9 @@ function generateCodeBlocks({
       blockType,
       language: lang,
       qrHash,
+      qrToken: qrHash,
+      correctOrder: originalOrder,
+      type: blockType,
       points: 10,
       isDecoy: false,
       hint: generateHint(blockType, snippet),
@@ -292,7 +295,9 @@ function generateCodeBlocks({
     b.taskId = blockToTaskMap[b.blockId] || 'task-1';
   });
 
-  return { blocks, tasks };
+  blocks.blocks = blocks;
+  blocks.tasks = tasks;
+  return blocks;
 }
 
 /**

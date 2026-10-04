@@ -10,9 +10,6 @@ export default function CodeBlock({ block, onAdd, isAdded }) {
           <span className="uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
             {block.type || 'BLOCK'}
           </span>
-          {block.isDecoy && (
-            <span className="text-rose-400 font-bold bg-rose-950/40 px-1 rounded">DECOY</span>
-          )}
         </div>
         <pre className="text-xs font-mono text-slate-800 truncate whitespace-pre">
           {block.code.split('\n')[0]}

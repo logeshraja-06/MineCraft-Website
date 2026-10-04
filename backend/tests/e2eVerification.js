@@ -2,7 +2,12 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
-const BASE_URL = 'http://localhost:5001/api';
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
+
+console.warn('\n⚠️ ========================================================');
+console.warn('⚠️ WARNING: e2eVerification.js runs against a LIVE server!');
+console.warn('⚠️ ONLY execute this script against a LOCAL/DEV database.');
+console.warn('⚠️ ========================================================\n');
 
 async function runAcceptanceTest() {
   console.log('====================================================');
@@ -14,33 +19,34 @@ async function runAcceptanceTest() {
   let createdChallengeId = '';
   let createdChallengeSlug = '';
 
-  // 1. Admin Login
-  console.log('[TEST 1] Admin Authentication');
-  const adminLoginRes = await axios.post(`${BASE_URL}/auth/admin/login`, {
-    email: 'admin@mindcraft.io',
-    password: 'AdminSecurePassword2026!',
-  });
-  if (!adminLoginRes.data.token) throw new Error('Admin login failed');
-  adminToken = adminLoginRes.data.token;
-  console.log('✓ Admin login successful. Role:', adminLoginRes.data.user.role);
+  try {
+    // 1. Admin Login
+    console.log('[TEST 1] Admin Authentication');
+    const adminLoginRes = await axios.post(`${BASE_URL}/auth/admin/login`, {
+      email: 'admin@mindcraft.io',
+      password: 'AdminSecurePassword2026!',
+    });
+    if (!adminLoginRes.data.token) throw new Error('Admin login failed');
+    adminToken = adminLoginRes.data.token;
+    console.log('✓ Admin login successful. Role:', adminLoginRes.data.user.role);
 
-  // 2. Admin Dashboard Overview
-  console.log('\n[TEST 2] Admin Dashboard Overview Telemetry');
-  const overviewRes = await axios.get(`${BASE_URL}/admin/overview`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-  });
-  console.log('✓ Stats returned from MongoDB:');
-  console.log('  - Total Participants:', overviewRes.data.stats.totalParticipants);
-  console.log('  - Active Participants:', overviewRes.data.stats.activeParticipants);
-  console.log('  - Total Challenges:', overviewRes.data.stats.totalChallenges);
-  console.log('  - Published Challenges:', overviewRes.data.stats.publishedChallenges);
-  console.log('  - Total Submissions:', overviewRes.data.stats.totalSubmissions);
-  console.log('  - Accepted Submissions:', overviewRes.data.stats.acceptedSubmissions);
-  console.log('  - Live Sessions Count:', overviewRes.data.liveSessions.length);
+    // 2. Admin Dashboard Overview
+    console.log('\n[TEST 2] Admin Dashboard Overview Telemetry');
+    const overviewRes = await axios.get(`${BASE_URL}/admin/overview`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    console.log('✓ Stats returned from MongoDB:');
+    console.log('  - Total Participants:', overviewRes.data.stats.totalParticipants);
+    console.log('  - Active Participants:', overviewRes.data.stats.activeParticipants);
+    console.log('  - Total Challenges:', overviewRes.data.stats.totalChallenges);
+    console.log('  - Published Challenges:', overviewRes.data.stats.publishedChallenges);
+    console.log('  - Total Submissions:', overviewRes.data.stats.totalSubmissions);
+    console.log('  - Accepted Submissions:', overviewRes.data.stats.acceptedSubmissions);
+    console.log('  - Live Sessions Count:', overviewRes.data.liveSessions.length);
 
-  // 3. Create a Java Challenge with Complete Source Code & Block Generation
-  console.log('\n[TEST 3] Create Java Challenge via Multi-Section Workflow');
-  const javaSolution = `import java.util.*;
+    // 3. Create a Java Challenge with Complete Source Code & Block Generation
+    console.log('\n[TEST 3] Create Java Challenge via Multi-Section Workflow');
+    const javaSolution = `import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
@@ -51,9 +57,9 @@ public class Main {
     }
 }`;
 
-  const challengePayload = {
-    title: 'Java Arithmetic Adder',
-    slug: `java-adder-e2e-${Date.now()}`,
+    const challengePayload = {
+      title: 'E2E Test Java Adder',
+      slug: `e2e-test-java-adder-${Date.now()}`,
     category: 'Basic Arithmetic',
     difficulty: 'Easy',
     points: 100,
@@ -243,9 +249,22 @@ public class Main {
     }
   }
 
-  console.log('\n====================================================');
-  console.log('ALL ACCEPTANCE TESTS COMPLETED SUCCESSFULLY! ✓✓✓');
-  console.log('====================================================');
+    console.log('\n====================================================');
+    console.log('ALL ACCEPTANCE TESTS COMPLETED SUCCESSFULLY! ✓✓✓');
+    console.log('====================================================');
+  } finally {
+    if (createdChallengeId && adminToken) {
+      console.log(`\n[CLEANUP] Deleting test challenge (${createdChallengeId})...`);
+      try {
+        await axios.delete(`${BASE_URL}/admin/challenges/${createdChallengeId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        console.log('✓ Successfully deleted temporary e2e test challenge.');
+      } catch (cleanErr) {
+        console.warn('⚠️ Warning: failed to clean up test challenge:', cleanErr.message);
+      }
+    }
+  }
 }
 
 runAcceptanceTest().catch((err) => {

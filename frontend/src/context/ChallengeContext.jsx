@@ -1,364 +1,386 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { CHALLENGES } from '../data/challenges';
-import { localStorageService } from '../services/localStorageService';
-import {
-  STORAGE_KEYS,
-  USE_MOCK_JUDGE,
-} from '../utils/constants';
-import { combineFragments, seededShuffle } from '../utils/assembly';
-import { runCode as mockRunCode } from '../services/mockCompiler';
-import { judgeSubmission as mockJudgeSubmission } from '../services/mockJudge';
 import { challengeApi } from '../services/challengeApi';
+import { sessionApi } from '../services/sessionApi';
+import { qrApi } from '../services/qrApi';
 import { runCode as apiRunCode, submitSolution as apiSubmitSolution } from '../services/api';
+import { clearCompetitionStorage } from '../utils/constants';
+import { combineFragments, seededShuffle } from '../utils/assembly';
 
 const ChallengeContext = createContext(null);
-
-// ─── helpers ───────────────────────────────────────────────────────────────
-
-function getStaticChallenge(id) {
-  return CHALLENGES.find((c) => c.id === id || c.slug === id) || CHALLENGES[0];
-}
-
-// ─── Provider ──────────────────────────────────────────────────────────────
 
 export function ChallengeProvider({ children }) {
   const searchParams = new URLSearchParams(window.location.search);
   const urlChallengeId = searchParams.get('id') || searchParams.get('challengeId');
 
-  // ── challenge selection ──
-  const [challengeId, setChallengeId] = useState(() => {
-    if (urlChallengeId) return urlChallengeId;
-    const session = localStorageService.get(STORAGE_KEYS.CHALLENGE_SESSION, null);
-    return session?.challengeId || CHALLENGES[0].id;
-  });
-
+  // ── Available challenges from server ──
+  const [challenges, setChallenges] = useState([]);
+  const [challengeId, setChallengeId] = useState(urlChallengeId || null);
   const [activeChallengeInfo, setActiveChallengeInfo] = useState(null);
 
-  // Sync challenge info if not found or custom
-  useEffect(() => {
-    let cancelled = false;
-    const fetchChallengeInfo = async () => {
-      try {
-        const res = await challengeApi.getById(challengeId);
-        if (cancelled) return;
-        if (res.success && res.challenge) {
-          setActiveChallengeInfo(res.challenge);
-        }
-      } catch (e) {
-        // Fallback to static
-      }
-    };
-    if (challengeId) {
-      fetchChallengeInfo();
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [challengeId]);
-
-  // ── phase machine ──
-  // "SETUP" | "HUNT" | "ASSEMBLE" | "DONE"
-  const [phase, setPhase] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.PHASE, 'SETUP')
-  );
-
-  // ── language ──
-  const [language, setLanguage] = useState(() => {
-    const session = localStorageService.get(STORAGE_KEYS.CHALLENGE_SESSION, null);
-    return session?.language || 'python';
-  });
-  const [languageLocked, setLanguageLocked] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.LANGUAGE_LOCKED, false)
-  );
-
-  // ── timer ──
-  const [startTime, setStartTime] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.START_TIME, null)
-  );
-
-  // ── SERVER-DRIVEN TASK STATE ──
+  // ── Server-authoritative session ──
   const [serverSession, setServerSession] = useState(null);
+  const [phase, setPhase] = useState('SETUP'); // SETUP | HUNT | ASSEMBLE | DONE
+  const [language, setLanguage] = useState('python');
+  const [languageLocked, setLanguageLocked] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [isTimeExpired, setIsTimeExpired] = useState(false);
+
+  // ── Fragments & Tasks ──
+  const [collectedFragments, setCollectedFragments] = useState([]);
+  const [collectedFragmentIds, setCollectedFragmentIds] = useState([]);
+  const [shuffledVaultOrder, setShuffledVaultOrder] = useState([]);
+  const [assemblyOrder, setAssemblyOrder] = useState([]);
+
+  // Server task progression (if task-based hunt)
   const [currentTask, setCurrentTask] = useState(null);
   const [allTasksCompleted, setAllTasksCompleted] = useState(false);
   const [totalTasks, setTotalTasks] = useState(0);
-  const [completedTaskIds, setCompletedTaskIds] = useState(() =>
-    localStorageService.get('mc_completed_task_ids', [])
-  );
-  const [currentTaskIndex, setCurrentTaskIndex] = useState(() =>
-    localStorageService.get('mc_current_task_index', 0)
-  );
-
-  // ── collected blocks (from server) ──
-  const [collectedFragments, setCollectedFragments] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.COLLECTED_FRAGMENTS, [])
-  );
-  const [collectedFragmentIds, setCollectedFragmentIds] = useState(() =>
-    localStorageService.get('mc_collected_fragment_ids', [])
-  );
-
-  // ── assembly (ASSEMBLE phase) ──
-  const [shuffledVaultOrder, setShuffledVaultOrder] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.SHUFFLED_VAULT, [])
-  );
-  const [assemblyOrder, setAssemblyOrder] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.ASSEMBLY_ORDER, [])
-  );
-
-  // ── scoring ──
-  const [penaltySeconds, setPenaltySeconds] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.PENALTY_SECONDS, 0)
-  );
-  const [quizAttempts, setQuizAttempts] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.QUIZ_ATTEMPTS, 0)
-  );
-  const [submissionAttempts, setSubmissionAttempts] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.SUBMISSION_ATTEMPTS, 0)
-  );
-
-  // ── result ──
-  const [finalResult, setFinalResult] = useState(() =>
-    localStorageService.get(STORAGE_KEYS.FINAL_RESULT, null)
-  );
-
-  // ── execution state ──
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const [compileOutput, setCompileOutput] = useState(null);
-  const [isTimeExpired, setIsTimeExpired] = useState(false);
-
-  // ── task quiz state ──
+  const [completedTaskIds, setCompletedTaskIds] = useState([]);
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [taskCooldownRemaining, setTaskCooldownRemaining] = useState(0);
   const [lastQuizExplain, setLastQuizExplain] = useState('');
   const [lastQuizCorrect, setLastQuizCorrect] = useState(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
 
-  // ── refs ──
+  // ── Scoring & Attempts ──
+  const [penaltySeconds, setPenaltySeconds] = useState(0);
+  const [quizAttempts, setQuizAttempts] = useState(0);
+  const [submissionAttempts, setSubmissionAttempts] = useState(0);
+
+  // ── Execution state ──
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [compileOutput, setCompileOutput] = useState(null);
+  const [finalResult, setFinalResult] = useState(null);
+  const [lockedNotice, setLockedNotice] = useState(null);
+
   const submittingRef = useRef(false);
-  const cooldownTimerRef = useRef(null);
+  const saveAssemblyTimerRef = useRef(null);
 
-  // ── derived: current static challenge definition (for sampleInput/Output, title, etc.) ──
-  const currentChallenge = useMemo(() => getStaticChallenge(challengeId), [challengeId]);
+  // 1. Load active challenges on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function loadChallenges() {
+      try {
+        const [res, progRes] = await Promise.all([
+          challengeApi.getAll().catch(() => ({ challenges: [] })),
+          challengeApi.getProgress().catch(() => null),
+        ]);
+        if (cancelled) return;
+        const list = res.challenges || (Array.isArray(res) ? res : []);
+        setChallenges(list);
 
-  // ── derived: challenge info (merged static + server) ──
+        if (!challengeId) {
+          if (progRes?.currentChallengeSlug) {
+            setChallengeId(progRes.currentChallengeSlug);
+          }
+        }
+      } catch (err) {
+        console.warn('[ChallengeContext] Failed to load challenges:', err.message);
+      }
+    }
+    loadChallenges();
+    return () => { cancelled = true; };
+  }, []);
+
+  // 2. Fetch active challenge details whenever challengeId changes
+  useEffect(() => {
+    if (!challengeId) return;
+    let cancelled = false;
+
+    async function loadChallengeDetails() {
+      try {
+        const res = await challengeApi.getById(challengeId);
+        if (cancelled) return;
+        if (res.success && res.challenge) {
+          setActiveChallengeInfo(res.challenge);
+          const tasks = res.challenge.tasks || [];
+          setTotalTasks(tasks.length);
+          if (tasks.length > 0 && !currentTask) {
+            const firstTask = tasks[0];
+            const quiz = firstTask.quizPool?.[0] || null;
+            if (quiz) {
+              setCurrentTask({
+                taskId: firstTask.taskId,
+                title: firstTask.title,
+                description: firstTask.description,
+                order: firstTask.order,
+                quiz: {
+                  quizId: quiz.quizId,
+                  type: quiz.type,
+                  prompt: quiz.prompt,
+                  options: quiz.options || [],
+                  concept: quiz.concept || '',
+                },
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[ChallengeContext] Failed to load challenge details:', err.message);
+      }
+    }
+
+    loadChallengeDetails();
+    return () => { cancelled = true; };
+  }, [challengeId]);
+
+  // 3. Recover active session from server whenever challengeId changes
+  useEffect(() => {
+    if (!challengeId) return;
+    const token = localStorage.getItem('mindcraft_token');
+    const userStr = localStorage.getItem('mindcraft_user');
+    // If not authenticated or on admin route or user is an admin, skip participant session recovery
+    if (!token) return;
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) return;
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u?.role === 'admin') return;
+      } catch (_) {}
+    }
+
+    let cancelled = false;
+
+    async function recoverServerSession() {
+      try {
+        const res = await sessionApi.getCurrentSession(challengeId);
+        if (cancelled) return;
+        if (res.success && res.session) {
+          const sess = res.session;
+          setServerSession(sess);
+          setStartTime(sess.startTime);
+          if (sess.selectedLanguage) setLanguage(sess.selectedLanguage);
+
+          if (res.isExpired) {
+            setIsTimeExpired(true);
+          }
+
+          if (sess.scannedBlocks && sess.scannedBlocks.length > 0) {
+            setCollectedFragments(sess.scannedBlocks);
+            setCollectedFragmentIds(sess.scannedBlocks.map((b) => b.blockId || b._id));
+            setLanguageLocked(true);
+          }
+
+          if (sess.assemblyOrder && sess.assemblyOrder.length > 0) {
+            setAssemblyOrder(sess.assemblyOrder);
+          }
+
+          // Fetch current task state if in progress
+          try {
+            const taskData = await challengeApi.getCurrentTask(challengeId);
+            if (!cancelled && taskData.success) {
+              if (taskData.currentTask) setCurrentTask(taskData.currentTask);
+              if (taskData.totalTasks) setTotalTasks(taskData.totalTasks);
+              if (taskData.completedTaskIds) setCompletedTaskIds(taskData.completedTaskIds);
+              if (taskData.currentTaskIndex !== undefined) setCurrentTaskIndex(taskData.currentTaskIndex);
+              if (taskData.allTasksCompleted) {
+                setAllTasksCompleted(true);
+                setPhase('ASSEMBLE');
+              }
+            }
+          } catch (_) {}
+
+          if (sess.status === 'COMPLETED') {
+            setPhase('DONE');
+          } else if (sess.assemblyOrder?.length > 0 || sess.status === 'ACTIVE') {
+            const expectedTotal = activeChallengeInfo?.blockConfig?.totalBlocks || activeChallengeInfo?.totalBlocks || activeChallengeInfo?.tasks?.length || 4;
+            const isAllCollected = sess.scannedBlocks?.length >= expectedTotal;
+            setPhase(isAllCollected ? 'ASSEMBLE' : 'HUNT');
+          }
+        }
+      } catch (err) {
+        if (err.response?.status === 403 && (err.response?.data?.code === 'CHALLENGE_LOCKED' || err.response?.data?.code === 'CHALLENGE_COMPLETED')) {
+          setLockedNotice(err.response.data.message || 'This challenge is not accessible.');
+        }
+        // Participant session recovery failure is normal if no session was started yet
+      }
+    }
+
+    recoverServerSession();
+    return () => { cancelled = true; };
+  }, [challengeId, activeChallengeInfo?.totalBlocks, activeChallengeInfo?.blockConfig?.totalBlocks, activeChallengeInfo?.tasks?.length]);
+
+  // ── Derived active challenge metadata ──
   const challenge = useMemo(() => {
-    const base = currentChallenge;
-    const server = serverSession?.challenge || activeChallengeInfo;
-    const supportedLangs = server?.supportedLanguages?.length
-      ? server.supportedLanguages
-      : server?.languageConfigs?.map((lc) => lc.language) || Object.keys(base?.languages || {});
-    return {
-      ...base,
-      id: challengeId,
-      slug: server?.slug || base?.id || challengeId,
-      title: server?.title || base?.title || 'Coding Challenge',
-      description: server?.description || base?.description || '',
-      difficulty: server?.difficulty || base?.difficulty || 'Medium',
-      points: server?.points ?? base?.points ?? 100,
-      category: server?.category || base?.category || 'Algorithms',
-      sampleInput: server?.sampleInput || base?.sampleInput || '',
-      sampleOutput: server?.sampleOutput || base?.sampleOutput || '',
-      duration: serverSession?.session?.durationSeconds || server?.timeLimitSeconds || base?.duration || 1200,
-      supportedLanguages: supportedLangs,
-      tasks: server?.tasks || [],
-    };
-  }, [currentChallenge, serverSession, activeChallengeInfo, challengeId]);
+    const raw = activeChallengeInfo || {};
+    const supportedLangs = raw.supportedLanguages?.length
+      ? raw.supportedLanguages
+      : ['python', 'c', 'cpp', 'java'];
 
-  // ── derived: fragment map from collected blocks ──
+    return {
+      id: raw._id || raw.id || challengeId || 'challenge',
+      slug: raw.slug || challengeId || 'challenge',
+      title: raw.title || 'Coding Challenge',
+      description: raw.description || '',
+      difficulty: raw.difficulty || 'Medium',
+      points: Number(raw.points) || 100,
+      category: raw.category || 'Algorithms',
+      sampleInput: raw.sampleInput || '',
+      sampleOutput: raw.sampleOutput || '',
+      duration: raw.timeLimitSeconds || raw.duration || 1200,
+      supportedLanguages: supportedLangs,
+      tasks: raw.tasks || [],
+    };
+  }, [activeChallengeInfo, challengeId]);
+
+  // ── Derived fragment map ──
   const fragmentMap = useMemo(() => {
     const map = {};
     collectedFragments.forEach((f) => {
-      if (f && f.blockId) {
-        map[f.blockId] = { id: f.blockId, code: f.code, role: f.role };
+      const id = f.blockId || f._id;
+      if (id) {
+        map[id] = { id, code: f.code || f.codeSnippet || '', role: f.type || f.role || 'LOGIC' };
       }
     });
     return map;
   }, [collectedFragments]);
 
-  // ── derived: assembled fragments ──
+  // ── Derived assembled fragments ──
   const assemblyFragments = useMemo(
     () => assemblyOrder.map((id) => fragmentMap[id]).filter(Boolean),
     [assemblyOrder, fragmentMap]
   );
 
-  // ── derived: assembled source code ──
+  // ── Derived assembled source code ──
   const assembledCode = useMemo(() => combineFragments(assemblyFragments), [assemblyFragments]);
 
-  // ── derived: total fragment count ──
   const totalFragments = useMemo(() => {
-    if (serverSession?.challenge?.supportedLanguages) {
-      const langInfo = serverSession.challenge.supportedLanguages.find(
-        (l) => l.id === language
-      );
-      return langInfo?.blockCount || totalTasks;
-    }
-    return totalTasks;
-  }, [serverSession, language, totalTasks]);
+    return (
+      activeChallengeInfo?.blockConfig?.totalBlocks ||
+      activeChallengeInfo?.totalBlocks ||
+      (Array.isArray(activeChallengeInfo?.tasks) && activeChallengeInfo.tasks.length > 0 ? activeChallengeInfo.tasks.length : 0) ||
+      activeChallengeInfo?.languageConfigs?.[0]?.blockCount ||
+      (collectedFragments.length > 0 ? collectedFragments.length : 4)
+    );
+  }, [activeChallengeInfo, collectedFragments.length]);
 
-  // ── init shuffled vault when entering ASSEMBLE ──
+  // ── Shuffle vault when entering ASSEMBLE phase ──
   useEffect(() => {
-    if (phase !== 'ASSEMBLE') return;
+    if (phase !== 'ASSEMBLE' && phase !== 'DONE') return;
     const canonicalIds = collectedFragmentIds;
     if (canonicalIds.length === 0) return;
-    if (shuffledVaultOrder.length === canonicalIds.length && assemblyOrder.length === canonicalIds.length) {
-      return; // already matching
-    }
-    const seed = startTime ? Number(startTime) % 99991 : 12345;
+    if (assemblyOrder.length > 0) return; // preserve server-restored order
+
+    const seed = startTime ? new Date(startTime).getTime() % 99991 : 12345;
     const shuffled = seededShuffle([...canonicalIds], seed);
     setShuffledVaultOrder(shuffled);
     setAssemblyOrder(shuffled);
-  }, [phase, collectedFragmentIds, startTime, shuffledVaultOrder.length, assemblyOrder.length]);
+  }, [phase, collectedFragmentIds, startTime, assemblyOrder.length]);
 
-  // ─── persist state ──────────────────────────────────────────────────
+  // ── Debounced save assembly to server ──
+  const syncAssemblyToServer = useCallback((order, code) => {
+    if (!challengeId) return;
+    if (saveAssemblyTimerRef.current) clearTimeout(saveAssemblyTimerRef.current);
+    saveAssemblyTimerRef.current = setTimeout(async () => {
+      try {
+        await sessionApi.saveAssembly({
+          challengeId,
+          assemblyOrder: order,
+          assembledCode: code,
+        });
+      } catch (err) {
+        console.warn('[ChallengeContext] Failed to persist assembly to server:', err.message);
+      }
+    }, 600);
+  }, [challengeId]);
 
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.PHASE, phase); }, [phase]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.CHALLENGE_SESSION, { challengeId, language }); }, [challengeId, language]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.LANGUAGE_LOCKED, languageLocked); }, [languageLocked]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.COLLECTED_FRAGMENTS, collectedFragments); }, [collectedFragments]);
-  useEffect(() => { localStorageService.set('mc_collected_fragment_ids', collectedFragmentIds); }, [collectedFragmentIds]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.SHUFFLED_VAULT, shuffledVaultOrder); }, [shuffledVaultOrder]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.ASSEMBLY_ORDER, assemblyOrder); }, [assemblyOrder]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.PENALTY_SECONDS, penaltySeconds); }, [penaltySeconds]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.QUIZ_ATTEMPTS, quizAttempts); }, [quizAttempts]);
-  useEffect(() => { localStorageService.set(STORAGE_KEYS.SUBMISSION_ATTEMPTS, submissionAttempts); }, [submissionAttempts]);
-  useEffect(() => { if (finalResult) localStorageService.set(STORAGE_KEYS.FINAL_RESULT, finalResult); }, [finalResult]);
-  useEffect(() => { localStorageService.set('mc_completed_task_ids', completedTaskIds); }, [completedTaskIds]);
-  useEffect(() => { localStorageService.set('mc_current_task_index', currentTaskIndex); }, [currentTaskIndex]);
+  // ── Actions ──
 
-  // ── cooldown ticker ──
-  useEffect(() => {
-    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
-    if (taskCooldownRemaining <= 0) return;
-    cooldownTimerRef.current = setInterval(() => {
-      setTaskCooldownRemaining((prev) => {
-        const next = prev - 1;
-        if (next <= 0) {
-          clearInterval(cooldownTimerRef.current);
-          return 0;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(cooldownTimerRef.current);
-  }, [taskCooldownRemaining]);
-
-  // ─── actions ────────────────────────────────────────────────────────
-
-  /** Pick language (only before first task answered) */
   const selectLanguage = useCallback((lang) => {
     if (languageLocked) return;
     setLanguage(lang);
   }, [languageLocked]);
 
-  /**
-   * Start the challenge: call server to start session, get first task.
-   * This replaces the old client-side startChallenge.
-   */
   const startChallenge = useCallback(async (selectedChalId) => {
     const targetId = selectedChalId || challengeId;
-    const now = Date.now();
+    clearCompetitionStorage();
 
     try {
-      const res = await challengeApi.startSession(targetId, language);
-      if (res.success) {
+      const res = await sessionApi.startSession({ challengeId: targetId, language });
+      if (res.success && res.session) {
         setChallengeId(targetId);
-        setStartTime(now);
-        localStorageService.set(STORAGE_KEYS.START_TIME, now);
-        setPhase('HUNT');
+        setServerSession(res.session);
+        setStartTime(res.session.startTime);
         setLanguageLocked(false);
-        setCollectedFragments([]);
-        setCollectedFragmentIds([]);
+        setCollectedFragments(res.session.scannedBlocks || []);
+        setCollectedFragmentIds((res.session.scannedBlocks || []).map((b) => b.blockId || b._id));
         setShuffledVaultOrder([]);
-        setAssemblyOrder([]);
-        setPenaltySeconds(res.session?.totalPenaltySeconds || 0);
+        setAssemblyOrder(res.session.assemblyOrder || []);
+        setPenaltySeconds(0);
         setQuizAttempts(0);
         setSubmissionAttempts(0);
         setFinalResult(null);
         setCompileOutput(null);
         setIsTimeExpired(false);
-        setAllTasksCompleted(false);
-        setLastQuizExplain('');
-        setLastQuizCorrect(null);
-        setTaskCooldownRemaining(0);
 
-        // Set server state
-        setServerSession(res);
-        setCurrentTask(res.currentTask);
-        setTotalTasks(res.totalTasks || 0);
-        setCompletedTaskIds(res.session?.completedTaskIds || []);
-        setCurrentTaskIndex(res.session?.currentTaskIndex || 0);
+        // Fetch task-based progression from server
+        try {
+          const taskRes = await challengeApi.startSession(targetId, language);
+          if (taskRes && taskRes.success) {
+            if (taskRes.currentTask) setCurrentTask(taskRes.currentTask);
+            if (taskRes.totalTasks) setTotalTasks(taskRes.totalTasks);
+            if (taskRes.completedTaskIds) setCompletedTaskIds(taskRes.completedTaskIds);
+            if (taskRes.currentTaskIndex !== undefined) setCurrentTaskIndex(taskRes.currentTaskIndex);
+            if (taskRes.allTasksCompleted) setAllTasksCompleted(true);
+          }
+        } catch (tErr) {
+          console.warn('[ChallengeContext] Task progression notice:', tErr.message);
+        }
 
-        // If session already has unlocked blocks (resume), load them
-        if (res.session?.unlockedBlocks?.length > 0) {
-          setCollectedFragments(res.session.unlockedBlocks);
-          setCollectedFragmentIds(res.session.unlockedBlocks.map((b) => b.blockId));
+        // If blocks were already unlocked from previous session
+        if (res.session.scannedBlocks?.length > 0) {
           setLanguageLocked(true);
+        }
+
+        // If challenge has tasks, start in HUNT. If 0 tasks, enter ASSEMBLE
+        const chalTasks = activeChallengeInfo?.tasks || [];
+        if (chalTasks.length === 0) {
+          setPhase('ASSEMBLE');
+        } else {
+          setPhase('HUNT');
         }
       }
     } catch (err) {
-      console.error('[ChallengeContext] startChallenge error:', err);
-      // Fallback: start locally
+      if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
+        const msg = err.response.data.message || 'Complete previous tiers first to unlock this challenge.';
+        setLockedNotice(msg);
+        throw err;
+      }
+      console.error('[ChallengeContext] startSession error:', err);
       setChallengeId(targetId);
-      setStartTime(now);
-      localStorageService.set(STORAGE_KEYS.START_TIME, now);
+      setStartTime(new Date().toISOString());
       setPhase('HUNT');
     }
-  }, [challengeId, language]);
+  }, [challengeId, language, activeChallengeInfo]);
 
-  /**
-   * Try to recover session on mount (if phase is HUNT and we have a challengeId)
-   */
-  useEffect(() => {
-    if (phase !== 'HUNT' && phase !== 'ASSEMBLE') return;
-    if (!challengeId) return;
-
-    let cancelled = false;
-
-    const recover = async () => {
-      try {
-        const res = await challengeApi.getProgress(challengeId);
-        if (cancelled) return;
-        if (res.success && res.hasSession) {
-          setServerSession(res);
-          setCurrentTask(res.currentTask);
-          setTotalTasks(res.session?.totalTasks || res.challenge?.totalTasks || 0);
-          setCompletedTaskIds(res.session?.completedTaskIds || []);
-          setCurrentTaskIndex(res.session?.currentTaskIndex || 0);
-          setAllTasksCompleted(res.allTasksCompleted || false);
-          setPenaltySeconds(res.session?.totalPenaltySeconds || 0);
-
-          if (res.unlockedBlocks?.length > 0) {
-            setCollectedFragments(res.unlockedBlocks);
-            setCollectedFragmentIds(res.unlockedBlocks.map((b) => b.blockId));
-            if (res.unlockedBlocks.length > 0) setLanguageLocked(true);
-          }
-
-          if (res.cooldownRemaining > 0) {
-            setTaskCooldownRemaining(res.cooldownRemaining);
-          }
-
-          // Auto-transition to ASSEMBLE if all tasks done
-          if (res.allTasksCompleted && phase === 'HUNT') {
-            setPhase('ASSEMBLE');
-          }
-        }
-      } catch (err) {
-        console.warn('[ChallengeContext] Session recovery skipped:', err.message);
+  const scanQRCode = useCallback(async (qrCode) => {
+    if (!challengeId) return null;
+    try {
+      const res = await qrApi.scanBlock({ qrCode, challengeId });
+      if (res.success && res.block) {
+        setCollectedFragments((prev) => {
+          const exists = prev.some((b) => (b.blockId || b._id) === (res.block.blockId || res.block._id));
+          return exists ? prev : [...prev, res.block];
+        });
+        setCollectedFragmentIds((prev) => {
+          const id = res.block.blockId || res.block._id;
+          return prev.includes(id) ? prev : [...prev, id];
+        });
+        setLanguageLocked(true);
+        return res.block;
       }
-    };
+    } catch (err) {
+      console.error('[ChallengeContext] scanQRCode error:', err);
+      throw err;
+    }
+    return null;
+  }, [challengeId]);
 
-    recover();
-    return () => { cancelled = true; };
-  }, []); // Only on mount
-
-  /**
-   * Submit quiz answer to server.
-   * Returns { correct, explain, penalty?, cooldown?, unlockedBlock? }
-   */
   const submitQuizAnswer = useCallback(async (answer) => {
     if (taskSubmitting || taskCooldownRemaining > 0) {
       return { correct: false, explain: 'Please wait...' };
     }
-
     setTaskSubmitting(true);
     setLastQuizCorrect(null);
     setLastQuizExplain('');
@@ -368,132 +390,111 @@ export function ChallengeProvider({ children }) {
       setQuizAttempts((prev) => prev + 1);
 
       if (res.correct) {
-        // Lock language after first correct answer
         if (!languageLocked) setLanguageLocked(true);
-
         setLastQuizCorrect(true);
         setLastQuizExplain(res.explain || '');
 
-        // Add unlocked block
         if (res.unlockedBlock) {
           setCollectedFragments((prev) => {
-            if (prev.find((f) => f.blockId === res.unlockedBlock.blockId)) return prev;
+            if (prev.find((f) => (f.blockId || f._id) === (res.unlockedBlock.blockId || res.unlockedBlock._id))) return prev;
             return [...prev, res.unlockedBlock];
           });
           setCollectedFragmentIds((prev) => {
-            if (prev.includes(res.unlockedBlock.blockId)) return prev;
-            return [...prev, res.unlockedBlock.blockId];
+            const id = res.unlockedBlock.blockId || res.unlockedBlock._id;
+            return prev.includes(id) ? prev : [...prev, id];
           });
         }
 
-        // Update task state
         setCompletedTaskIds(res.completedTaskIds || []);
         setCurrentTaskIndex(res.currentTaskIndex || 0);
         setCurrentTask(res.nextTask || null);
         setAllTasksCompleted(res.allTasksCompleted || false);
         setPenaltySeconds(res.totalPenaltySeconds || 0);
 
-        // Transition to ASSEMBLE if all tasks done
         if (res.allTasksCompleted) {
-          // Also set all unlocked blocks from server
           if (res.unlockedBlocks) {
             setCollectedFragments(res.unlockedBlocks);
-            setCollectedFragmentIds(res.unlockedBlocks.map((b) => b.blockId));
+            setCollectedFragmentIds(res.unlockedBlocks.map((b) => b.blockId || b._id));
           }
           setTimeout(() => setPhase('ASSEMBLE'), 600);
         }
 
         return { correct: true, explain: res.explain || '', unlockedBlock: res.unlockedBlock };
       } else {
-        // Wrong answer: keep current task and question, apply only -penalty (no cooldown)
         setLastQuizCorrect(false);
-        setLastQuizExplain(res.explain || 'Incorrect. Please try again!');
+        setLastQuizExplain(res.explain || 'Incorrect answer. Please review logic and try again.');
         setPenaltySeconds(res.totalPenaltySeconds ?? (penaltySeconds + (res.penalty || 20)));
-        setTaskCooldownRemaining(0);
-
         return {
           correct: false,
-          explain: res.explain || 'Incorrect. Please try again!',
+          explain: res.explain || 'Incorrect answer. Please review logic and try again.',
           penalty: res.penalty || 20,
-          cooldown: 0,
         };
       }
     } catch (err) {
-      console.error('[ChallengeContext] submitQuizAnswer error:', err);
-      // Handle cooldown errors
-      if (err.response?.status === 429) {
-        const cooldown = err.response?.data?.cooldownRemaining || 3;
-        setTaskCooldownRemaining(cooldown);
-        return { correct: false, explain: 'Cooldown active. Please wait.', cooldown };
+      if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
+        setLockedNotice(err.response.data.message || 'This challenge is locked.');
       }
-      return { correct: false, explain: 'Server error. Please try again.' };
+      return { correct: false, explain: err.response?.data?.message || 'Server error. Please try again.' };
     } finally {
       setTaskSubmitting(false);
     }
   }, [challengeId, taskSubmitting, taskCooldownRemaining, languageLocked, penaltySeconds]);
 
-  /** Reorder assembly board by swapping two indices */
   const reorderAssembly = useCallback((sourceIdx, destIdx) => {
     setAssemblyOrder((prev) => {
       if (
         sourceIdx < 0 || sourceIdx >= prev.length ||
         destIdx < 0   || destIdx   >= prev.length
       ) return prev;
-      const result = [...prev];
-      const [removed] = result.splice(sourceIdx, 1);
-      result.splice(destIdx, 0, removed);
-      return result;
+      const next = [...prev];
+      const [removed] = next.splice(sourceIdx, 1);
+      next.splice(destIdx, 0, removed);
+
+      const newFragments = next.map((id) => fragmentMap[id]).filter(Boolean);
+      const newCode = combineFragments(newFragments);
+      syncAssemblyToServer(next, newCode);
+
+      return next;
     });
-  }, []);
+  }, [fragmentMap, syncAssemblyToServer]);
 
-  /** Reset assembly board to the seeded shuffle */
   const resetAssemblyOrder = useCallback(() => {
-    setAssemblyOrder([...shuffledVaultOrder]);
-  }, [shuffledVaultOrder]);
+    const next = [...shuffledVaultOrder];
+    setAssemblyOrder(next);
+    const newFragments = next.map((id) => fragmentMap[id]).filter(Boolean);
+    const newCode = combineFragments(newFragments);
+    syncAssemblyToServer(next, newCode);
+  }, [shuffledVaultOrder, fragmentMap, syncAssemblyToServer]);
 
-  // ─── execution ──────────────────────────────────────────────────────
+  // ── Execution (Real backend / Judge0) ──
 
   const executeCode = useCallback(async (customInput = null) => {
     setIsCompiling(true);
     setCompileOutput(null);
     try {
       const inputToUse = customInput ?? challenge.sampleInput ?? '';
-
-      if (!USE_MOCK_JUDGE) {
-        try {
-          const apiRes = await apiRunCode(language, assembledCode, inputToUse);
-          if (apiRes && (apiRes.success || apiRes.status)) {
-            setCompileOutput(apiRes);
-            return apiRes;
-          }
-        } catch (_) {
-          // fall through to mock
-        }
-      }
-
-      const result = await mockRunCode({
-        language,
-        sourceCode: assembledCode,
-        input: inputToUse,
-        challenge: currentChallenge,
-        assemblyOrder: assemblyFragments,
-        langFragments: currentChallenge.languages?.[language]?.fragments || [],
-        acceptedOrders: currentChallenge.languages?.[language]?.acceptedOrders || [],
-      });
-      setCompileOutput(result);
-      return result;
+      const apiRes = await apiRunCode(language, assembledCode, inputToUse);
+      setCompileOutput(apiRes);
+      return apiRes;
     } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
+        setLockedNotice(err.response.data.message || 'This challenge is locked.');
+      }
       const fallback = {
-        success: false, status: 'Error',
-        stdout: '', stderr: 'Unable to execute. Please try again.',
-        compileOutput: '', executionTime: '0.00s', memory: '0.0 MB',
+        success: false,
+        status: 'Error',
+        stdout: '',
+        stderr: err.response?.data?.message || err.message || 'Execution error.',
+        compileOutput: '',
+        executionTime: '0.00s',
+        memory: '0.0 MB',
       };
       setCompileOutput(fallback);
       return fallback;
     } finally {
       setIsCompiling(false);
     }
-  }, [language, assembledCode, assemblyFragments, currentChallenge, challenge]);
+  }, [language, assembledCode, challenge.sampleInput]);
 
   const submitSolution = useCallback(async (participant) => {
     if (submittingRef.current) return null;
@@ -502,39 +503,24 @@ export function ChallengeProvider({ children }) {
     setSubmissionAttempts((prev) => prev + 1);
 
     try {
-      let outcome = null;
+      // First ensure the server has the latest assembly
+      await sessionApi.saveAssembly({
+        challengeId,
+        assemblyOrder,
+        assembledCode,
+      });
 
-      if (!USE_MOCK_JUDGE) {
-        try {
-          const apiRes = await apiSubmitSolution(language, assembledCode, challengeId);
-          if (apiRes && apiRes.status) outcome = apiRes;
-        } catch (_) {
-          // fall through to mock
-        }
-      }
-
-      if (!outcome) {
-        outcome = await mockJudgeSubmission({
-          language,
-          sourceCode: assembledCode,
-          challenge: currentChallenge,
-          assemblyOrder: assemblyFragments,
-          langFragments: currentChallenge.languages?.[language]?.fragments || [],
-          acceptedOrders: currentChallenge.languages?.[language]?.acceptedOrders || [],
-        });
-      }
-
-      const elapsedSeconds = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
-      const rankingTime = elapsedSeconds + penaltySeconds;
+      const outcome = await apiSubmitSolution(language, assembledCode, challengeId);
+      const isAccepted = outcome.status === 'ACCEPTED' || outcome.success;
 
       const record = {
         ...outcome,
-        passed: outcome.status === 'ACCEPTED' || outcome.success,
-        finalScore: outcome.score || (outcome.status === 'ACCEPTED' ? (challenge.points || 100) : 0),
-        score: outcome.score || (outcome.status === 'ACCEPTED' ? (challenge.points || 100) : 0),
-        participantName: participant?.name || 'Participant',
-        participantId: participant?.participantId || 'MC-CONTESTANT',
-        challengeId: challengeId,
+        passed: isAccepted,
+        finalScore: outcome.score || (isAccepted ? challenge.points : 0),
+        score: outcome.score || (isAccepted ? challenge.points : 0),
+        participantName: participant?.name || '',
+        participantId: participant?.participantId || '',
+        challengeId,
         challengeTitle: challenge.title,
         language,
         timestamp: new Date().toISOString(),
@@ -542,39 +528,38 @@ export function ChallengeProvider({ children }) {
         penaltySeconds,
         fragmentCount: collectedFragments.length,
         quizAttempts,
-        rankingTime,
       };
 
-      if (record.passed) {
+      if (isAccepted) {
         setFinalResult(record);
         setPhase('DONE');
       }
       return record;
     } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
+        setLockedNotice(err.response.data.message || 'This challenge is locked.');
+      }
       return {
-        success: false, status: 'WRONG_ANSWER',
+        success: false,
+        status: 'WRONG_ANSWER',
         title: '⚠️ EVALUATION ERROR',
-        message: 'Unable to evaluate submission. Please try again.',
-        passedCount: 0, totalCount: 3, testResults: [],
-        executionTime: '0.00s', memory: '0.0 MB',
+        message: err.response?.data?.message || 'Unable to evaluate submission.',
+        passedCount: 0,
+        totalCount: 3,
+        testResults: [],
+        executionTime: '0.00s',
+        memory: '0.0 MB',
       };
     } finally {
       setIsValidating(false);
       submittingRef.current = false;
     }
-  }, [
-    language, assembledCode, assemblyFragments, currentChallenge, challenge,
-    challengeId, startTime, penaltySeconds, quizAttempts, submissionAttempts,
-    collectedFragments,
-  ]);
+  }, [challengeId, assemblyOrder, assembledCode, language, challenge.points, challenge.title, submissionAttempts, penaltySeconds, collectedFragments.length, quizAttempts]);
 
   const handleTimeExpired = useCallback(() => setIsTimeExpired(true), []);
 
   const resetAll = useCallback(() => {
-    localStorageService.clearAllChallengeData();
-    localStorageService.remove('mc_completed_task_ids');
-    localStorageService.remove('mc_current_task_index');
-    localStorageService.remove('mc_collected_fragment_ids');
+    clearCompetitionStorage();
     setPhase('SETUP');
     setStartTime(null);
     setLanguageLocked(false);
@@ -599,9 +584,6 @@ export function ChallengeProvider({ children }) {
     setTaskCooldownRemaining(0);
   }, []);
 
-  /**
-   * Select a challenge to solve: resets prior session state and prepares new challenge
-   */
   const selectChallenge = useCallback((newId) => {
     if (!newId) return;
     setChallengeId(newId);
@@ -627,23 +609,15 @@ export function ChallengeProvider({ children }) {
     setLastQuizExplain('');
     setLastQuizCorrect(null);
     setLanguageLocked(false);
+    clearCompetitionStorage();
+  }, []);
 
-    localStorageService.clearAllChallengeData();
-    localStorageService.remove('mc_completed_task_ids');
-    localStorageService.remove('mc_current_task_index');
-    localStorageService.remove('mc_collected_fragment_ids');
-    localStorageService.set(STORAGE_KEYS.PHASE, 'SETUP');
-    localStorageService.set(STORAGE_KEYS.CHALLENGE_SESSION, { challengeId: newId, language });
-  }, [language]);
-
-  // ── langConfig compat layer ──
   const langConfig = useMemo(() => {
-    // Build a compat structure for components that still reference langConfig
     return {
       fragments: collectedFragments.map((f) => ({
-        id: f.blockId,
-        code: f.code,
-        role: f.role,
+        id: f.blockId || f._id,
+        code: f.code || f.codeSnippet || '',
+        role: f.type || f.role || 'LOGIC',
       })),
     };
   }, [collectedFragments]);
@@ -653,7 +627,7 @@ export function ChallengeProvider({ children }) {
       value={{
         // challenge
         challenge,
-        challenges: CHALLENGES,
+        challenges,
         setChallengeId,
         selectChallenge,
 
@@ -670,7 +644,7 @@ export function ChallengeProvider({ children }) {
         // phase
         phase,
 
-        // ── SERVER-DRIVEN TASK STATE ──
+        // task state
         currentTask,
         allTasksCompleted,
         totalTasks,
@@ -682,12 +656,13 @@ export function ChallengeProvider({ children }) {
         lastQuizCorrect,
         taskSubmitting,
 
-        // fragments (blocks)
+        // fragments
         collectedFragments,
         collectedFragmentIds,
         fragmentMap,
         shuffledVaultOrder,
         totalFragments,
+        scanQRCode,
 
         // assembly
         assemblyOrder,
@@ -701,7 +676,6 @@ export function ChallengeProvider({ children }) {
         penaltySeconds,
         quizAttempts,
         submissionAttempts,
-        // compat aliases
         attempts: submissionAttempts,
 
         // execution
@@ -716,29 +690,23 @@ export function ChallengeProvider({ children }) {
         isTimeExpired,
         handleTimeExpired,
         resetAll,
+        lockedNotice,
+        setLockedNotice,
 
-        // ── legacy aliases ──
+        // aliases for backward compatibility
         unlockedBlocks: collectedFragments.map((f) => ({
-          id: f.blockId,
-          code: f.code,
-          role: f.role,
-          blockId: f.blockId,
+          id: f.blockId || f._id,
+          code: f.code || f.codeSnippet || '',
+          role: f.type || f.role || 'LOGIC',
+          blockId: f.blockId || f._id,
         })),
         assemblyBlocks: assemblyFragments,
         reorderAssemblyBlocks: reorderAssembly,
         removeAssemblyBlock: () => {},
         addBlockToAssembly: () => false,
         revealNextBlock: async () => null,
-        unlockQR: () => null,
-        scannedQRIds: [],
-
-        // legacy chest compat (no-op)
-        chestStates: {},
-        activeChestId: null,
-        setActiveChestId: () => {},
-        activeChestQuiz: null,
-        openChest: () => null,
-        cooldownRemaining: taskCooldownRemaining,
+        unlockQR: scanQRCode,
+        scannedQRIds: collectedFragmentIds,
       }}
     >
       {children}

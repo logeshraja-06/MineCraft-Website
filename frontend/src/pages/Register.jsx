@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useParticipant } from '../context/ParticipantContext';
+<<<<<<< HEAD
 import { User, Mail, Phone, Building2, BookOpen, GraduationCap, ArrowRight } from 'lucide-react';
 import api from '../services/api';
+=======
+import Button from '../components/common/Button';
+import { UserCheck, AlertCircle } from 'lucide-react';
+>>>>>>> 4ef53940a45ad1dae46ac557bfb879ce57d6bbf5
 
 export default function Register() {
   const { registerParticipant, participant } = useParticipant();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get('redirect');
 
   const [form, setForm] = useState({
     fullName: participant?.name || '',
@@ -20,14 +23,24 @@ export default function Register() {
   });
 
   const [errors, setErrors] = useState({});
+<<<<<<< HEAD
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
     const errs = {};
     if (!form.fullName.trim()) errs.fullName = 'Full Name is required';
+=======
+  const [serverError, setServerError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim()) errs.name = 'Full name is required';
+    if (!form.participantId.trim()) errs.participantId = 'Participant ID is required';
+>>>>>>> 4ef53940a45ad1dae46ac557bfb879ce57d6bbf5
     if (!form.email.trim()) {
       errs.email = 'Email address is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       errs.email = 'Invalid email format';
     }
     if (!form.phone.trim()) errs.phone = 'Phone / WhatsApp Number is required';
@@ -39,7 +52,9 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError(null);
     if (!validate()) return;
+<<<<<<< HEAD
     
     setIsSubmitting(true);
     // registerParticipant context expects name and other fields
@@ -70,13 +85,31 @@ export default function Register() {
       // Continue even if backend call fails to allow testing flow
     } finally {
       setIsSubmitting(false);
+=======
+
+    try {
+      setSubmitting(true);
+      await registerParticipant({
+        name: form.name.trim(),
+        participantId: form.participantId.trim().toUpperCase(),
+        email: form.email.trim().toLowerCase(),
+        college: form.college.trim(),
+        department: form.department.trim(),
+      });
+      navigate('/rules');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Registration failed. Please check your credentials.';
+      setServerError(msg);
+    } finally {
+      setSubmitting(false);
+>>>>>>> 4ef53940a45ad1dae46ac557bfb879ce57d6bbf5
     }
-    navigate(redirectUrl || '/challenges');
   };
 
   const years = ['1st Year', '2nd Year', '3rd Year', 'Final Year'];
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-slate-50 flex items-center justify-center py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[550px] w-full bg-white rounded-[2rem] shadow-xl shadow-orange-100/50 border border-orange-100/50 p-6 sm:p-8 relative overflow-hidden">
         
@@ -87,10 +120,24 @@ export default function Register() {
           </h2>
           <p className="text-slate-500 text-[14px]">
             Fill in your details to register for Mind Craft.
+=======
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 font-mono">
+      <div className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-2xl shadow-xl space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 mx-auto rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#F28C0F]">
+            <UserCheck className="w-6 h-6" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-wide">
+            Participant Registration
+          </h2>
+          <p className="text-xs text-slate-600">
+            Enter your competition credentials to unlock the challenge portal
+>>>>>>> 4ef53940a45ad1dae46ac557bfb879ce57d6bbf5
           </p>
           <div className="w-16 h-1 bg-[#FFBE4D] mt-2 rounded-full"></div>
         </div>
 
+<<<<<<< HEAD
         <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
           
           {/* Full Name */}
@@ -114,10 +161,47 @@ export default function Register() {
               <Mail className="w-4 h-4" strokeWidth={2.5} /> 
               <span>Email ID <span className="text-red-500">*</span></span>
             </label>
+=======
+        {serverError && (
+          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+            <span>{serverError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <div>
+            <label className="block uppercase font-bold text-slate-700 mb-1">Participant Name *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Full name"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#F28C0F]"
+            />
+            {errors.name && <p className="text-rose-500 text-[10px] mt-1">{errors.name}</p>}
+          </div>
+
+          <div>
+            <label className="block uppercase font-bold text-slate-700 mb-1">Participant ID *</label>
+            <input
+              type="text"
+              value={form.participantId}
+              onChange={(e) => setForm({ ...form, participantId: e.target.value.toUpperCase() })}
+              placeholder="e.g. MC-101"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#F28C0F] uppercase font-bold tracking-wider"
+            />
+            {errors.participantId && <p className="text-rose-500 text-[10px] mt-1">{errors.participantId}</p>}
+          </div>
+
+          <div>
+            <label className="block uppercase font-bold text-slate-700 mb-1">Email Address *</label>
+>>>>>>> 4ef53940a45ad1dae46ac557bfb879ce57d6bbf5
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+<<<<<<< HEAD
               placeholder="Enter your email address"
               className={`w-full px-4 py-2.5 bg-[#FAFAFA] border ${errors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-[#FFBE4D] focus:ring-[#FFBE4D]/20'} rounded-xl text-slate-800 placeholder:text-gray-400 text-[14px] focus:outline-none focus:ring-4 transition-all`}
             />
@@ -232,6 +316,44 @@ export default function Register() {
               {isSubmitting ? 'Registering...' : 'Register Now'} 
               <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
             </button>
+=======
+              placeholder="you@college.edu"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#F28C0F]"
+            />
+            {errors.email && <p className="text-rose-500 text-[10px] mt-1">{errors.email}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block uppercase font-bold text-slate-700 mb-1">College *</label>
+              <input
+                type="text"
+                value={form.college}
+                onChange={(e) => setForm({ ...form, college: e.target.value })}
+                placeholder="e.g. University Name"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#F28C0F]"
+              />
+              {errors.college && <p className="text-rose-500 text-[10px] mt-1">{errors.college}</p>}
+            </div>
+
+            <div>
+              <label className="block uppercase font-bold text-slate-700 mb-1">Department *</label>
+              <input
+                type="text"
+                value={form.department}
+                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                placeholder="e.g. CSE / IT"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#F28C0F]"
+              />
+              {errors.department && <p className="text-rose-500 text-[10px] mt-1">{errors.department}</p>}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Button type="submit" variant="primary" className="w-full font-bold bg-[#F28C0F] hover:bg-orange-500 text-slate-950" disabled={submitting}>
+              {submitting ? 'REGISTERING...' : 'CONTINUE TO RULES →'}
+            </Button>
+>>>>>>> 4ef53940a45ad1dae46ac557bfb879ce57d6bbf5
           </div>
           
         </form>

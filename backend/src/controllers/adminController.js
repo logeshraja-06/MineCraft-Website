@@ -7,9 +7,14 @@ const Submission = require('../models/Submission');
 const ParticipantSession = require('../models/ParticipantSession');
 const Settings = require('../models/Settings');
 const { generateCodeBlocks } = require('../services/challenge/codeBlockSplitter');
-const { getLeaderboardData } = require('../services/leaderboard/leaderboardService');
+const { getLeaderboardData, freezeLeaderboard } = require('../services/leaderboard/leaderboardService');
 const { generateExcelReport } = require('../services/reports/excelExportService');
 const { generatePdfReport } = require('../services/reports/pdfExportService');
+const XLSX = require('xlsx');
+const bcrypt = require('bcryptjs');
+const QRCode = require('qrcode');
+const { generateQRToken } = require('../services/qr/qrValidation');
+
 
 const findAdminChallenge = async (idOrSlug) => {
   if (!idOrSlug) return null;
@@ -196,8 +201,45 @@ exports.getChallengeById = asyncHandler(async (req, res) => {
   });
 });
 
+const ALLOWED_CHALLENGE_FIELDS = [
+  'title', 'slug', 'description', 'category', 'difficulty', 'points',
+  'timeLimitSeconds', 'duration', 'sampleInput', 'sampleOutput',
+  'supportedLanguages', 'sourceLanguage', 'sourceCode', 'splitStrategy',
+  'blockConfig', 'tasks', 'status', 'isActive', 'tags', 'sequenceOrder',
+];
+
+function filterChallengeFields(body) {
+  const clean = {};
+  ALLOWED_CHALLENGE_FIELDS.forEach((field) => {
+    if (body[field] !== undefined) clean[field] = body[field];
+  });
+  return clean;
+}
+
 exports.createChallenge = asyncHandler(async (req, res) => {
-  const { blocks, testCases, ...challengeData } = req.body;
+  const { blocks, testCases } = req.body || {};
+  const challengeData = filterChallengeFields(req.body || {});
+
+  // Validate sequenceOrder if supplied
+  if (challengeData.sequenceOrder !== undefined && challengeData.sequenceOrder !== null && challengeData.sequenceOrder !== '') {
+    const seq = Number(challengeData.sequenceOrder);
+    if (![1, 2, 3].includes(seq)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sequence position must be 1 (Easy), 2 (Medium), or 3 (Hard)',
+      });
+    }
+    const duplicate = await Challenge.findOne({ sequenceOrder: seq });
+    if (duplicate) {
+      return res.status(400).json({
+        success: false,
+        message: `Sequence position ${seq} is already assigned to challenge "${duplicate.title}"`,
+      });
+    }
+    challengeData.sequenceOrder = seq;
+  } else {
+    challengeData.sequenceOrder = null;
+  }
 
   // Auto-generate slug if missing
   if (!challengeData.slug && challengeData.title) {
@@ -208,6 +250,7 @@ exports.createChallenge = asyncHandler(async (req, res) => {
   }
 
   const challenge = await Challenge.create(challengeData);
+
 
   // If blocks are provided explicitly or generated from sourceCode
   if (Array.isArray(blocks) && blocks.length > 0) {
@@ -269,14 +312,42 @@ exports.createChallenge = asyncHandler(async (req, res) => {
 });
 
 exports.updateChallenge = asyncHandler(async (req, res) => {
-  const { blocks, testCases, ...updateData } = req.body;
+  const { blocks, testCases } = req.body || {};
+  const updateData = filterChallengeFields(req.body || {});
 
   const existing = await findAdminChallenge(req.params.id);
   if (!existing) {
     return res.status(404).json({ success: false, message: 'Challenge not found' });
   }
 
+  // Validate sequenceOrder if supplied
+  if (updateData.sequenceOrder !== undefined) {
+    if (updateData.sequenceOrder === null || updateData.sequenceOrder === '' || updateData.sequenceOrder === 'none') {
+      updateData.sequenceOrder = null;
+    } else {
+      const seq = Number(updateData.sequenceOrder);
+      if (![1, 2, 3].includes(seq)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Sequence position must be 1 (Easy), 2 (Medium), or 3 (Hard)',
+        });
+      }
+      const duplicate = await Challenge.findOne({
+        sequenceOrder: seq,
+        _id: { $ne: existing._id },
+      });
+      if (duplicate) {
+        return res.status(400).json({
+          success: false,
+          message: `Sequence position ${seq} is already assigned to challenge "${duplicate.title}"`,
+        });
+      }
+      updateData.sequenceOrder = seq;
+    }
+  }
+
   const challenge = await Challenge.findByIdAndUpdate(existing._id, updateData, { new: true });
+
   if (!challenge) {
     return res.status(404).json({ success: false, message: 'Challenge not found' });
   }
@@ -528,11 +599,13 @@ exports.getParticipants = asyncHandler(async (req, res) => {
     userFilter.$or = [
       { name: { $regex: search, $options: 'i' } },
       { email: { $regex: search, $options: 'i' } },
+      { participantId: { $regex: search, $options: 'i' } },
       { teamName: { $regex: search, $options: 'i' } },
+      { college: { $regex: search, $options: 'i' } },
     ];
   }
 
-  const users = await User.find(userFilter);
+  const users = await User.find(userFilter).select('-password');
   const userIds = users.map((u) => u._id);
 
   const [submissions, sessions] = await Promise.all([
@@ -564,11 +637,12 @@ exports.getParticipants = asyncHandler(async (req, res) => {
 
     return {
       _id: u._id,
-      participantId: `MC-${u._id.toString().slice(-4).toUpperCase()}`,
+      participantId: u.participantId || `MC-${u._id.toString().slice(-4).toUpperCase()}`,
       name: u.name,
       email: u.email,
-      college: u.college || 'Engineering Institute',
-      teamName: u.teamName || u.name,
+      college: u.college || '',
+      department: u.department || '',
+      teamName: u.teamName || u.participantId || u.name,
       challengesAttempted: userSessions.length || (userSubs.length > 0 ? 1 : 0),
       challengesCompleted: solvedChallengeIds.size,
       score: totalScore,
@@ -590,7 +664,7 @@ exports.getParticipants = asyncHandler(async (req, res) => {
 });
 
 exports.getParticipantById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select('-password');
   if (!user) {
     return res.status(404).json({ success: false, message: 'Participant not found' });
   }
@@ -639,7 +713,7 @@ exports.getParticipantById = asyncHandler(async (req, res) => {
     success: true,
     participant: {
       ...user.toObject(),
-      participantId: `MC-${user._id.toString().slice(-4).toUpperCase()}`,
+      participantId: user.participantId || `MC-${user._id.toString().slice(-4).toUpperCase()}`,
       stats: {
         totalScore,
         acceptedCount,
@@ -654,7 +728,7 @@ exports.getParticipantById = asyncHandler(async (req, res) => {
 });
 
 exports.toggleParticipantStatus = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select('-password');
   if (!user) {
     return res.status(404).json({ success: false, message: 'Participant not found' });
   }
@@ -856,3 +930,233 @@ exports.updateSettings = asyncHandler(async (req, res) => {
   }
   res.json({ success: true, message: 'Competition settings updated successfully', settings });
 });
+
+/**
+ * Helper to escape CSV values and prevent formula injection (=, +, -, @)
+ */
+function sanitizeCSVCell(val) {
+  if (val === null || val === undefined) return '""';
+  let s = String(val).trim();
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+/**
+ * GET /api/admin/leaderboard/export?format=csv|xlsx
+ * Exports official competition leaderboard results with CSV formula protection.
+ */
+exports.exportLeaderboard = asyncHandler(async (req, res) => {
+  const format = (req.query.format || 'csv').toLowerCase();
+  const rankings = await getLeaderboardData({ forceFresh: true });
+
+  const rows = rankings.map((r) => ({
+    Rank: r.rank,
+    Name: r.name,
+    'Participant ID': r.participantId,
+    College: r.college,
+    Department: r.department,
+    Email: r.email,
+    'Challenges Solved': r.challengesSolved,
+    'Score (marks)': r.score,
+    'Total Time': r.formattedTime || r.timeFormatted || '0m 00s',
+    'Last Submission Time': r.lastSubmissionTime ? new Date(r.lastSubmissionTime).toISOString() : 'N/A',
+  }));
+
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  if (format === 'xlsx') {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Results');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="mindcraft-results-${dateStr}.xlsx"`);
+    return res.send(buffer);
+  }
+
+  // Default: CSV format
+  const headers = [
+    'Rank',
+    'Name',
+    'Participant ID',
+    'College',
+    'Department',
+    'Email',
+    'Challenges Solved',
+    'Score (marks)',
+    'Total Time',
+    'Last Submission Time',
+  ];
+
+  const csvRows = [headers.join(',')];
+  rows.forEach((r) => {
+    csvRows.push([
+      sanitizeCSVCell(r.Rank),
+      sanitizeCSVCell(r.Name),
+      sanitizeCSVCell(r['Participant ID']),
+      sanitizeCSVCell(r.College),
+      sanitizeCSVCell(r.Department),
+      sanitizeCSVCell(r.Email),
+      sanitizeCSVCell(r['Challenges Solved']),
+      sanitizeCSVCell(r['Score (marks)']),
+      sanitizeCSVCell(r['Total Time']),
+      sanitizeCSVCell(r['Last Submission Time']),
+    ].join(','));
+  });
+
+  const csvContent = '\uFEFF' + csvRows.join('\r\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="mindcraft-results-${dateStr}.csv"`);
+  res.send(csvContent);
+});
+
+/**
+ * GET /api/admin/participants/export?format=csv|xlsx
+ * Exports registered participant name list.
+ */
+exports.exportParticipants = asyncHandler(async (req, res) => {
+  const format = (req.query.format || 'csv').toLowerCase();
+  const users = await User.find({
+    role: { $ne: 'admin' },
+    email: { $ne: 'admin@mindcraft.local' },
+  })
+    .select('name participantId college department email createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const rows = users.map((u) => ({
+    Name: u.name,
+    'Participant ID': u.participantId || `MC-${String(u._id).slice(-4).toUpperCase()}`,
+    College: u.college || 'N/A',
+    Department: u.department || 'N/A',
+    Email: u.email,
+    'Registered At': u.createdAt ? new Date(u.createdAt).toISOString() : 'N/A',
+  }));
+
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  if (format === 'xlsx') {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Participants');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="mindcraft-participants-${dateStr}.xlsx"`);
+    return res.send(buffer);
+  }
+
+  const headers = ['Name', 'Participant ID', 'College', 'Department', 'Email', 'Registered At'];
+  const csvRows = [headers.join(',')];
+  rows.forEach((r) => {
+    csvRows.push([
+      sanitizeCSVCell(r.Name),
+      sanitizeCSVCell(r['Participant ID']),
+      sanitizeCSVCell(r.College),
+      sanitizeCSVCell(r.Department),
+      sanitizeCSVCell(r.Email),
+      sanitizeCSVCell(r['Registered At']),
+    ].join(','));
+  });
+
+  const csvContent = '\uFEFF' + csvRows.join('\r\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="mindcraft-participants-${dateStr}.csv"`);
+  res.send(csvContent);
+});
+
+/**
+ * POST /api/admin/leaderboard/freeze
+ * Freeze/unfreeze the public leaderboard.
+ */
+exports.freezeLeaderboardToggle = asyncHandler(async (req, res) => {
+  const { isFrozen = true } = req.body || {};
+  await freezeLeaderboard(!!isFrozen);
+  res.json({
+    success: true,
+    message: isFrozen ? 'Leaderboard is now frozen.' : 'Leaderboard unfrozen (live updates resumed).',
+    isFrozen: !!isFrozen,
+  });
+});
+
+/**
+ * PUT /api/admin/change-password
+ * Allows the logged-in admin to update their password.
+ */
+exports.changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long' });
+  }
+
+  const adminUser = await User.findById(req.user._id);
+  if (!adminUser) {
+    return res.status(404).json({ success: false, message: 'Admin account not found' });
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, adminUser.password);
+  if (!isMatch) {
+    return res.status(400).json({ success: false, message: 'Incorrect current password' });
+  }
+
+  adminUser.password = await bcrypt.hash(newPassword, 10);
+  await adminUser.save();
+
+  res.json({ success: true, message: 'Admin password changed successfully' });
+});
+
+/**
+ * POST /api/admin/challenges/:id/generate-qr
+ * Generates and returns printable QR code tokens and images for a challenge.
+ */
+exports.generateChallengeQRs = asyncHandler(async (req, res) => {
+  const challenge = await findAdminChallenge(req.params.id);
+  if (!challenge) {
+    return res.status(404).json({ success: false, message: 'Challenge not found' });
+  }
+
+  const blocks = await QRBlock.find({
+    $or: [{ challengeId: challenge._id }, { challengeId: challenge.slug }],
+  }).sort({ correctOrder: 1, displayOrder: 1 });
+
+  const qrItems = await Promise.all(
+    blocks.map(async (b) => {
+      const token = b.qrToken || generateQRToken(challenge.slug, b.blockId, b.language);
+      if (!b.qrToken) {
+        b.qrToken = token;
+        await b.save();
+      }
+      const qrDataUrl = await QRCode.toDataURL(token, {
+        errorCorrectionLevel: 'H',
+        width: 300,
+        margin: 2,
+      });
+
+      return {
+        blockId: b.blockId,
+        title: b.title,
+        language: b.language,
+        qrToken: token,
+        qrDataUrl,
+        type: b.type,
+        isDecoy: b.isDecoy,
+        correctOrder: b.correctOrder,
+      };
+    })
+  );
+
+  res.json({
+    success: true,
+    challenge: { id: challenge._id, title: challenge.title, slug: challenge.slug },
+    blocks: qrItems,
+  });
+});
+

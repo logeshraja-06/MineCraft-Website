@@ -45,6 +45,7 @@ export default function ChallengeEdit() {
     timeLimitSeconds: 1200,
     maxAttempts: 5,
     status: 'Published',
+    sequenceOrder: '',
   });
 
   // Section 2: Multi-Language Code Blocks
@@ -78,6 +79,7 @@ export default function ChallengeEdit() {
             timeLimitSeconds: c.timeLimitSeconds || 1200,
             maxAttempts: c.maxAttempts || 5,
             status: c.status || 'Published',
+            sequenceOrder: c.sequenceOrder !== undefined && c.sequenceOrder !== null ? String(c.sequenceOrder) : '',
           });
 
           // Multi-language configs
@@ -264,6 +266,7 @@ export default function ChallengeEdit() {
       const primaryLang = languageConfigs[0];
       const payload = {
         ...basicInfo,
+        sequenceOrder: basicInfo.sequenceOrder ? Number(basicInfo.sequenceOrder) : null,
         supportedLanguages: languageConfigs.map((lc) => lc.language),
         sourceLanguage: primaryLang.language,
         sourceCode: primaryLang.blocks.map((b) => b.code).join('\n'),
@@ -432,7 +435,7 @@ export default function ChallengeEdit() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-slate-600 font-bold">Difficulty</label>
                   <select
@@ -443,6 +446,20 @@ export default function ChallengeEdit() {
                     <option value="Easy">Easy</option>
                     <option value="Medium">Medium</option>
                     <option value="Hard">Hard</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-slate-600 font-bold">Sequence (Roadmap)</label>
+                  <select
+                    value={basicInfo.sequenceOrder || ''}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, sequenceOrder: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:outline-none focus:border-orange-500"
+                  >
+                    <option value="">None (Draft / Hidden)</option>
+                    <option value="1">1 // Easy (First)</option>
+                    <option value="2">2 // Medium (Second)</option>
+                    <option value="3">3 // Hard (Final)</option>
                   </select>
                 </div>
 

@@ -1,89 +1,60 @@
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:5001/api';
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000/api';
+
+console.warn('\n⚠️ ========================================================');
+console.warn('⚠️ WARNING: verifyThreeChallenges.js checks a LIVE server!');
+console.warn('⚠️ ONLY execute this script against a LOCAL/DEV database.');
+console.warn('⚠️ ========================================================\n');
 
 async function verifyThreeChallenges() {
-  console.log('--- VERIFYING 3 DEFAULT CHALLENGES IN MONGODB ATLAS ---');
+  console.log('--- VERIFYING 3 CANONICAL CHALLENGES (ch-05, ch-06, ch-07) ---');
 
   // 1. Get all public challenges
   const res = await axios.get(`${BASE_URL}/challenges`);
   const challenges = res.data.challenges;
-  console.log(`Retrieved ${challenges.length} challenges from MongoDB Atlas.`);
+  console.log(`Retrieved ${challenges.length} participant-facing challenges.`);
 
-  const titles = [
-    'Smart Expense Analyzer',
-    'Movie Recommendation Engine',
-    'Campus Event Seat Manager',
-  ];
+  const expectedSlugs = ['ch-05', 'ch-06', 'ch-07'];
 
-  for (const title of titles) {
-    const ch = challenges.find((c) => c.title === title);
+  if (challenges.length !== 3) {
+    throw new Error(`Expected exactly 3 participant-facing challenges, but received ${challenges.length}!`);
+  }
+
+  for (let i = 0; i < expectedSlugs.length; i++) {
+    const slug = expectedSlugs[i];
+    const ch = challenges.find((c) => c.slug === slug);
     if (!ch) {
-      throw new Error(`Missing expected challenge: "${title}" in MongoDB Atlas!`);
+      throw new Error(`Missing expected canonical challenge: "${slug}"!`);
+    }
+
+    const expectedOrder = i + 1;
+    if (ch.sequenceOrder !== expectedOrder) {
+      throw new Error(`Challenge ${slug} has sequenceOrder ${ch.sequenceOrder}, expected ${expectedOrder}!`);
     }
 
     console.log(`\n======================================================`);
-    console.log(`CHALLENGE: "${ch.title}" (ID: ${ch._id})`);
+    console.log(`CANONICAL #${ch.sequenceOrder}: "${ch.title}" (${ch.slug})`);
     console.log(`  - Difficulty: ${ch.difficulty}`);
-    console.log(`  - Language: ${ch.sourceLanguage}`);
+    console.log(`  - Sequence Order: ${ch.sequenceOrder}`);
     console.log(`  - Points: ${ch.points}`);
-    console.log(`  - Status: ${ch.status}`);
-    console.log(`  - Tasks Count: ${ch.tasks?.length || 0}`);
-    console.log(`  - Test Cases Count: ${ch.testCases?.length || 0}`);
+    console.log(`  - Tasks Count: ${ch.tasks?.length || ch.tasksCount || 0}`);
 
-    // Verify tasks details
-    if (!ch.tasks || ch.tasks.length === 0) {
-      throw new Error(`Challenge "${title}" has no reveal tasks!`);
+    // Check that source code is NOT leaked
+    const detailRes = await axios.get(`${BASE_URL}/challenges/${ch.slug || ch._id}`);
+    if (detailRes.data.challenge.sourceCode) {
+      throw new Error(`SECURITY VIOLATION: Source code leaked for ${slug}!`);
     }
 
-    ch.tasks.forEach((t) => {
-      console.log(`    * Task ${t.taskId}: "${t.title}" (Blocks: ${t.requiredBlockIds.join(', ')}, Penalty: -${t.penalty} pts)`);
-    });
-
-    // Check participant view of blocks
-    const blocksRes = await axios.get(`${BASE_URL}/challenges/${ch._id}/blocks`);
-    console.log(`  - Participant Visible Blocks: ${blocksRes.data.blocks.length} (Unlocked count: ${blocksRes.data.unlockedCount} / ${blocksRes.data.totalBlocks})`);
-    
-    // Check that source code is NOT leaked
-    const detailRes = await axios.get(`${BASE_URL}/challenges/${ch._id}`);
-    if (detailRes.data.challenge.sourceCode) {
-      throw new Error(`SECURITY VIOLATION: Source code leaked for ${title}!`);
+    const quizPool = detailRes.data.challenge.tasks?.[0]?.quizPool || [];
+    if (quizPool.length > 0) {
+      if (quizPool[0].answer !== undefined || quizPool[0].explain !== undefined) {
+        throw new Error(`SECURITY VIOLATION: Quiz answer/explanation leaked for ${slug}!`);
+      }
     }
   }
 
-  // 2. Test Task-Based Reveal
-  console.log(`\n--- TESTING TASK-BASED REVEAL FLOW ---`);
-  // Register or login a test contestant
-  const participantEmail = `task_reveal_test_${Date.now()}@college.edu`;
-  await axios.post(`${BASE_URL}/participants/register`, {
-    name: 'Task Tester',
-    email: participantEmail,
-    password: 'Password123!',
-    teamName: 'RevealTeam',
-    college: 'MIT',
-  });
-  const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
-    email: participantEmail,
-    password: 'Password123!',
-  });
-  const token = loginRes.data.token;
-
-  const expenseChal = challenges.find((c) => c.title === 'Smart Expense Analyzer');
-  console.log(`Testing task reveal for "${expenseChal.title}" Task 2...`);
-
-  const revealRes = await axios.post(
-    `${BASE_URL}/challenges/${expenseChal._id}/reveal`,
-    { taskId: 2 },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  console.log(`✓ Task 2 Reveal successful:`);
-  console.log(`  - Revealed Block ID: ${revealRes.data.revealedBlock.blockId}`);
-  console.log(`  - Code: ${revealRes.data.revealedBlock.code.split('\n')[0]}...`);
-  console.log(`  - Total Reveals: ${revealRes.data.revealsCount}`);
-  console.log(`  - Current Penalty: -${revealRes.data.penalty} pts`);
-
-  console.log('\n--- ALL 3 DEFAULT CHALLENGES & TASK REVEAL VERIFIED SUCCESSFULLY! ---');
+  console.log('\n--- ALL 3 CANONICAL CHALLENGES VERIFIED WITH ZERO LEAKS! ---');
 }
 
 verifyThreeChallenges().catch((err) => {

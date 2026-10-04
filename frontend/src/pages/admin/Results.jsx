@@ -19,6 +19,8 @@ export default function AdminResults() {
   const [loading, setLoading] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingCSV, setDownloadingCSV] = useState(false);
+  const [downloadingParticipants, setDownloadingParticipants] = useState(false);
   const [rankings, setRankings] = useState([]);
   const [toast, setToast] = useState(null);
 
@@ -39,6 +41,30 @@ export default function AdminResults() {
   useEffect(() => {
     fetchSummary();
   }, []);
+
+  const handleExportCSV = async () => {
+    try {
+      setDownloadingCSV(true);
+      await adminApi.exportLeaderboard('csv');
+      setToast({ message: 'Results CSV successfully exported and downloaded!', type: 'success' });
+    } catch (err) {
+      setToast({ message: 'Results CSV export failed', type: 'error' });
+    } finally {
+      setDownloadingCSV(false);
+    }
+  };
+
+  const handleExportParticipants = async () => {
+    try {
+      setDownloadingParticipants(true);
+      await adminApi.exportParticipants('csv');
+      setToast({ message: 'Participant name list (.csv) downloaded successfully!', type: 'success' });
+    } catch (err) {
+      setToast({ message: 'Participant list export failed', type: 'error' });
+    } finally {
+      setDownloadingParticipants(false);
+    }
+  };
 
   const handleDownloadExcel = async () => {
     try {
@@ -76,19 +102,39 @@ export default function AdminResults() {
               OFFICIAL RESULTS & EXPORT SUITE
             </h1>
             <p className="text-xs text-slate-600 mt-1">
-              Generate and stream certified competition reports, multi-sheet Excel scorecards, and formatted PDFs
+              Generate and stream certified competition reports, multi-sheet Excel scorecards, formatted PDFs, and contestant rosters
             </p>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            icon={RefreshCw}
-            onClick={fetchSummary}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Download}
+              onClick={handleExportCSV}
+              disabled={downloadingCSV}
+            >
+              {downloadingCSV ? 'Exporting...' : 'Export Results'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Download}
+              onClick={handleExportParticipants}
+              disabled={downloadingParticipants}
+            >
+              {downloadingParticipants ? 'Downloading...' : 'Download Participant List'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              onClick={fetchSummary}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Download Action Cards */}

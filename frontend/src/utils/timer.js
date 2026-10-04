@@ -14,6 +14,11 @@ export function formatTimeElapsed(seconds = 0) {
 
 export function getRemainingTime(startTime, totalDurationSeconds = 1200) {
   if (!startTime) return totalDurationSeconds;
-  const elapsed = Math.floor((Date.now() - Number(startTime)) / 1000);
+  const startMs = typeof startTime === 'string' || startTime instanceof Date
+    ? new Date(startTime).getTime()
+    : Number(startTime);
+  if (isNaN(startMs)) return totalDurationSeconds;
+  const elapsed = Math.floor((Date.now() - startMs) / 1000);
   return Math.max(0, totalDurationSeconds - elapsed);
 }
+

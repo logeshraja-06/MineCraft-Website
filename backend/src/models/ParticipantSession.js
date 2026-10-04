@@ -5,11 +5,11 @@ const participantSessionSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     challengeId: { type: mongoose.Schema.Types.Mixed, required: true },
 
-    // ── NEW: Language & task progression ──────────────────────────────
+    // Language & progression
     selectedLanguage: { type: String, default: 'python' },
     completedTaskIds: [{ type: String }],
     currentTaskIndex: { type: Number, default: 0 },
-    currentQuizIndex: { type: Number, default: 0 }, // index into current task's quizPool
+    currentQuizIndex: { type: Number, default: 0 },
     taskAttempts: [
       {
         taskId: { type: String },
@@ -21,8 +21,10 @@ const participantSessionSchema = new mongoose.Schema(
       },
     ],
 
-    // ── Existing block tracking ──────────────────────────────────────
-    scannedBlocks: [{ type: mongoose.Schema.Types.Mixed }],
+    // Scanning & Assembly progression
+    scannedBlocks: [{ type: mongoose.Schema.Types.Mixed }], // array of scanned block IDs / objects
+    assemblyOrder: [{ type: String }],                     // block IDs arranged in participant's order
+    assembledCode: { type: String, default: '' },
     revealedBlockIds: [{ type: String }],
     revealsCount: { type: Number, default: 0 },
     revealEvents: [
@@ -33,6 +35,8 @@ const participantSessionSchema = new mongoose.Schema(
         timestamp: { type: Date, default: Date.now },
       },
     ],
+
+    // Timing (server-authoritative)
     startTime: { type: Date, default: Date.now },
     endTime: { type: Date },
     durationSeconds: { type: Number, default: 1200 },
@@ -43,7 +47,7 @@ const participantSessionSchema = new mongoose.Schema(
     wrongAttemptsCount: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ['ACTIVE', 'IDLE', 'COMPLETED', 'DISCONNECTED', 'SUSPICIOUS'],
+      enum: ['ACTIVE', 'IDLE', 'COMPLETED', 'EXPIRED', 'DISCONNECTED', 'SUSPICIOUS'],
       default: 'ACTIVE',
     },
     lastActivityAt: { type: Date, default: Date.now },
@@ -52,4 +56,3 @@ const participantSessionSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('ParticipantSession', participantSessionSchema);
-

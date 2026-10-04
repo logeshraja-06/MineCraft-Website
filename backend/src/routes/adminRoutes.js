@@ -45,13 +45,21 @@ router.get('/submissions/:id', adminController.getSubmissionById);
 
 // Leaderboard
 router.get('/leaderboard', adminController.getLeaderboard);
+router.get('/leaderboard/export', adminController.exportLeaderboard);
+router.post('/leaderboard/freeze', adminController.freezeLeaderboardToggle);
 
 // Reports & Exports (Real files generated)
+router.get('/participants/export', adminController.exportParticipants);
 router.get('/reports/export/excel', adminController.exportExcel);
 router.get('/reports/export/pdf', adminController.exportPdf);
 
-// Settings
+// QR Generation
+router.post('/challenges/:id/generate-qr', adminController.generateChallengeQRs);
+
+// Settings & Security
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
+router.put('/change-password', adminController.changePassword);
 
 module.exports = router;
+

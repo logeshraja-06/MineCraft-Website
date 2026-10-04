@@ -83,6 +83,27 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setError(null);
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('mc_') || k.startsWith('mindcraft_game_'))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (_) {}
+  };
+
+  const setAuthSession = (newToken, newUser) => {
+    if (newToken) {
+      localStorage.setItem('mindcraft_token', newToken);
+      setToken(newToken);
+    }
+    if (newUser) {
+      localStorage.setItem('mindcraft_user', JSON.stringify(newUser));
+      setUser(newUser);
+    }
   };
 
   return (
@@ -97,6 +118,7 @@ export const AuthProvider = ({ children }) => {
         login: handleLogin,
         adminLogin: handleAdminLogin,
         logout: handleLogout,
+        setAuthSession,
       }}
     >
       {children}

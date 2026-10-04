@@ -9,16 +9,19 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=5000
       - NODE_ENV=development
       - MONGO_URI=mongodb://mongo:27017/mindcraft
       - REDIS_URL=redis://redis:6379
       - JUDGE0_URL=http://judge0-server:2358
-      - JWT_SECRET=mindcraft_super_secret_jwt_key_2026
+      - JUDGE0_API_KEY=judge0_secret_api_key_2026
     depends_on:
       - mongo
       - redis
+      - judge0-server
     networks:
       - mindcraft-network
 
@@ -57,9 +60,65 @@ services:
     networks:
       - mindcraft-network
 
+  # Judge0 Sandbox Execution Engine
+  judge0-server:
+    image: judge0/judge0:1.13.0
+    container_name: judge0-server
+    restart: always
+    command: ["./scripts/server"]
+    ports:
+      - "2358:2358"
+    volumes:
+      - ./judge0/judge0.conf:/judge0.conf:ro
+    environment:
+      - AUTH_TOKEN=judge0_secret_api_key_2026
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    networks:
+      - mindcraft-network
+
+  judge0-workers:
+    image: judge0/judge0:1.13.0
+    container_name: judge0-workers
+    restart: always
+    privileged: true
+    command: ["./scripts/workers"]
+    volumes:
+      - ./judge0/judge0.conf:/judge0.conf:ro
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    networks:
+      - mindcraft-network
+
+  judge0-db:
+    image: postgres:13-alpine
+    container_name: judge0-db
+    restart: always
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0password
+      - POSTGRES_DB=judge0
+    volumes:
+      - judge0-postgres-data:/var/lib/postgresql/data
+    networks:
+      - mindcraft-network
+
+  judge0-redis:
+    image: redis:6-alpine
+    container_name: judge0-redis
+    restart: always
+    volumes:
+      - judge0-redis-data:/data
+    networks:
+      - mindcraft-network
+
 volumes:
   mongo-data:
   redis-data:
+  judge0-postgres-data:
+  judge0-redis-data:
 
 networks:
   mindcraft-network:

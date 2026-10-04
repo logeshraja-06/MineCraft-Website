@@ -27,6 +27,7 @@ export default function AdminSettings() {
     leaderboardVisibility: 'Public',
     autoSubmit: true,
     sessionTimeout: 60,
+    enforceProgression: true,
   });
 
   const [loading, setLoading] = useState(true);
@@ -215,6 +216,21 @@ export default function AdminSettings() {
                 />
                 <span className="text-slate-700 font-semibold">Auto-Submit on Timer Expiry</span>
               </label>
+
+              <label className="flex items-start gap-3 cursor-pointer p-3.5 bg-slate-950/80 rounded-xl border border-cyan-800/60 hover:border-cyan-500/70 transition-colors sm:col-span-3">
+                <input
+                  type="checkbox"
+                  checked={settings.enforceProgression ?? true}
+                  onChange={(e) => setSettings({ ...settings, enforceProgression: e.target.checked })}
+                  className="mt-0.5 rounded bg-slate-900 border-cyan-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 cursor-pointer"
+                />
+                <div>
+                  <span className="text-cyan-300 font-bold block text-xs">Enforce Easy → Medium → Hard progression</span>
+                  <span className="text-slate-400 text-[11px] block mt-0.5">
+                    When enabled, participants must solve Easy to unlock Medium, and solve Medium to unlock Hard. When disabled, all challenges are accessible immediately.
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -232,6 +248,18 @@ export default function AdminSettings() {
           </div>
         </form>
 
+        {/* SECURITY & ADMIN CREDENTIALS */}
+        <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-4 shadow-xl">
+          <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+            <Lock className="w-4 h-4" /> ADMIN SECURITY & ACCESS CREDENTIALS
+          </h3>
+          <p className="text-xs text-slate-400">
+            Update your master admin console authentication password.
+          </p>
+
+          <AdminPasswordForm setToast={setToast} />
+        </div>
+
         {toast && (
           <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
@@ -239,3 +267,88 @@ export default function AdminSettings() {
     </div>
   );
 }
+
+function AdminPasswordForm({ setToast }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changing, setChanging] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setToast({ message: 'New passwords do not match', type: 'error' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setToast({ message: 'Password must be at least 6 characters', type: 'error' });
+      return;
+    }
+
+    try {
+      setChanging(true);
+      const res = await adminApi.changePassword(currentPassword, newPassword);
+      if (res.success) {
+        setToast({ message: 'Admin password successfully updated!', type: 'success' });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err) {
+      setToast({ message: err.response?.data?.message || 'Password update failed', type: 'error' });
+    } finally {
+      setChanging(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md text-xs">
+      <div className="space-y-1.5">
+        <label className="text-slate-400 font-bold">Current Master Password</label>
+        <input
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+          placeholder="Enter current password"
+          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-slate-400 font-bold">New Password</label>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          placeholder="Enter new password (min 6 chars)"
+          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-slate-400 font-bold">Confirm New Password</label>
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          placeholder="Confirm new password"
+          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono"
+        />
+      </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        type="submit"
+        disabled={changing}
+        className="border-amber-500/40 text-amber-300 hover:bg-amber-950/40"
+      >
+        {changing ? 'Updating Password...' : 'Update Admin Password'}
+      </Button>
+    </form>
+  );
+}
+

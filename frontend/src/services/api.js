@@ -36,18 +36,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('mindcraft_token');
-      // Dispatch event so active pollers can stop
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('mindcraft_auth_expired'));
+      const url = error.config?.url || '';
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
 
-        const currentPath = window.location.pathname;
-        if (currentPath.startsWith('/admin') && currentPath !== '/admin/login' && !isRedirecting) {
-          isRedirecting = true;
-          setTimeout(() => {
-            window.location.href = '/admin/login';
-            isRedirecting = false;
-          }, 300);
+      // Only invalidate token and redirect if this was an admin route or /auth/me verification failure
+      if (url.includes('/auth/me') || (currentPath.startsWith('/admin') && currentPath !== '/admin/login')) {
+        localStorage.removeItem('mindcraft_token');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('mindcraft_auth_expired'));
+
+          if (!isRedirecting) {
+            isRedirecting = true;
+            setTimeout(() => {
+              window.location.href = '/admin/login';
+              isRedirecting = false;
+            }, 300);
+          }
         }
       }
     }

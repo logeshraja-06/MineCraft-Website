@@ -147,4 +147,55 @@ export const adminApi = {
     window.URL.revokeObjectURL(url);
     return true;
   },
+
+  // Export Results (CSV or XLSX)
+  exportLeaderboard: async (format = 'csv') => {
+    const response = await api.get(`/admin/leaderboard/export?format=${format}`, { responseType: 'blob' });
+    const mime = format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv';
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: mime }));
+    const link = document.createElement('a');
+    link.href = url;
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `mindcraft-results-${dateStr}.${format}`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    return true;
+  },
+
+  // Download participant name list
+  exportParticipants: async (format = 'csv') => {
+    const response = await api.get(`/admin/participants/export?format=${format}`, { responseType: 'blob' });
+    const mime = format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv';
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: mime }));
+    const link = document.createElement('a');
+    link.href = url;
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `mindcraft-participants-${dateStr}.${format}`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    return true;
+  },
+
+  // Freeze Leaderboard toggle
+  freezeLeaderboard: async (isFrozen = true) => {
+    const { data } = await api.post('/admin/leaderboard/freeze', { isFrozen });
+    return data;
+  },
+
+  // Change Admin Password
+  changePassword: async (currentPassword, newPassword) => {
+    const { data } = await api.put('/admin/change-password', { currentPassword, newPassword });
+    return data;
+  },
+
+  // Generate QR batch for challenge
+  generateQRs: async (challengeId) => {
+    const { data } = await api.post(`/admin/challenges/${challengeId}/generate-qr`);
+    return data;
+  },
 };
+

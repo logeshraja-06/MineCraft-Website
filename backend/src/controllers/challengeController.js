@@ -3,6 +3,7 @@ const Challenge = require('../models/Challenge');
 const QRBlock = require('../models/QRBlock');
 const TestCase = require('../models/TestCase');
 const ParticipantSession = require('../models/ParticipantSession');
+const { getProgressForUser, checkChallengeLock } = require('../services/challenge/progressionService');
 
 const findChallengeByIdOrSlug = async (idOrSlug) => {
   if (!idOrSlug) return null;
@@ -57,9 +58,26 @@ function sanitizePublicChallenge(challengeDoc, visibleTests = null) {
 }
 
 exports.getChallenges = asyncHandler(async (req, res) => {
-  const challenges = await Challenge.find({ isActive: true }).select('-sourceCode');
+  const challenges = await Challenge.find({
+    isActive: true,
+    status: 'Published',
+    sequenceOrder: { $in: [1, 2, 3] },
+  })
+    .sort({ sequenceOrder: 1 })
+    .select('-sourceCode');
   const sanitized = challenges.map((c) => sanitizePublicChallenge(c));
   res.json({ success: true, challenges: sanitized });
+});
+
+exports.getUserProgress = asyncHandler(async (req, res) => {
+  const result = await getProgressForUser(req.user?._id, req.user);
+  res.json({
+    success: true,
+    progress: result.progress,
+    currentChallengeSlug: result.currentChallengeSlug,
+    allCompleted: result.allCompleted,
+    enforceProgression: result.enforceProgression,
+  });
 });
 
 exports.getChallengeById = asyncHandler(async (req, res) => {
@@ -108,6 +126,10 @@ exports.getParticipantBlocks = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Challenge not found' });
   }
 
+  if (req.user && !(await checkChallengeLock(req, res, challenge))) {
+    return;
+  }
+
   const allBlocks = await QRBlock.find({ challengeId }).sort({ displayOrder: 1 });
 
   // If user is authenticated, check their session
@@ -126,19 +148,24 @@ exports.getParticipantBlocks = asyncHandler(async (req, res) => {
     const isInitiallyVisible = block.displayOrder <= initialCount || block.isInitiallyVisible;
     const isUnlocked = isInitiallyVisible || revealedIds.includes(block.blockId);
 
+    const cleanSnippet = block.codeSnippet
+      ? block.codeSnippet.replace(/#\s*DECOY[^\n]*/gi, '').replace(/\/\/\s*DECOY[^\n]*/gi, '')
+      : null;
+
     return {
       blockId: block.blockId,
-      code: isUnlocked ? block.codeSnippet : null, // Hide code if locked
-      codeSnippet: isUnlocked ? block.codeSnippet : null,
-      blockType: isUnlocked ? block.blockType : 'LOCKED',
+      code: isUnlocked ? cleanSnippet : null, // Hide code if locked
+      codeSnippet: isUnlocked ? cleanSnippet : null,
+      blockType: isUnlocked ? (block.type || block.blockType || 'LOGIC') : 'LOCKED',
+      type: isUnlocked ? (block.type || block.blockType || 'LOGIC') : 'LOCKED',
       language: block.language,
-      qrHash: block.qrHash,
+      qrToken: block.qrToken || block.qrHash,
+      qrHash: block.qrHash || block.qrToken,
       displayOrder: block.displayOrder,
       taskId: block.taskId,
       isUnlocked,
-      isDecoy: isUnlocked ? block.isDecoy : false,
-      hint: isUnlocked ? block.hint : 'Hidden Code Fragment - Complete task or click reveal to unlock',
-      // DO NOT INCLUDE originalOrder
+      hint: isUnlocked ? block.hint : 'Hidden Code Fragment',
+      // DO NOT INCLUDE originalOrder, correctOrder, or isDecoy
     };
   });
 
@@ -161,6 +188,10 @@ exports.revealBlock = asyncHandler(async (req, res) => {
   const challenge = await findChallengeByIdOrSlug(challengeId);
   if (!challenge) {
     return res.status(404).json({ success: false, message: 'Challenge not found' });
+  }
+
+  if (req.user && !(await checkChallengeLock(req, res, challenge))) {
+    return;
   }
 
   const allBlocks = await QRBlock.find({ challengeId }).sort({ displayOrder: 1 });

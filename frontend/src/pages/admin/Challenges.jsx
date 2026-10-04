@@ -59,6 +59,16 @@ export default function AdminChallenges() {
     }
   };
 
+  const participantFacing = challenges.filter(
+    (c) => c.status === 'Published' && c.isActive !== false && [1, 2, 3].includes(Number(c.sequenceOrder))
+  );
+  const sequenceOrderSet = new Set(participantFacing.map((c) => Number(c.sequenceOrder)));
+  const isSequenceValid =
+    participantFacing.length === 3 &&
+    sequenceOrderSet.has(1) &&
+    sequenceOrderSet.has(2) &&
+    sequenceOrderSet.has(3);
+
   useEffect(() => {
     fetchChallenges();
   }, [difficultyFilter, statusFilter, langFilter]);
@@ -170,6 +180,37 @@ export default function AdminChallenges() {
           </div>
         </div>
 
+        {/* Canonical Sequence Warning Banner */}
+        {!loading && (
+          !isSequenceValid ? (
+            <div className="p-4 rounded-2xl bg-amber-950/60 border border-amber-500/60 text-amber-200 flex items-start gap-3 shadow-lg">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                ⚠️
+              </div>
+              <div className="space-y-1 text-xs">
+                <h4 className="font-bold text-amber-300 uppercase tracking-wide">
+                  Participant Sequence Alert: Exactly 3 Challenges Required
+                </h4>
+                <p className="text-amber-200/90 leading-relaxed font-sans">
+                  The participant-facing arena requires <strong>exactly 3 published challenges</strong> assigned to sequence positions <strong>1 (Easy), 2 (Medium), and 3 (Hard)</strong>.
+                  Currently assigned: {participantFacing.length} / 3 (positions: {Array.from(sequenceOrderSet).sort().join(', ') || 'none'}).
+                  Please edit challenges and configure sequence positions 1, 2, and 3 so participants can progress.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                <span>Canonical 3-challenge sequence active: <strong>1: Easy</strong> → <strong>2: Medium</strong> → <strong>3: Hard</strong></span>
+              </div>
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                Roadmap Ready
+              </span>
+            </div>
+          )
+        )}
+
         {/* Filters & Search Toolbar */}
         <div className="p-4 bg-white/80 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-4 text-xs">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
@@ -244,6 +285,7 @@ export default function AdminChallenges() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] border-b border-slate-200">
                 <tr>
+                  <th className="px-4 py-3.5">Sequence</th>
                   <th className="px-4 py-3.5">Challenge Title</th>
                   <th className="px-4 py-3.5">Difficulty</th>
                   <th className="px-4 py-3.5">Language</th>
@@ -257,14 +299,14 @@ export default function AdminChallenges() {
               <tbody className="divide-y divide-slate-800 text-slate-700">
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-600">
+                    <td colSpan="9" className="p-8 text-center text-slate-600">
                       <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-orange-400" />
                       Loading challenges from database...
                     </td>
                   </tr>
                 ) : challenges.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-500">
+                    <td colSpan="9" className="p-8 text-center text-slate-500">
                       No challenges found matching filters. Click "Create Challenge" to create one.
                     </td>
                   </tr>
@@ -272,8 +314,27 @@ export default function AdminChallenges() {
                   challenges.map((c) => (
                     <tr key={c._id} className="hover:bg-slate-100/40 transition">
                       <td className="px-4 py-3.5">
+                        {c.sequenceOrder === 1 ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            1 // Easy
+                          </span>
+                        ) : c.sequenceOrder === 2 ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            2 // Medium
+                          </span>
+                        ) : c.sequenceOrder === 3 ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            3 // Hard
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">
+                            Unassigned
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
                         <div className="font-bold text-slate-900 text-sm">{c.title}</div>
-                        <div className="text-[10px] text-orange-400/80 font-mono">slug: {c.slug}</div>
+                        <div className="text-[10px] text-orange-500/80 font-mono">slug: {c.slug}</div>
                       </td>
                       <td className="px-4 py-3.5">
                         <span

@@ -11,10 +11,17 @@
  * This is idempotent: it upserts by slug, so re-running is safe.
  */
 
+const dns = require('dns');
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (_) {}
+
 const mongoose = require('mongoose');
 const env = require('../config/env');
 const Challenge = require('../models/Challenge');
 const TestCase = require('../models/TestCase');
+const QRBlock = require('../models/QRBlock');
+const { generateQRToken } = require('../services/qr/qrValidation');
 
 // ── Static challenge data (mirrored from frontend) ─────────────────────────
 
@@ -24,422 +31,9 @@ const QUIZ_TYPE_MAP = {
   fill: 'FILL_BLANK',
 };
 
-const CHALLENGES_DATA = [
-  // ─── CHALLENGE 1 – FIND THE SUM ─────────────────────────────────────────
-  {
-    slug: 'ch-01',
-    title: 'Challenge 1 – Find the Sum',
-    category: 'Math & Accumulation',
-    difficulty: 'Medium',
-    points: 100,
-    description:
-      'Given a positive integer N from standard input, calculate and display the total sum of all natural numbers from 1 up to N (inclusive).\n\nFormula: Sum = 1 + 2 + 3 + ... + N',
-    sampleInput: '5',
-    sampleOutput: '15',
-    timeLimitSeconds: 1200,
-    supportedLanguages: ['python', 'cpp', 'c', 'java'],
-    hiddenTests: [
-      { input: '5', expectedOutput: '15', description: 'Base sample test' },
-      { input: '10', expectedOutput: '55', description: 'Mid-range accumulation' },
-      { input: '20', expectedOutput: '210', description: 'Upper bound validation' },
-    ],
-    languageConfigs: [
-      {
-        language: 'python',
-        languageName: 'Python 3',
-        blocks: [
-          { blockId: 'py1-f1', code: 'n = int(input().strip())', role: 'INPUT', order: 1 },
-          { blockId: 'py1-f2', code: 'total = 0\nfor i in range(1, n + 1):\n    total += i', role: 'LOGIC', order: 2 },
-          { blockId: 'py1-f3', code: 'print(total)', role: 'OUTPUT', order: 3 },
-        ],
-        revealOrder: ['py1-f3', 'py1-f1', 'py1-f2'],
-        acceptedOrders: [],
-      },
-      {
-        language: 'cpp',
-        languageName: 'C++ 17',
-        blocks: [
-          { blockId: 'cpp1-f1', code: '#include <iostream>\nusing namespace std;', role: 'IMPORT', order: 1 },
-          { blockId: 'cpp1-f2', code: 'int main() {\n    int n, total = 0;\n    cin >> n;', role: 'INPUT', order: 2 },
-          { blockId: 'cpp1-f3', code: '    for (int i = 1; i <= n; i++) {\n        total += i;\n    }', role: 'LOGIC', order: 3 },
-          { blockId: 'cpp1-f4', code: '    cout << total << endl;', role: 'OUTPUT', order: 4 },
-          { blockId: 'cpp1-f5', code: '    return 0;\n}', role: 'CLOSE', order: 5 },
-        ],
-        revealOrder: ['cpp1-f4', 'cpp1-f1', 'cpp1-f3', 'cpp1-f5', 'cpp1-f2'],
-        acceptedOrders: [],
-      },
-      {
-        language: 'c',
-        languageName: 'C (GCC)',
-        blocks: [
-          { blockId: 'c1-f1', code: '#include <stdio.h>', role: 'IMPORT', order: 1 },
-          { blockId: 'c1-f2', code: 'int main() {\n    int n, total = 0;\n    scanf("%d", &n);', role: 'INPUT', order: 2 },
-          { blockId: 'c1-f3', code: '    for (int i = 1; i <= n; i++) {\n        total += i;\n    }', role: 'LOGIC', order: 3 },
-          { blockId: 'c1-f4', code: '    printf("%d\\n", total);', role: 'OUTPUT', order: 4 },
-          { blockId: 'c1-f5', code: '    return 0;\n}', role: 'CLOSE', order: 5 },
-        ],
-        revealOrder: ['c1-f3', 'c1-f5', 'c1-f1', 'c1-f4', 'c1-f2'],
-        acceptedOrders: [],
-      },
-      {
-        language: 'java',
-        languageName: 'Java 11',
-        blocks: [
-          { blockId: 'java1-f1', code: 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {', role: 'WRAPPER', order: 1 },
-          { blockId: 'java1-f2', code: '        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int total = 0;', role: 'INPUT', order: 2 },
-          { blockId: 'java1-f3', code: '        for (int i = 1; i <= n; i++) {\n            total += i;\n        }', role: 'LOGIC', order: 3 },
-          { blockId: 'java1-f4', code: '        System.out.println(total);', role: 'OUTPUT', order: 4 },
-          { blockId: 'java1-f5', code: '    }\n}', role: 'CLOSE', order: 5 },
-        ],
-        revealOrder: ['java1-f4', 'java1-f2', 'java1-f5', 'java1-f1', 'java1-f3'],
-        acceptedOrders: [],
-      },
-    ],
-    quizzes: {
-      'q1-sum-1': { type: 'mcq', concept: 'loops', prompt: 'How many times does `for i in range(1, n + 1)` iterate when n = 5?', options: ['4', '5', '6', 'n + 1'], answer: 1, explain: 'range(1, 6) yields 1, 2, 3, 4, 5 → 5 iterations.' },
-      'q1-sum-2': { type: 'output', concept: 'accumulation', prompt: 'What does this print?\n\ntotal = 0\nfor i in range(1, 4):\n    total += i\nprint(total)', answer: '6', explain: '1 + 2 + 3 = 6.' },
-      'q1-sum-3': { type: 'fill', concept: 'syntax', prompt: 'Complete the line: `total ___ i`  (adds i to total each iteration)', answer: ['+=', '+= i'], explain: '+= is the addition-assignment operator.' },
-      'q1-sum-4': { type: 'mcq', concept: 'accumulation', prompt: 'Which variable holds the running sum in the Python solution?', options: ['n', 'i', 'total', 'result'], answer: 2, explain: '`total` is initialised to 0 and accumulated with each i.' },
-      'q1-sum-5': { type: 'mcq', concept: 'input', prompt: 'Which function reads N as an integer from stdin in Python?', options: ['input()', 'int(input())', 'read()', 'scan()'], answer: 1, explain: 'int(input()) reads the string and converts it.' },
-      'q1-sum-6': { type: 'output', concept: 'loops', prompt: 'What is printed?\n\ntotal = 0\nfor i in range(1, 6):\n    total += i\nprint(total)', answer: '15', explain: '1+2+3+4+5 = 15.' },
-      'q1-sum-7': { type: 'mcq', concept: 'cpp-syntax', prompt: 'In C++, which statement reads an integer from stdin?', options: ['scanf("%d",&n)', 'cin >> n', 'gets(n)', 'readline(n)'], answer: 1, explain: '`cin >> n` extracts an integer from standard input in C++.' },
-      'q1-sum-8': { type: 'fill', concept: 'loops', prompt: 'Fill in the blank: `for (int i = 1; i ___ n; i++)` to iterate from 1 to N inclusive.', answer: ['<=', '< n + 1'], explain: 'Using <= n ensures i reaches n on the last iteration.' },
-      'q1-sum-9': { type: 'mcq', concept: 'java-syntax', prompt: 'In Java, which class is used to read integers from stdin?', options: ['System.in', 'BufferedReader', 'Scanner', 'InputStreamReader'], answer: 2, explain: '`Scanner sc = new Scanner(System.in)` is the idiomatic Java approach.' },
-    },
-    // chest-to-quiz mapping per language (from original static data)
-    chestMap: {
-      python: [
-        { quizPool: ['q1-sum-1', 'q1-sum-2'], rewardBlock: 'py1-f3' },
-        { quizPool: ['q1-sum-3', 'q1-sum-4'], rewardBlock: 'py1-f1' },
-        { quizPool: ['q1-sum-5', 'q1-sum-6'], rewardBlock: 'py1-f2' },
-      ],
-      cpp: [
-        { quizPool: ['q1-sum-7', 'q1-sum-8'], rewardBlock: 'cpp1-f4' },
-        { quizPool: ['q1-sum-1', 'q1-sum-3'], rewardBlock: 'cpp1-f1' },
-        { quizPool: ['q1-sum-5', 'q1-sum-9'], rewardBlock: 'cpp1-f3' },
-        { quizPool: ['q1-sum-2', 'q1-sum-6'], rewardBlock: 'cpp1-f5' },
-        { quizPool: ['q1-sum-4', 'q1-sum-7'], rewardBlock: 'cpp1-f2' },
-      ],
-      c: [
-        { quizPool: ['q1-sum-1', 'q1-sum-8'], rewardBlock: 'c1-f3' },
-        { quizPool: ['q1-sum-7', 'q1-sum-3'], rewardBlock: 'c1-f5' },
-        { quizPool: ['q1-sum-5', 'q1-sum-2'], rewardBlock: 'c1-f1' },
-        { quizPool: ['q1-sum-6', 'q1-sum-9'], rewardBlock: 'c1-f4' },
-        { quizPool: ['q1-sum-4', 'q1-sum-1'], rewardBlock: 'c1-f2' },
-      ],
-      java: [
-        { quizPool: ['q1-sum-9', 'q1-sum-1'], rewardBlock: 'java1-f4' },
-        { quizPool: ['q1-sum-7', 'q1-sum-4'], rewardBlock: 'java1-f2' },
-        { quizPool: ['q1-sum-3', 'q1-sum-8'], rewardBlock: 'java1-f5' },
-        { quizPool: ['q1-sum-2', 'q1-sum-5'], rewardBlock: 'java1-f1' },
-        { quizPool: ['q1-sum-6', 'q1-sum-9'], rewardBlock: 'java1-f3' },
-      ],
-    },
-  },
-
-  // ─── CHALLENGE 2 – REVERSE A STRING ──────────────────────────────────────
-  {
-    slug: 'ch-02',
-    title: 'Challenge 2 – Reverse a String',
-    category: 'Strings & Pointers',
-    difficulty: 'Easy',
-    points: 100,
-    description:
-      "Read an input word or sequence of characters from standard input and print the exact reversed string.\n\nExample: 'hello' becomes 'olleh'.",
-    sampleInput: 'hello',
-    sampleOutput: 'olleh',
-    timeLimitSeconds: 1200,
-    supportedLanguages: ['python', 'cpp', 'c', 'java'],
-    hiddenTests: [
-      { input: 'mindcraft', expectedOutput: 'tfardcnim', description: 'Platform name reversal' },
-      { input: 'racecar', expectedOutput: 'racecar', description: 'Palindrome preservation' },
-      { input: 'algorithm', expectedOutput: 'mihtirogla', description: 'General vocabulary' },
-    ],
-    languageConfigs: [
-      {
-        language: 'python', languageName: 'Python 3',
-        blocks: [
-          { blockId: 'py2-f1', code: 's = input().strip()', role: 'INPUT', order: 1 },
-          { blockId: 'py2-f2', code: 'rev = s[::-1]', role: 'LOGIC', order: 2 },
-          { blockId: 'py2-f3', code: 'print(rev)', role: 'OUTPUT', order: 3 },
-        ],
-        revealOrder: ['py2-f2', 'py2-f3', 'py2-f1'], acceptedOrders: [],
-      },
-      {
-        language: 'cpp', languageName: 'C++ 17',
-        blocks: [
-          { blockId: 'cpp2-f1', code: '#include <iostream>\n#include <string>\n#include <algorithm>\nusing namespace std;', role: 'IMPORT', order: 1 },
-          { blockId: 'cpp2-f2', code: 'int main() {\n    string s;\n    cin >> s;', role: 'INPUT', order: 2 },
-          { blockId: 'cpp2-f3', code: '    reverse(s.begin(), s.end());', role: 'LOGIC', order: 3 },
-          { blockId: 'cpp2-f4', code: '    cout << s << endl;\n    return 0;\n}', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['cpp2-f3', 'cpp2-f1', 'cpp2-f4', 'cpp2-f2'], acceptedOrders: [],
-      },
-      {
-        language: 'c', languageName: 'C (GCC)',
-        blocks: [
-          { blockId: 'c2-f1', code: '#include <stdio.h>\n#include <string.h>', role: 'IMPORT', order: 1 },
-          { blockId: 'c2-f2', code: 'int main() {\n    char s[1000];\n    scanf("%s", s);', role: 'INPUT', order: 2 },
-          { blockId: 'c2-f3', code: '    int len = strlen(s);\n    for (int i = 0; i < len / 2; i++) {\n        char tmp = s[i];\n        s[i] = s[len - 1 - i];\n        s[len - 1 - i] = tmp;\n    }', role: 'LOGIC', order: 3 },
-          { blockId: 'c2-f4', code: '    printf("%s\\n", s);\n    return 0;\n}', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['c2-f4', 'c2-f2', 'c2-f1', 'c2-f3'], acceptedOrders: [],
-      },
-      {
-        language: 'java', languageName: 'Java 11',
-        blocks: [
-          { blockId: 'java2-f1', code: 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {', role: 'WRAPPER', order: 1 },
-          { blockId: 'java2-f2', code: '        Scanner sc = new Scanner(System.in);\n        String s = sc.next();', role: 'INPUT', order: 2 },
-          { blockId: 'java2-f3', code: '        StringBuilder sb = new StringBuilder(s);\n        String rev = sb.reverse().toString();', role: 'LOGIC', order: 3 },
-          { blockId: 'java2-f4', code: '        System.out.println(rev);\n    }\n}', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['java2-f3', 'java2-f4', 'java2-f1', 'java2-f2'], acceptedOrders: [],
-      },
-    ],
-    quizzes: {
-      'q2-rev-1': { type: 'mcq', concept: 'slicing', prompt: 'In Python, `s[::-1]` on a string "hello" returns:', options: ['"hello"', '"olleh"', '"hell"', 'Error'], answer: 1, explain: 'Slice step -1 traverses characters from end to start.' },
-      'q2-rev-2': { type: 'output', concept: 'slicing', prompt: 'What does this print?\n\ns = "abc"\nprint(s[::-1])', answer: 'cba', explain: 'Reversed slice: c, b, a.' },
-      'q2-rev-3': { type: 'fill', concept: 'syntax', prompt: 'Complete: `rev = s[___]`  to reverse string s in Python', answer: ['::-1', ':: -1'], explain: 's[::-1] uses extended slice with step -1.' },
-      'q2-rev-4': { type: 'mcq', concept: 'string-ops', prompt: 'Which C++ function reverses a string in-place?', options: ['str.flip()', 'reverse(s.begin(), s.end())', 'strrev(s)', 's.invert()'], answer: 1, explain: 'std::reverse from <algorithm> reverses iterators in-place.' },
-      'q2-rev-5': { type: 'mcq', concept: 'java-ops', prompt: 'Which Java class has a `.reverse()` method for strings?', options: ['String', 'StringBuffer', 'StringBuilder', 'Both B and C'], answer: 3, explain: 'Both StringBuffer and StringBuilder have .reverse().' },
-      'q2-rev-6': { type: 'output', concept: 'string-ops', prompt: 'What does this Java code print?\n\nString s = "hi";\nStringBuilder sb = new StringBuilder(s);\nSystem.out.println(sb.reverse().toString());', answer: 'ih', explain: 'StringBuilder.reverse() reverses the character sequence.' },
-      'q2-rev-7': { type: 'mcq', concept: 'c-ops', prompt: 'Which C function returns the length of a C-string?', options: ['len(s)', 'sizeof(s)', 'strlen(s)', 'length(s)'], answer: 2, explain: 'strlen() from <string.h> counts characters up to null terminator.' },
-      'q2-rev-8': { type: 'fill', concept: 'loops', prompt: 'In the C swap-based reversal loop, the loop runs while `i < ___`.', answer: ['len / 2', 'len/2'], explain: 'Only need to swap up to the midpoint; beyond that the string is mirrored.' },
-    },
-    chestMap: {
-      python: [
-        { quizPool: ['q2-rev-1', 'q2-rev-2'], rewardBlock: 'py2-f2' },
-        { quizPool: ['q2-rev-3', 'q2-rev-4'], rewardBlock: 'py2-f3' },
-        { quizPool: ['q2-rev-5', 'q2-rev-6'], rewardBlock: 'py2-f1' },
-      ],
-      cpp: [
-        { quizPool: ['q2-rev-7', 'q2-rev-1'], rewardBlock: 'cpp2-f3' },
-        { quizPool: ['q2-rev-2', 'q2-rev-8'], rewardBlock: 'cpp2-f1' },
-        { quizPool: ['q2-rev-3', 'q2-rev-5'], rewardBlock: 'cpp2-f4' },
-        { quizPool: ['q2-rev-6', 'q2-rev-4'], rewardBlock: 'cpp2-f2' },
-      ],
-      c: [
-        { quizPool: ['q2-rev-1', 'q2-rev-7'], rewardBlock: 'c2-f4' },
-        { quizPool: ['q2-rev-8', 'q2-rev-4'], rewardBlock: 'c2-f2' },
-        { quizPool: ['q2-rev-3', 'q2-rev-6'], rewardBlock: 'c2-f1' },
-        { quizPool: ['q2-rev-2', 'q2-rev-5'], rewardBlock: 'c2-f3' },
-      ],
-      java: [
-        { quizPool: ['q2-rev-5', 'q2-rev-2'], rewardBlock: 'java2-f3' },
-        { quizPool: ['q2-rev-8', 'q2-rev-1'], rewardBlock: 'java2-f4' },
-        { quizPool: ['q2-rev-6', 'q2-rev-3'], rewardBlock: 'java2-f1' },
-        { quizPool: ['q2-rev-4', 'q2-rev-7'], rewardBlock: 'java2-f2' },
-      ],
-    },
-  },
-
-  // ─── CHALLENGE 3 – FIND THE LARGEST NUMBER ───────────────────────────────
-  {
-    slug: 'ch-03',
-    title: 'Challenge 3 – Find the Largest Number',
-    category: 'Array Traversal',
-    difficulty: 'Hard',
-    points: 120,
-    description: 'Given space-separated integers on standard input, determine and print the maximum (largest) integer in the sequence.',
-    sampleInput: '3 8 2 15 6',
-    sampleOutput: '15',
-    timeLimitSeconds: 1200,
-    supportedLanguages: ['python', 'cpp', 'c', 'java'],
-    hiddenTests: [
-      { input: '10 45 2 99 31', expectedOutput: '99', description: 'Multi-element sequence' },
-      { input: '-5 -1 -20 -3', expectedOutput: '-1', description: 'Negative integers handling' },
-      { input: '100 200 50 400 150', expectedOutput: '400', description: 'Triple digit values' },
-    ],
-    languageConfigs: [
-      {
-        language: 'python', languageName: 'Python 3',
-        blocks: [
-          { blockId: 'py3-f1', code: 'nums = list(map(int, input().split()))', role: 'INPUT', order: 1 },
-          { blockId: 'py3-f2', code: 'max_val = nums[0]', role: 'INIT', order: 2 },
-          { blockId: 'py3-f3', code: 'for x in nums[1:]:\n    if x > max_val:\n        max_val = x', role: 'LOGIC', order: 3 },
-          { blockId: 'py3-f4', code: 'print(max_val)', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['py3-f3', 'py3-f1', 'py3-f4', 'py3-f2'], acceptedOrders: [],
-      },
-      {
-        language: 'cpp', languageName: 'C++ 17',
-        blocks: [
-          { blockId: 'cpp3-f1', code: '#include <iostream>\nusing namespace std;', role: 'IMPORT', order: 1 },
-          { blockId: 'cpp3-f2', code: 'int main() {\n    int x, max_val;\n    cin >> max_val;', role: 'INIT', order: 2 },
-          { blockId: 'cpp3-f3', code: '    while (cin >> x) {\n        if (x > max_val) max_val = x;\n    }', role: 'LOGIC', order: 3 },
-          { blockId: 'cpp3-f4', code: '    cout << max_val << endl;\n    return 0;\n}', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['cpp3-f3', 'cpp3-f4', 'cpp3-f1', 'cpp3-f2'], acceptedOrders: [],
-      },
-      {
-        language: 'c', languageName: 'C (GCC)',
-        blocks: [
-          { blockId: 'c3-f1', code: '#include <stdio.h>', role: 'IMPORT', order: 1 },
-          { blockId: 'c3-f2', code: 'int main() {\n    int x, max_val;\n    scanf("%d", &max_val);', role: 'INIT', order: 2 },
-          { blockId: 'c3-f3', code: '    while (scanf("%d", &x) == 1) {\n        if (x > max_val) max_val = x;\n    }', role: 'LOGIC', order: 3 },
-          { blockId: 'c3-f4', code: '    printf("%d\\n", max_val);\n    return 0;\n}', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['c3-f2', 'c3-f4', 'c3-f3', 'c3-f1'], acceptedOrders: [],
-      },
-      {
-        language: 'java', languageName: 'Java 11',
-        blocks: [
-          { blockId: 'java3-f1', code: 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {', role: 'WRAPPER', order: 1 },
-          { blockId: 'java3-f2', code: '        Scanner sc = new Scanner(System.in);\n        int maxVal = sc.nextInt();', role: 'INIT', order: 2 },
-          { blockId: 'java3-f3', code: '        while (sc.hasNextInt()) {\n            int x = sc.nextInt();\n            if (x > maxVal) maxVal = x;\n        }', role: 'LOGIC', order: 3 },
-          { blockId: 'java3-f4', code: '        System.out.println(maxVal);\n    }\n}', role: 'OUTPUT', order: 4 },
-        ],
-        revealOrder: ['java3-f4', 'java3-f3', 'java3-f1', 'java3-f2'], acceptedOrders: [],
-      },
-    ],
-    quizzes: {
-      'q3-max-1': { type: 'mcq', concept: 'comparison', prompt: 'Which Python expression correctly checks if x is greater than max_val?', options: ['x == max_val', 'x > max_val', 'x >= max_val', 'max_val > x'], answer: 1, explain: 'x > max_val is true when x is strictly greater.' },
-      'q3-max-2': { type: 'output', concept: 'traversal', prompt: 'What does this print?\n\nnums = [3, 8, 2, 15, 6]\nmax_val = nums[0]\nfor x in nums[1:]:\n    if x > max_val:\n        max_val = x\nprint(max_val)', answer: '15', explain: '15 is the largest element.' },
-      'q3-max-3': { type: 'fill', concept: 'init', prompt: 'To start the max search in Python, we initialise max_val with `nums[___]` to avoid assuming the range.', answer: ['0', '[0]'], explain: 'nums[0] safely seeds max_val with the first element.' },
-      'q3-max-4': { type: 'mcq', concept: 'loops', prompt: 'In `for x in nums[1:]:` why do we start at index 1?', options: ['To skip the last element', 'Because index 0 is already used as the initial max', 'Python lists start at 1', 'To avoid an off-by-one error in the output'], answer: 1, explain: 'Index 0 is used to seed max_val, so we compare from index 1 onward.' },
-      'q3-max-5': { type: 'mcq', concept: 'cpp-input', prompt: 'In C++, `while (cin >> x)` reads integers until:', options: ['x == 0', 'EOF or invalid input', 'x > 1000', 'The loop runs 10 times'], answer: 1, explain: 'cin >> x returns false on EOF or read failure.' },
-      'q3-max-6': { type: 'output', concept: 'negative-nums', prompt: 'What does this print?\n\nnums = [-5, -1, -20, -3]\nmax_val = nums[0]\nfor x in nums[1:]:\n    if x > max_val:\n        max_val = x\nprint(max_val)', answer: '-1', explain: '-1 is the largest among all negative values.' },
-      'q3-max-7': { type: 'fill', concept: 'c-scanf', prompt: 'In C, `while (scanf("%d", &x) ___ 1)` reads integers until EOF.', answer: ['== 1', '==1'], explain: 'scanf returns the number of items read; == 1 means one integer was read successfully.' },
-      'q3-max-8': { type: 'mcq', concept: 'java-scanner', prompt: 'In Java, `sc.hasNextInt()` returns:', options: ['The next integer', 'True if the next token is an integer, false otherwise', 'The count of remaining integers', 'True only if the Scanner is at EOF'], answer: 1, explain: 'hasNextInt() peeks ahead without consuming, returns boolean.' },
-    },
-    chestMap: {
-      python: [
-        { quizPool: ['q3-max-1', 'q3-max-2'], rewardBlock: 'py3-f3' },
-        { quizPool: ['q3-max-3', 'q3-max-4'], rewardBlock: 'py3-f1' },
-        { quizPool: ['q3-max-5', 'q3-max-6'], rewardBlock: 'py3-f4' },
-        { quizPool: ['q3-max-7', 'q3-max-1'], rewardBlock: 'py3-f2' },
-      ],
-      cpp: [
-        { quizPool: ['q3-max-7', 'q3-max-3'], rewardBlock: 'cpp3-f3' },
-        { quizPool: ['q3-max-1', 'q3-max-5'], rewardBlock: 'cpp3-f4' },
-        { quizPool: ['q3-max-6', 'q3-max-2'], rewardBlock: 'cpp3-f1' },
-        { quizPool: ['q3-max-4', 'q3-max-8'], rewardBlock: 'cpp3-f2' },
-      ],
-      c: [
-        { quizPool: ['q3-max-2', 'q3-max-8'], rewardBlock: 'c3-f2' },
-        { quizPool: ['q3-max-6', 'q3-max-1'], rewardBlock: 'c3-f4' },
-        { quizPool: ['q3-max-3', 'q3-max-5'], rewardBlock: 'c3-f3' },
-        { quizPool: ['q3-max-7', 'q3-max-4'], rewardBlock: 'c3-f1' },
-      ],
-      java: [
-        { quizPool: ['q3-max-5', 'q3-max-7'], rewardBlock: 'java3-f4' },
-        { quizPool: ['q3-max-3', 'q3-max-8'], rewardBlock: 'java3-f3' },
-        { quizPool: ['q3-max-1', 'q3-max-2'], rewardBlock: 'java3-f1' },
-        { quizPool: ['q3-max-6', 'q3-max-4'], rewardBlock: 'java3-f2' },
-      ],
-    },
-  },
-
-  // ─── CHALLENGE 4 – STAR PYRAMID ──────────────────────────────────────────
-  {
-    slug: 'ch-04',
-    title: 'Challenge 4 – Star Pyramid',
-    category: 'Nested Loops & Patterns',
-    difficulty: 'Hard',
-    points: 150,
-    description: 'Given a positive integer N from standard input, print a left-aligned star pyramid of N rows.\n\nRow i (1-indexed) contains exactly i stars.\n\nExample for N=4:\n*\n**\n***\n****',
-    sampleInput: '4',
-    sampleOutput: '*\n**\n***\n****',
-    timeLimitSeconds: 1200,
-    supportedLanguages: ['python', 'cpp', 'c', 'java'],
-    hiddenTests: [
-      { input: '4', expectedOutput: '*\n**\n***\n****', description: 'Basic pyramid 4 rows' },
-      { input: '1', expectedOutput: '*', description: 'Single row edge case' },
-      { input: '6', expectedOutput: '*\n**\n***\n****\n*****\n******', description: 'Six-row pyramid' },
-    ],
-    languageConfigs: [
-      {
-        language: 'python', languageName: 'Python 3',
-        blocks: [
-          { blockId: 'py4-f1', code: 'n = int(input().strip())', role: 'INPUT', order: 1 },
-          { blockId: 'py4-f2', code: 'for i in range(1, n + 1):', role: 'OUTER_LOOP', order: 2 },
-          { blockId: 'py4-f3', code: "    print('*' * i)", role: 'OUTPUT', order: 3 },
-        ],
-        revealOrder: ['py4-f3', 'py4-f1', 'py4-f2'], acceptedOrders: [],
-      },
-      {
-        language: 'cpp', languageName: 'C++ 17',
-        blocks: [
-          { blockId: 'cpp4-f1', code: '#include <iostream>\nusing namespace std;', role: 'IMPORT', order: 1 },
-          { blockId: 'cpp4-f2', code: 'int main() {\n    int n;\n    cin >> n;', role: 'INPUT', order: 2 },
-          { blockId: 'cpp4-f3', code: '    for (int i = 1; i <= n; i++) {', role: 'OUTER_LOOP', order: 3 },
-          { blockId: 'cpp4-f4', code: '        for (int j = 0; j < i; j++) {\n            cout << "*";\n        }', role: 'INNER_LOOP', order: 4 },
-          { blockId: 'cpp4-f5', code: '        cout << endl;\n    }', role: 'ROW_END', order: 5 },
-          { blockId: 'cpp4-f6', code: '    return 0;\n}', role: 'CLOSE', order: 6 },
-        ],
-        revealOrder: ['cpp4-f4', 'cpp4-f1', 'cpp4-f6', 'cpp4-f3', 'cpp4-f2', 'cpp4-f5'], acceptedOrders: [],
-      },
-      {
-        language: 'c', languageName: 'C (GCC)',
-        blocks: [
-          { blockId: 'c4-f1', code: '#include <stdio.h>', role: 'IMPORT', order: 1 },
-          { blockId: 'c4-f2', code: 'int main() {\n    int n;\n    scanf("%d", &n);', role: 'INPUT', order: 2 },
-          { blockId: 'c4-f3', code: '    for (int i = 1; i <= n; i++) {', role: 'OUTER_LOOP', order: 3 },
-          { blockId: 'c4-f4', code: '        for (int j = 0; j < i; j++) {\n            printf("*");\n        }', role: 'INNER_LOOP', order: 4 },
-          { blockId: 'c4-f5', code: '        printf("\\n");\n    }', role: 'ROW_END', order: 5 },
-          { blockId: 'c4-f6', code: '    return 0;\n}', role: 'CLOSE', order: 6 },
-        ],
-        revealOrder: ['c4-f5', 'c4-f3', 'c4-f1', 'c4-f4', 'c4-f6', 'c4-f2'], acceptedOrders: [],
-      },
-      {
-        language: 'java', languageName: 'Java 11',
-        blocks: [
-          { blockId: 'java4-f1', code: 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {', role: 'WRAPPER', order: 1 },
-          { blockId: 'java4-f2', code: '        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();', role: 'INPUT', order: 2 },
-          { blockId: 'java4-f3', code: '        for (int i = 1; i <= n; i++) {', role: 'OUTER_LOOP', order: 3 },
-          { blockId: 'java4-f4', code: '            for (int j = 0; j < i; j++) {\n                System.out.print("*");\n            }', role: 'INNER_LOOP', order: 4 },
-          { blockId: 'java4-f5', code: '            System.out.println();', role: 'ROW_END', order: 5 },
-          { blockId: 'java4-f6', code: '        }\n    }\n}', role: 'CLOSE', order: 6 },
-        ],
-        revealOrder: ['java4-f4', 'java4-f6', 'java4-f2', 'java4-f1', 'java4-f5', 'java4-f3'], acceptedOrders: [],
-      },
-    ],
-    quizzes: {
-      'q4-pyr-1': { type: 'mcq', concept: 'nested-loops', prompt: 'In a star pyramid, how many stars appear on row i (1-indexed)?', options: ['i - 1', 'i', 'i + 1', 'n - i'], answer: 1, explain: 'Row 1 has 1 star, row 2 has 2 stars, ..., row i has i stars.' },
-      'q4-pyr-2': { type: 'output', concept: 'pattern', prompt: "What does `print('*' * 3)` output in Python?", answer: '***', explain: "String multiplication repeats '*' three times." },
-      'q4-pyr-3': { type: 'mcq', concept: 'outer-loop', prompt: 'The outer loop in a star pyramid iterates over:', options: ['Number of stars per row', 'Row number (1 to N)', 'Column count', 'Diagonal index'], answer: 1, explain: 'The outer loop runs from row 1 to N, one iteration per row.' },
-      'q4-pyr-4': { type: 'fill', concept: 'inner-loop', prompt: 'Fill the blank: `for (int j = 0; j < ___; j++)` to print i stars on row i in C++.', answer: ['i', 'i;'], explain: 'j < i means j takes values 0, 1, ..., i-1 → i iterations.' },
-      'q4-pyr-5': { type: 'output', concept: 'nested-loops', prompt: 'How many total stars are printed for N = 3?', answer: '6', explain: 'Row 1: 1 star, row 2: 2 stars, row 3: 3 stars → 1+2+3 = 6.' },
-      'q4-pyr-6': { type: 'mcq', concept: 'newline', prompt: 'After printing stars on a row in C++, you call:', options: ['cout << "\\n"', 'cout << endl', 'printf("\\n")', 'Both A and B'], answer: 3, explain: 'Both cout << "\\n" and cout << endl advance to the next line in C++.' },
-      'q4-pyr-7': { type: 'mcq', concept: 'java-output', prompt: 'In Java, `System.out.print("*")` vs `System.out.println("*")`:', options: ['Both add a newline after *', 'print does NOT add a newline; println does', 'println does NOT add a newline; print does', 'Both are identical'], answer: 1, explain: 'print appends nothing; println appends the platform newline.' },
-      'q4-pyr-8': { type: 'fill', concept: 'outer-loop-bound', prompt: 'Fill: `for i in range(1, ___ + 1):` to loop row numbers 1 through N in Python.', answer: ['n', 'N'], explain: 'range(1, n + 1) generates 1, 2, ..., n.' },
-    },
-    chestMap: {
-      python: [
-        { quizPool: ['q4-pyr-1', 'q4-pyr-2'], rewardBlock: 'py4-f3' },
-        { quizPool: ['q4-pyr-3', 'q4-pyr-4'], rewardBlock: 'py4-f1' },
-        { quizPool: ['q4-pyr-5', 'q4-pyr-6'], rewardBlock: 'py4-f2' },
-      ],
-      cpp: [
-        { quizPool: ['q4-pyr-7', 'q4-pyr-2'], rewardBlock: 'cpp4-f4' },
-        { quizPool: ['q4-pyr-1', 'q4-pyr-8'], rewardBlock: 'cpp4-f1' },
-        { quizPool: ['q4-pyr-3', 'q4-pyr-6'], rewardBlock: 'cpp4-f6' },
-        { quizPool: ['q4-pyr-5', 'q4-pyr-4'], rewardBlock: 'cpp4-f3' },
-        { quizPool: ['q4-pyr-8', 'q4-pyr-7'], rewardBlock: 'cpp4-f2' },
-        { quizPool: ['q4-pyr-4', 'q4-pyr-1'], rewardBlock: 'cpp4-f5' },
-      ],
-      c: [
-        { quizPool: ['q4-pyr-2', 'q4-pyr-7'], rewardBlock: 'c4-f5' },
-        { quizPool: ['q4-pyr-8', 'q4-pyr-3'], rewardBlock: 'c4-f3' },
-        { quizPool: ['q4-pyr-1', 'q4-pyr-5'], rewardBlock: 'c4-f1' },
-        { quizPool: ['q4-pyr-4', 'q4-pyr-6'], rewardBlock: 'c4-f4' },
-        { quizPool: ['q4-pyr-7', 'q4-pyr-2'], rewardBlock: 'c4-f6' },
-        { quizPool: ['q4-pyr-6', 'q4-pyr-8'], rewardBlock: 'c4-f2' },
-      ],
-      java: [
-        { quizPool: ['q4-pyr-3', 'q4-pyr-8'], rewardBlock: 'java4-f4' },
-        { quizPool: ['q4-pyr-7', 'q4-pyr-5'], rewardBlock: 'java4-f6' },
-        { quizPool: ['q4-pyr-1', 'q4-pyr-4'], rewardBlock: 'java4-f2' },
-        { quizPool: ['q4-pyr-6', 'q4-pyr-2'], rewardBlock: 'java4-f1' },
-        { quizPool: ['q4-pyr-8', 'q4-pyr-3'], rewardBlock: 'java4-f5' },
-        { quizPool: ['q4-pyr-2', 'q4-pyr-7'], rewardBlock: 'java4-f3' },
-      ],
-    },
-  },
-
-  // ─── CHALLENGE 5 – GREATEST AMONG THREE NUMBERS ──────────────────────────
-  {
+const CHALLENGES_DATA = [  {
     slug: 'ch-05',
+    sequenceOrder: 1,
     title: 'Challenge 5 – Greatest Among Three Numbers',
     category: 'Conditionals & Logic',
     difficulty: 'Easy',
@@ -649,6 +243,694 @@ const CHALLENGES_DATA = [
       },
     ],
   },
+  {
+    slug: 'ch-06',
+    sequenceOrder: 2,
+    title: 'Challenge 6 – Count Primes up to N',
+    category: 'Loops & Functions',
+    difficulty: 'Medium',
+    points: 200,
+    description:
+      'Given an integer N from standard input, determine and display the number of prime numbers less than or equal to N.\n\nInput: A single integer N (1 <= N <= 10000).\nOutput: A single integer representing the count of prime numbers <= N.',
+    sampleInput: '10',
+    sampleOutput: '4',
+    timeLimitSeconds: 1200,
+    supportedLanguages: ['python', 'java', 'cpp', 'c'],
+    hiddenTests: [
+      { input: '1\n', expectedOutput: '0', description: 'Edge case: 1 is not prime' },
+      { input: '2\n', expectedOutput: '1', description: 'Smallest prime number' },
+      { input: '10\n', expectedOutput: '4', description: 'Sample case: primes 2, 3, 5, 7' },
+      { input: '20\n', expectedOutput: '8', description: 'Primes <= 20' },
+      { input: '97\n', expectedOutput: '25', description: 'Prime upper boundary 97' },
+      { input: '100\n', expectedOutput: '25', description: 'Century boundary 100' },
+      { input: '1000\n', expectedOutput: '168', description: 'N = 1000' },
+      { input: '10000\n', expectedOutput: '1229', description: 'Maximum constraint N = 10000' },
+    ],
+    languageConfigs: [
+      {
+        language: 'python',
+        languageName: 'Python 3',
+        blocks: [
+          { blockId: 'py6-f1', code: 'import sys\n\ndef main():', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'py6-f2', code: '    tokens = sys.stdin.read().split()\n    if not tokens:\n        return\n    n = int(tokens[0])\n    count = 0', role: 'INPUT', order: 2 },
+          { blockId: 'py6-f3', code: '    def is_prime(val):\n        if val < 2:\n            return False\n        d = 2\n        while d * d <= val:\n            if val % d == 0:\n                return False\n            d += 1\n        return True', role: 'LOGIC', order: 3 },
+          { blockId: 'py6-f4', code: '    for i in range(2, n + 1):\n        if is_prime(i):', role: 'LOGIC', order: 4 },
+          { blockId: 'py6-f5', code: '            count += 1', role: 'LOGIC', order: 5 },
+          { blockId: 'py6-f6', code: '    print(count)\n\nif __name__ == \'__main__\':\n    main()', role: 'OUTPUT', order: 6 },
+        ],
+        revealOrder: ['py6-f1', 'py6-f2', 'py6-f3', 'py6-f4', 'py6-f5', 'py6-f6'],
+        acceptedOrders: [],
+      },
+      {
+        language: 'java',
+        languageName: 'Java 17',
+        blocks: [
+          { blockId: 'java6-f1', code: 'import java.util.Scanner;\nimport java.util.function.IntPredicate;\n\npublic class Main {\n    public static void main(String[] args) {', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'java6-f2', code: '        Scanner sc = new Scanner(System.in);\n        if (!sc.hasNextInt()) return;\n        int n = sc.nextInt();\n        int count = 0;', role: 'INPUT', order: 2 },
+          { blockId: 'java6-f3', code: '        IntPredicate isPrime = val -> {\n            if (val < 2) return false;\n            for (int d = 2; d * d <= val; d++) {\n                if (val % d == 0) return false;\n            }\n            return true;\n        };', role: 'LOGIC', order: 3 },
+          { blockId: 'java6-f4', code: '        for (int i = 2; i <= n; i++) {\n            if (isPrime.test(i)) {', role: 'LOGIC', order: 4 },
+          { blockId: 'java6-f5', code: '                count++;\n            }\n        }', role: 'LOGIC', order: 5 },
+          { blockId: 'java6-f6', code: '        System.out.println(count);\n    }\n}', role: 'OUTPUT', order: 6 },
+        ],
+        revealOrder: ['java6-f1', 'java6-f2', 'java6-f3', 'java6-f4', 'java6-f5', 'java6-f6'],
+        acceptedOrders: [],
+      },
+      {
+        language: 'cpp',
+        languageName: 'C++ 17',
+        blocks: [
+          { blockId: 'cpp6-f1', code: '#include <iostream>\nusing namespace std;\n\nint main() {', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'cpp6-f2', code: '    int n;\n    if (!(cin >> n)) return 0;\n    int count = 0;', role: 'INPUT', order: 2 },
+          { blockId: 'cpp6-f3', code: '    auto isPrime = [](int val) {\n        if (val < 2) return false;\n        for (int d = 2; d * d <= val; d++) {\n            if (val % d == 0) return false;\n        }\n        return true;\n    };', role: 'LOGIC', order: 3 },
+          { blockId: 'cpp6-f4', code: '    for (int i = 2; i <= n; i++) {\n        if (isPrime(i)) {', role: 'LOGIC', order: 4 },
+          { blockId: 'cpp6-f5', code: '            count++;\n        }\n    }', role: 'LOGIC', order: 5 },
+          { blockId: 'cpp6-f6', code: '    cout << count << endl;\n    return 0;\n}', role: 'OUTPUT', order: 6 },
+        ],
+        revealOrder: ['cpp6-f1', 'cpp6-f2', 'cpp6-f3', 'cpp6-f4', 'cpp6-f5', 'cpp6-f6'],
+        acceptedOrders: [],
+      },
+      {
+        language: 'c',
+        languageName: 'C (GCC)',
+        blocks: [
+          { blockId: 'c6-f1', code: '#include <stdio.h>\n#include <stdbool.h>\n\nint main() {', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'c6-f2', code: '    int n;\n    if (scanf("%d", &n) != 1) return 0;\n    int count = 0;', role: 'INPUT', order: 2 },
+          { blockId: 'c6-f3', code: '    auto bool isPrime(int val);\n    bool isPrime(int val) {\n        if (val < 2) return false;\n        for (int d = 2; d * d <= val; d++) {\n            if (val % d == 0) return false;\n        }\n        return true;\n    }', role: 'LOGIC', order: 3 },
+          { blockId: 'c6-f4', code: '    for (int i = 2; i <= n; i++) {\n        if (isPrime(i)) {', role: 'LOGIC', order: 4 },
+          { blockId: 'c6-f5', code: '            count++;\n        }\n    }', role: 'LOGIC', order: 5 },
+          { blockId: 'c6-f6', code: '    printf("%d\\n", count);\n    return 0;\n}', role: 'OUTPUT', order: 6 },
+        ],
+        revealOrder: ['c6-f1', 'c6-f2', 'c6-f3', 'c6-f4', 'c6-f5', 'c6-f6'],
+        acceptedOrders: [],
+      },
+    ],
+    tasks: [
+      {
+        taskId: 'task-1',
+        title: 'Task 1: Program Entry & Stream Setup',
+        description: 'Complete this task to unlock the program skeleton and standard library imports.',
+        order: 1,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py6-f1',
+          java: 'java6-f1',
+          cpp: 'cpp6-f1',
+          c: 'c6-f1',
+        },
+        quizPool: [
+          {
+            quizId: 'q6-t1-q1',
+            type: 'MCQ',
+            prompt: 'Which header file or module is typically imported to read standard input in Python and C?',
+            options: ['sys in Python, <stdio.h> in C', 'math in Python, <stdlib.h> in C', 'os in Python, <string.h> in C', 'io in Python, <iostream> in C'],
+            answer: 0,
+            explain: 'Python uses sys (or input()) for standard streams, while C uses <stdio.h> for scanf and standard I/O.',
+            concept: 'imports',
+          },
+          {
+            quizId: 'q6-t1-q2',
+            type: 'MCQ',
+            prompt: 'Why must the main entry point function return an integer in C and C++ (e.g. int main())?',
+            options: ['To return an exit status code to the operating system (0 indicating success)', 'To pass command line arguments to other processes', 'To allocate stack memory for local variables', 'To indicate the number of threads used by the runtime'],
+            answer: 0,
+            explain: 'In C and C++, main returns an exit code where 0 conventionally signals normal/successful termination to the OS.',
+            concept: 'main-return',
+          },
+        ],
+      },
+      {
+        taskId: 'task-2',
+        title: 'Task 2: Read Upper Bound Integer N',
+        description: 'Complete this task to unlock the standard input extraction block.',
+        order: 2,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py6-f2',
+          java: 'java6-f2',
+          cpp: 'cpp6-f2',
+          c: 'c6-f2',
+        },
+        quizPool: [
+          {
+            quizId: 'q6-t2-q1',
+            type: 'MCQ',
+            prompt: 'When reading an integer input from standard input in Java, which method of Scanner extracts the next integer token?',
+            options: ['nextInt()', 'readInteger()', 'next()', 'parseInt()'],
+            answer: 0,
+            explain: 'Scanner.nextInt() scans and parses the next token of the input as an int.',
+            concept: 'java-input',
+          },
+          {
+            quizId: 'q6-t2-q2',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'If standard input contains "  45  \\n  90  ", what integer is stored in N if only the first token is read?',
+            options: [],
+            answer: '45',
+            explain: 'Whitespace and newlines are delimiters; the first integer token parsed is 45.',
+            concept: 'input-tokens',
+          },
+        ],
+      },
+      {
+        taskId: 'task-3',
+        title: 'Task 3: Primality Test & Sqrt Optimization',
+        description: 'Complete this task to unlock the isPrime testing logic block.',
+        order: 3,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py6-f3',
+          java: 'java6-f3',
+          cpp: 'cpp6-f3',
+          c: 'c6-f3',
+        },
+        quizPool: [
+          {
+            quizId: 'q6-t3-q1',
+            type: 'MCQ',
+            prompt: 'Why is it sufficient to test divisors only up to sqrt(N) (d * d <= N) when checking whether N is prime?',
+            options: [
+              'If N has a factor greater than sqrt(N), its corresponding paired factor must be <= sqrt(N)',
+              'Because all prime numbers are odd numbers above sqrt(N)',
+              'Because the square root is the midpoint of the integer range',
+              'It is only a heuristic approximation and fails for large composite numbers',
+            ],
+            answer: 0,
+            explain: 'If N = a * b, at least one factor must satisfy a <= sqrt(N) and b >= sqrt(N). If no factor is found up to sqrt(N), N must be prime.',
+            concept: 'sqrt-optimization',
+          },
+          {
+            quizId: 'q6-t3-q2',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'Why is the number 1 not considered a prime number? What is the boolean result of isPrime(1)?',
+            options: [],
+            answer: 'false',
+            explain: 'By definition, a prime number is an integer greater than 1 that has exactly two distinct positive divisors: 1 and itself. Thus 1 is not prime.',
+            concept: 'prime-definition',
+          },
+        ],
+      },
+      {
+        taskId: 'task-4',
+        title: 'Task 4: Iterate Candidate Numbers (2..N)',
+        description: 'Complete this task to unlock the prime iteration loop header.',
+        order: 4,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py6-f4',
+          java: 'java6-f4',
+          cpp: 'cpp6-f4',
+          c: 'c6-f4',
+        },
+        quizPool: [
+          {
+            quizId: 'q6-t4-q1',
+            type: 'MCQ',
+            prompt: 'In Python, which range expression iterates through all candidate integers from 2 up to and including N?',
+            options: ['range(2, n + 1)', 'range(2, n)', 'range(1, n + 1)', 'range(2, n, 2)'],
+            answer: 0,
+            explain: 'In Python, range(start, stop) is exclusive of stop, so range(2, n + 1) iterates through 2, 3, ..., N.',
+            concept: 'loop-range',
+          },
+          {
+            quizId: 'q6-t4-q2',
+            type: 'FILL_BLANK',
+            prompt: 'In C/C++/Java, which arithmetic operator yields the remainder of integer division to test divisibility (e.g. n ___ d == 0)?',
+            options: [],
+            answer: ['%', 'mod', 'modulo'],
+            explain: 'The % operator computes the remainder of division; if n % d == 0, d divides n evenly.',
+            concept: 'modulo-operator',
+          },
+        ],
+      },
+      {
+        taskId: 'task-5',
+        title: 'Task 5: Count Increment & Scope Closure',
+        description: 'Complete this task to unlock the counter increment and loop termination block.',
+        order: 5,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py6-f5',
+          java: 'java6-f5',
+          cpp: 'cpp6-f5',
+          c: 'c6-f5',
+        },
+        quizPool: [
+          {
+            quizId: 'q6-t5-q1',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'How many prime numbers exist in the range from 2 to 10 inclusive?',
+            options: [],
+            answer: '4',
+            explain: 'The primes between 2 and 10 are 2, 3, 5, and 7 (total of 4 primes).',
+            concept: 'prime-count',
+          },
+          {
+            quizId: 'q6-t5-q2',
+            type: 'MCQ',
+            prompt: 'Which statement increments the integer variable count by 1 in C, C++, and Java?',
+            options: ['count++;', 'count**;', 'count += count;', 'increment(count);'],
+            answer: 0,
+            explain: 'count++ (or ++count or count += 1) increments the integer variable by 1.',
+            concept: 'increment-operator',
+          },
+        ],
+      },
+      {
+        taskId: 'task-6',
+        title: 'Task 6: Display Count & Terminate',
+        description: 'Complete this task to unlock the result output and program exit block.',
+        order: 6,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py6-f6',
+          java: 'java6-f6',
+          cpp: 'cpp6-f6',
+          c: 'c6-f6',
+        },
+        quizPool: [
+          {
+            quizId: 'q6-t6-q1',
+            type: 'MCQ',
+            prompt: 'Which format specifier is used with printf in C to output a signed decimal integer followed by a newline?',
+            options: ['%d\\n', '%f\\n', '%s\\n', '%c\\n'],
+            answer: 0,
+            explain: '%d formats a signed integer in decimal representation, and \\n creates a newline.',
+            concept: 'c-format-specifier',
+          },
+          {
+            quizId: 'q6-t6-q2',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'If N = 20, what single integer is printed to standard output?',
+            options: [],
+            answer: '8',
+            explain: 'The 8 primes <= 20 are 2, 3, 5, 7, 11, 13, 17, 19.',
+            concept: 'prime-output-evaluation',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'ch-07',
+    sequenceOrder: 3,
+    title: 'Challenge 7 – Longest Increasing Subsequence',
+    category: 'Dynamic Programming',
+    difficulty: 'Hard',
+    points: 300,
+    description:
+      'Given an integer N followed by an array of N integers from standard input, determine and display the length of the longest strictly increasing subsequence (LIS).\n\nInput: First line contains integer N (1 <= N <= 1000). Second line contains N space-separated integers.\nOutput: A single integer representing the length of the longest strictly increasing subsequence.',
+    sampleInput: '6\n5 2 8 6 3 6',
+    sampleOutput: '3',
+    timeLimitSeconds: 1200,
+    supportedLanguages: ['python', 'java', 'cpp', 'c'],
+    hiddenTests: [
+      { input: '1\n42\n', expectedOutput: '1', description: 'Edge case: single element' },
+      { input: '5\n7 7 7 7 7\n', expectedOutput: '1', description: 'All equal elements (strictly increasing length 1)' },
+      { input: '5\n10 9 8 7 6\n', expectedOutput: '1', description: 'Strictly decreasing sequence' },
+      { input: '5\n1 2 3 4 5\n', expectedOutput: '5', description: 'Strictly increasing sequence' },
+      { input: '6\n5 2 8 6 3 6\n', expectedOutput: '3', description: 'Sample case with duplicates' },
+      { input: '8\n10 22 9 33 21 50 41 60\n', expectedOutput: '5', description: 'Mixed increasing sequence' },
+      { input: '6\n-5 -2 -1 0 4 2\n', expectedOutput: '5', description: 'Negative and positive sequence' },
+      { input: '7\n1 3 2 4 3 5 4\n', expectedOutput: '4', description: 'Alternating sequence' },
+      { input: '10\n0 8 4 12 2 10 6 14 1 9\n', expectedOutput: '4', description: 'Standard benchmark sequence' },
+    ],
+    languageConfigs: [
+      {
+        language: 'python',
+        languageName: 'Python 3',
+        blocks: [
+          { blockId: 'py7-f1', code: 'import sys\n\ndef main():', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'py7-f2', code: '    tokens = sys.stdin.read().split()\n    if not tokens:\n        return\n    n = int(tokens[0])', role: 'INPUT', order: 2 },
+          { blockId: 'py7-f3', code: '    arr = [int(x) for x in tokens[1:1 + n]]', role: 'INPUT', order: 3 },
+          { blockId: 'py7-f4', code: '    dp = [1] * n', role: 'LOGIC', order: 4 },
+          { blockId: 'py7-f5', code: '    for i in range(n):', role: 'LOGIC', order: 5 },
+          { blockId: 'py7-f6', code: '        for j in range(i):\n            if arr[j] < arr[i] and dp[j] + 1 > dp[i]:\n                dp[i] = dp[j] + 1', role: 'LOGIC', order: 6 },
+          { blockId: 'py7-f7', code: '    max_len = 0\n    for val in dp:\n        if val > max_len:\n            max_len = val', role: 'LOGIC', order: 7 },
+          { blockId: 'py7-f8', code: '    print(max_len)\n\nif __name__ == \'__main__\':\n    main()', role: 'OUTPUT', order: 8 },
+        ],
+        revealOrder: ['py7-f1', 'py7-f2', 'py7-f3', 'py7-f4', 'py7-f5', 'py7-f6', 'py7-f7', 'py7-f8'],
+        acceptedOrders: [],
+      },
+      {
+        language: 'java',
+        languageName: 'Java 17',
+        blocks: [
+          { blockId: 'java7-f1', code: 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'java7-f2', code: '        Scanner sc = new Scanner(System.in);\n        if (!sc.hasNextInt()) return;\n        int n = sc.nextInt();', role: 'INPUT', order: 2 },
+          { blockId: 'java7-f3', code: '        int[] arr = new int[n];\n        for (int i = 0; i < n; i++) {\n            arr[i] = sc.nextInt();\n        }', role: 'INPUT', order: 3 },
+          { blockId: 'java7-f4', code: '        int[] dp = new int[n];\n        for (int i = 0; i < n; i++) {\n            dp[i] = 1;\n        }', role: 'LOGIC', order: 4 },
+          { blockId: 'java7-f5', code: '        for (int i = 0; i < n; i++) {', role: 'LOGIC', order: 5 },
+          { blockId: 'java7-f6', code: '            for (int j = 0; j < i; j++) {\n                if (arr[j] < arr[i] && dp[j] + 1 > dp[i]) {\n                    dp[i] = dp[j] + 1;\n                }\n            }\n        }', role: 'LOGIC', order: 6 },
+          { blockId: 'java7-f7', code: '        int maxLen = 0;\n        for (int i = 0; i < n; i++) {\n            if (dp[i] > maxLen) maxLen = dp[i];\n        }', role: 'LOGIC', order: 7 },
+          { blockId: 'java7-f8', code: '        System.out.println(maxLen);\n    }\n}', role: 'OUTPUT', order: 8 },
+        ],
+        revealOrder: ['java7-f1', 'java7-f2', 'java7-f3', 'java7-f4', 'java7-f5', 'java7-f6', 'java7-f7', 'java7-f8'],
+        acceptedOrders: [],
+      },
+      {
+        language: 'cpp',
+        languageName: 'C++ 17',
+        blocks: [
+          { blockId: 'cpp7-f1', code: '#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'cpp7-f2', code: '    int n;\n    if (!(cin >> n)) return 0;', role: 'INPUT', order: 2 },
+          { blockId: 'cpp7-f3', code: '    vector<int> arr(n);\n    for (int i = 0; i < n; i++) {\n        cin >> arr[i];\n    }', role: 'INPUT', order: 3 },
+          { blockId: 'cpp7-f4', code: '    vector<int> dp(n, 1);', role: 'LOGIC', order: 4 },
+          { blockId: 'cpp7-f5', code: '    for (int i = 0; i < n; i++) {', role: 'LOGIC', order: 5 },
+          { blockId: 'cpp7-f6', code: '        for (int j = 0; j < i; j++) {\n            if (arr[j] < arr[i] && dp[j] + 1 > dp[i]) {\n                dp[i] = dp[j] + 1;\n            }\n        }\n    }', role: 'LOGIC', order: 6 },
+          { blockId: 'cpp7-f7', code: '    int maxLen = 0;\n    for (int i = 0; i < n; i++) {\n        if (dp[i] > maxLen) maxLen = dp[i];\n    }', role: 'LOGIC', order: 7 },
+          { blockId: 'cpp7-f8', code: '    cout << maxLen << endl;\n    return 0;\n}', role: 'OUTPUT', order: 8 },
+        ],
+        revealOrder: ['cpp7-f1', 'cpp7-f2', 'cpp7-f3', 'cpp7-f4', 'cpp7-f5', 'cpp7-f6', 'cpp7-f7', 'cpp7-f8'],
+        acceptedOrders: [],
+      },
+      {
+        language: 'c',
+        languageName: 'C (GCC)',
+        blocks: [
+          { blockId: 'c7-f1', code: '#include <stdio.h>\n#include <stdlib.h>\n\nint main() {', role: 'MAIN_WRAPPER', order: 1 },
+          { blockId: 'c7-f2', code: '    int n;\n    if (scanf("%d", &n) != 1) return 0;', role: 'INPUT', order: 2 },
+          { blockId: 'c7-f3', code: '    int *arr = (int *)malloc(sizeof(int) * n);\n    for (int i = 0; i < n; i++) {\n        scanf("%d", &arr[i]);\n    }', role: 'INPUT', order: 3 },
+          { blockId: 'c7-f4', code: '    int *dp = (int *)malloc(sizeof(int) * n);\n    for (int i = 0; i < n; i++) {\n        dp[i] = 1;\n    }', role: 'LOGIC', order: 4 },
+          { blockId: 'c7-f5', code: '    for (int i = 0; i < n; i++) {', role: 'LOGIC', order: 5 },
+          { blockId: 'c7-f6', code: '        for (int j = 0; j < i; j++) {\n            if (arr[j] < arr[i] && dp[j] + 1 > dp[i]) {\n                dp[i] = dp[j] + 1;\n            }\n        }\n    }', role: 'LOGIC', order: 6 },
+          { blockId: 'c7-f7', code: '    int maxLen = 0;\n    for (int i = 0; i < n; i++) {\n        if (dp[i] > maxLen) maxLen = dp[i];\n    }', role: 'LOGIC', order: 7 },
+          { blockId: 'c7-f8', code: '    printf("%d\\n", maxLen);\n    free(arr);\n    free(dp);\n    return 0;\n}', role: 'OUTPUT', order: 8 },
+        ],
+        revealOrder: ['c7-f1', 'c7-f2', 'c7-f3', 'c7-f4', 'c7-f5', 'c7-f6', 'c7-f7', 'c7-f8'],
+        acceptedOrders: [],
+      },
+    ],
+    tasks: [
+      {
+        taskId: 'task-1',
+        title: 'Task 1: Setup & Environment Entry',
+        description: 'Complete this task to unlock the program skeleton and container headers.',
+        order: 1,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f1',
+          java: 'java7-f1',
+          cpp: 'cpp7-f1',
+          c: 'c7-f1',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t1-q1',
+            type: 'MCQ',
+            prompt: 'What is the worst-case time complexity of the standard nested-loop dynamic programming approach for Longest Increasing Subsequence of length N?',
+            options: ['O(N^2)', 'O(N log N)', 'O(N)', 'O(2^N)'],
+            answer: 0,
+            explain: 'With an outer loop of size N and an inner loop running up to i, total comparisons are N*(N-1)/2, which is O(N^2).',
+            concept: 'time-complexity',
+          },
+          {
+            quizId: 'q7-t1-q2',
+            type: 'MCQ',
+            prompt: 'Which header in C++ provides the std::vector dynamic array container?',
+            options: ['<vector>', '<array>', '<list>', '<algorithm>'],
+            answer: 0,
+            explain: '#include <vector> defines std::vector.',
+            concept: 'cpp-vector',
+          },
+        ],
+      },
+      {
+        taskId: 'task-2',
+        title: 'Task 2: Read Sequence Size N',
+        description: 'Complete this task to unlock the input parsing for sequence length.',
+        order: 2,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f2',
+          java: 'java7-f2',
+          cpp: 'cpp7-f2',
+          c: 'c7-f2',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t2-q1',
+            type: 'MCQ',
+            prompt: 'In dynamic programming problems where 1 <= N <= 1000, why is an O(N^2) solution acceptable for execution within standard 2-second limits?',
+            options: [
+              '1000^2 is 1,000,000 operations, which easily finishes in under 0.05 seconds (modern CPUs execute ~10^8 ops/sec)',
+              'Because O(N^2) algorithms automatically parallelize across GPU cores',
+              'Because the garbage collector optimizes nested loops to O(1)',
+              'Because N=1000 guarantees binary search trees are balanced',
+            ],
+            answer: 0,
+            explain: '1 million iterations take only a few milliseconds on standard hardware, well within time limits.',
+            concept: 'complexity-budget',
+          },
+          {
+            quizId: 'q7-t2-q2',
+            type: 'FILL_BLANK',
+            prompt: 'In C, which library function dynamically allocates memory on the heap for an array of integers?',
+            options: [],
+            answer: ['malloc', 'calloc', 'malloc()'],
+            explain: 'malloc(size) allocates uninitialized heap memory of the specified number of bytes.',
+            concept: 'memory-allocation',
+          },
+        ],
+      },
+      {
+        taskId: 'task-3',
+        title: 'Task 3: Read Array Elements',
+        description: 'Complete this task to unlock the array populating block.',
+        order: 3,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f3',
+          java: 'java7-f3',
+          cpp: 'cpp7-f3',
+          c: 'c7-f3',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t3-q1',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'Given the array sequence [10, 9, 8, 7, 6], what is the length of the longest strictly increasing subsequence?',
+            options: [],
+            answer: '1',
+            explain: 'Since each successive element is strictly smaller than the previous one, any strictly increasing subsequence contains only a single element.',
+            concept: 'decreasing-edge-case',
+          },
+          {
+            quizId: 'q7-t3-q2',
+            type: 'MCQ',
+            prompt: 'What is the difference between a subsequence and a contiguous subarray?',
+            options: [
+              'A subsequence can be derived by deleting zero or more elements without changing relative order of remaining elements',
+              'A subsequence must consist of consecutive adjacent elements in memory',
+              'A subsequence requires all elements to be sorted in ascending order in the input',
+              'Subarrays can reorder elements arbitrarily whereas subsequences cannot',
+            ],
+            answer: 0,
+            explain: 'A subsequence maintains relative order but does not need to be contiguous, unlike a subarray.',
+            concept: 'subsequence-definition',
+          },
+        ],
+      },
+      {
+        taskId: 'task-4',
+        title: 'Task 4: DP Table Initialization',
+        description: 'Complete this task to unlock the DP table allocation and baseline init.',
+        order: 4,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f4',
+          java: 'java7-f4',
+          cpp: 'cpp7-f4',
+          c: 'c7-f4',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t4-q1',
+            type: 'MCQ',
+            prompt: 'Why is every element of the dp array initialized to 1 at the beginning?',
+            options: [
+              'Every individual element by itself forms a valid strictly increasing subsequence of length 1',
+              'To prevent division by zero in the transition equation',
+              'Because 0 is reserved for empty sets',
+              'Because dynamic programming arrays must never contain null or zero values',
+            ],
+            answer: 0,
+            explain: 'A single element [a[i]] is trivially an increasing subsequence of length 1.',
+            concept: 'dp-initialization',
+          },
+          {
+            quizId: 'q7-t4-q2',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'If N = 4 and the input array is [7, 7, 7, 7], what is the final value of the longest strictly increasing subsequence?',
+            options: [],
+            answer: '1',
+            explain: 'Strictly increasing requires a[j] < a[i]. Since all elements are equal, no pair satisfies the condition, so max length remains 1.',
+            concept: 'strictly-increasing',
+          },
+        ],
+      },
+      {
+        taskId: 'task-5',
+        title: 'Task 5: Outer DP Loop Iteration',
+        description: 'Complete this task to unlock the outer sequence traversal loop.',
+        order: 5,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f5',
+          java: 'java7-f5',
+          cpp: 'cpp7-f5',
+          c: 'c7-f5',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t5-q1',
+            type: 'MCQ',
+            prompt: 'In the DP formulation, what does dp[i] represent when the outer loop completes iteration i?',
+            options: [
+              'The length of the longest strictly increasing subsequence that ends at index i',
+              'The total count of all increasing subsequences in the prefix array',
+              'The maximum element value observed up to index i',
+              'The length of the longest common subsequence between arr and its sorted copy',
+            ],
+            answer: 0,
+            explain: 'dp[i] stores the length of the longest strictly increasing subsequence whose last element is arr[i].',
+            concept: 'dp-state-definition',
+          },
+          {
+            quizId: 'q7-t5-q2',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'For the input array [1, 3, 2], what is the value of dp[1] after processing index 1?',
+            options: [],
+            answer: '2',
+            explain: 'At index 1 (value 3), arr[0]=1 < arr[1]=3, so dp[1] becomes dp[0] + 1 = 2 (subsequence [1, 3]).',
+            concept: 'dp-trace',
+          },
+        ],
+      },
+      {
+        taskId: 'task-6',
+        title: 'Task 6: Inner Subproblem Transition',
+        description: 'Complete this task to unlock the inner transition comparison and update.',
+        order: 6,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f6',
+          java: 'java7-f6',
+          cpp: 'cpp7-f6',
+          c: 'c7-f6',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t6-q1',
+            type: 'FILL_BLANK',
+            prompt: 'Complete the comparison operator to check strictly increasing condition between previous element a[j] and current element a[i]: if (a[j] ___ a[i])',
+            options: [],
+            answer: ['<', 'less than'],
+            explain: 'For a strictly increasing subsequence, the earlier element a[j] must be strictly less than a[i].',
+            concept: 'transition-condition',
+          },
+          {
+            quizId: 'q7-t6-q2',
+            type: 'MCQ',
+            prompt: 'What is the correct recurrence relation to update dp[i] given an earlier index j < i where arr[j] < arr[i]?',
+            options: [
+              'dp[i] = max(dp[i], dp[j] + 1)',
+              'dp[i] = dp[j] + dp[i]',
+              'dp[i] = max(dp[i], arr[j] + arr[i])',
+              'dp[i] = dp[j - 1] + 1',
+            ],
+            answer: 0,
+            explain: 'If arr[j] < arr[i], we can extend the increasing subsequence ending at j by appending arr[i], giving length dp[j] + 1.',
+            concept: 'bellman-transition',
+          },
+        ],
+      },
+      {
+        taskId: 'task-7',
+        title: 'Task 7: Calculate Maximum LIS Value',
+        description: 'Complete this task to unlock the global maximum extraction block.',
+        order: 7,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f7',
+          java: 'java7-f7',
+          cpp: 'cpp7-f7',
+          c: 'c7-f7',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t7-q1',
+            type: 'MCQ',
+            prompt: 'Why is the final answer the maximum across ALL entries in dp rather than simply dp[n - 1]?',
+            options: [
+              'The overall longest increasing subsequence might end at any index, not necessarily the last element',
+              'Because dp[n - 1] is overwritten by garbage values during memory cleanup',
+              'Because dp[n - 1] only represents decreasing sequences',
+              'Because the array must be reversed before finding the minimum',
+            ],
+            answer: 0,
+            explain: 'If the largest element was in the middle of the array, the longest subsequence could end before index n-1.',
+            concept: 'dp-result-extraction',
+          },
+          {
+            quizId: 'q7-t7-q2',
+            type: 'OUTPUT_PREDICTION',
+            prompt: 'For the input sequence [5, 2, 8, 6, 3, 6], what is the length of the longest strictly increasing subsequence?',
+            options: [],
+            answer: '3',
+            explain: 'Subsequences like [2, 5, 6] or [2, 3, 6] have length 3.',
+            concept: 'lis-sample-answer',
+          },
+        ],
+      },
+      {
+        taskId: 'task-8',
+        title: 'Task 8: Output Longest Subsequence Length',
+        description: 'Complete this task to unlock the result display and memory cleanup block.',
+        order: 8,
+        penalty: 20,
+        cooldownSeconds: 3,
+        rewards: {
+          python: 'py7-f8',
+          java: 'java7-f8',
+          cpp: 'cpp7-f8',
+          c: 'c7-f8',
+        },
+        quizPool: [
+          {
+            quizId: 'q7-t8-q1',
+            type: 'MCQ',
+            prompt: 'In C, which function must be called to release memory dynamically allocated with malloc before program exit?',
+            options: ['free()', 'delete()', 'release()', 'dispose()'],
+            answer: 0,
+            explain: 'free(ptr) deallocates memory allocated by malloc, preventing memory leaks.',
+            concept: 'c-memory-management',
+          },
+          {
+            quizId: 'q7-t8-q2',
+            type: 'MCQ',
+            prompt: 'Which Java class is used to write formatted output to the standard console stream?',
+            options: ['System.out', 'Console.write', 'StdOut.print', 'Runtime.output'],
+            answer: 0,
+            explain: 'System.out is the standard PrintStream used for console output in Java.',
+            concept: 'java-output',
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // ─── MAIN SEED FUNCTION ────────────────────────────────────────────────────
@@ -737,6 +1019,7 @@ async function seed() {
     const challengeDoc = {
       title: cd.title,
       slug: cd.slug,
+      sequenceOrder: cd.sequenceOrder,
       category: cd.category,
       difficulty: cd.difficulty,
       points: cd.points,
@@ -784,15 +1067,59 @@ async function seed() {
       console.log(`  → Seeded ${testDocs.length} test cases`);
     }
 
+    // Upsert QR Blocks across all language configs
+    await QRBlock.deleteMany({
+      $or: [{ challengeId: challenge._id }, { challengeId: challenge.slug }],
+    });
+
+    const qrBlockDocs = [];
+    if (Array.isArray(cd.languageConfigs)) {
+      for (const lc of cd.languageConfigs) {
+        if (Array.isArray(lc.blocks)) {
+          lc.blocks.forEach((block, idx) => {
+            const token = generateQRToken(challenge._id, block.blockId, lc.language);
+            qrBlockDocs.push({
+              challengeId: challenge._id,
+              blockId: block.blockId,
+              title: `${challenge.title} - ${lc.language.toUpperCase()} Block ${block.order || idx + 1}`,
+              language: lc.language,
+              code: block.code,
+              codeSnippet: block.code,
+              type: block.role || 'LOGIC',
+              blockType: block.role || 'LOGIC',
+              isDecoy: !!block.isDecoy,
+              correctOrder: block.order || idx + 1,
+              originalOrder: block.order || idx + 1,
+              displayOrder: lc.revealOrder ? lc.revealOrder.indexOf(block.blockId) + 1 : idx + 1,
+              qrToken: token,
+              qrHash: token,
+            });
+          });
+        }
+      }
+    }
+
+    if (qrBlockDocs.length > 0) {
+      await QRBlock.insertMany(qrBlockDocs);
+      console.log(`  → Seeded ${qrBlockDocs.length} QR blocks for ${cd.languageConfigs.length} languages`);
+    }
+
     console.log(`  ✓ Done: ${challenge.title}`);
   }
 
   console.log('\n[Seed] All challenges seeded successfully!');
-  await mongoose.disconnect();
-  process.exit(0);
+  if (require.main === module) {
+    await mongoose.disconnect();
+    process.exit(0);
+  }
 }
 
-seed().catch((err) => {
-  console.error('[Seed] Error:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  seed().catch((err) => {
+    console.error('[Seed] Error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = seed;
+module.exports.CHALLENGES_DATA = CHALLENGES_DATA;

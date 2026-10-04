@@ -1,12 +1,15 @@
+require('./testSafetyGuard');
 const request = require('supertest');
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../src/app');
-const env = require('../src/config/env');
 const User = require('../src/models/User');
 const Challenge = require('../src/models/Challenge');
 const QRBlock = require('../src/models/QRBlock');
 const TestCase = require('../src/models/TestCase');
 const { generateCodeBlocks } = require('../src/services/challenge/codeBlockSplitter');
+
+let mongoServer;
 
 describe('Blind Coding Platform - Admin & Challenge Workflow Suite', () => {
   let adminToken = '';
@@ -14,37 +17,45 @@ describe('Blind Coding Platform - Admin & Challenge Workflow Suite', () => {
   let challengeId = '';
 
   beforeAll(async () => {
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(env.MONGO_URI);
-    }
+    // 1. Initialize strictly in-memory MongoDB
+    mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    await mongoose.disconnect();
+    await mongoose.connect(uri);
 
-    // Authenticate admin
+    // 2. Create isolated Admin user in memory
+    await User.create({
+      name: 'Test Admin',
+      email: 'admin_test@mindcraft.local',
+      password: 'AdminPassword123!',
+      role: 'admin',
+    });
+
     const adminRes = await request(app).post('/api/auth/admin/login').send({
-      email: env.ADMIN_EMAIL,
-      password: env.ADMIN_PASSWORD,
+      email: 'admin_test@mindcraft.local',
+      password: 'AdminPassword123!',
     });
     adminToken = adminRes.body.token;
 
-    // Create participant user for security tests
+    // 3. Create isolated Participant user in memory
     const partEmail = `test_part_${Date.now()}@college.edu`;
-    await request(app).post('/api/participants/register').send({
+    const regRes = await request(app).post('/api/participants/register').send({
       name: 'Jest Participant',
+      participantId: `P-${Date.now()}`,
       email: partEmail,
-      password: 'Password123!',
       teamName: 'JestSquad',
       college: 'Tech University',
+      department: 'Computer Science',
     });
-
-    const partRes = await request(app).post('/api/auth/login').send({
-      email: partEmail,
-      password: 'Password123!',
-    });
-    participantToken = partRes.body.token;
-  });
+    participantToken = regRes.body.token;
+  }, 60000);
 
   afterAll(async () => {
     await mongoose.disconnect();
-  });
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
+  }, 60000);
 
   test('1. Syntax-Aware Code Block Splitter creates ordered fragments', () => {
     const javaCode = `import java.util.*;

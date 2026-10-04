@@ -11,6 +11,7 @@ export default function Footer() {
             Admin Portal
           </Link>
           <span className="text-[11px] text-slate-300">|</span>
+          <p className="text-[11px] text-slate-500">Official Competition Engine // Judge0 Sandboxed</p>
           <p className="text-[11px] text-slate-600">Frontend Prototype // Zero Backend Dependency</p>
         </div>
       </div>

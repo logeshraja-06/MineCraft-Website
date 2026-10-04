@@ -48,7 +48,15 @@ export default function AdminSubmissions() {
 
   useEffect(() => {
     fetchSubmissions();
+    const interval = setInterval(fetchSubmissions, 10000);
+    const stopPolling = () => clearInterval(interval);
+    window.addEventListener('mindcraft_auth_expired', stopPolling);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('mindcraft_auth_expired', stopPolling);
+    };
   }, [statusFilter, langFilter]);
+
 
   const openSubmissionDetails = async (id) => {
     try {

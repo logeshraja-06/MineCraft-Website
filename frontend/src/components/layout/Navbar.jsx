@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useParticipant } from '../../context/ParticipantContext';
-import { Lightbulb, ArrowRight } from 'lucide-react';
+import { useAuthContext } from '../../context/AuthContext';
+import { ArrowRight, Shield } from 'lucide-react';
 
 export default function Navbar() {
   const { participant } = useParticipant();
+  const { role, user } = useAuthContext() || {};
+  const isAdmin = role === 'admin' || user?.role === 'admin';
   const location = useLocation();
 
   const navLinks = [
@@ -12,10 +15,11 @@ export default function Navbar() {
     { label: 'Challenges', to: '/challenges' },
     { label: 'Rules', to: '/rules' },
     { label: 'Leaderboard', to: '/leaderboard' },
+    ...(isAdmin ? [{ label: 'Admin', to: '/admin' }] : []),
   ];
 
   return (
-    <nav className="bg-white sticky top-0 z-40 px-6 py-4 shadow-sm">
+    <nav className="bg-white sticky top-0 z-40 px-6 py-4 shadow-sm font-mono">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         
         {/* LOGO */}
@@ -69,7 +73,7 @@ export default function Navbar() {
           ) : (
             <Link
               to="/register"
-              className="px-8 py-3 rounded-full bg-[#F28C0F] hover:bg-orange-500 text-slate-900 font-bold text-base transition flex items-center gap-2"
+              className="px-8 py-3 rounded-full bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-bold text-base transition flex items-center gap-2"
             >
               Register <ArrowRight className="w-4 h-4" />
             </Link>

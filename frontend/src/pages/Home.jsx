@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, KeyRound, Box, Code, Puzzle, PlayCircle, Zap, Package, Play, Clock, BarChart2, ArrowRight } from 'lucide-react';
+import { useParticipant } from '../context/ParticipantContext';
+import { challengeApi } from '../services/challengeApi';
+import { ClipboardList, KeyRound, Box, Code, Puzzle, PlayCircle, Zap, Package, Play, Clock, BarChart2, ArrowRight, Layers } from 'lucide-react';
 
 export default function Home() {
+  const { participant } = useParticipant();
+  const [currentChallengeSlug, setCurrentChallengeSlug] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkProgress() {
+      if (!participant) return;
+      try {
+        const res = await challengeApi.getProgress();
+        if (!cancelled && res.success && res.currentChallengeSlug) {
+          setCurrentChallengeSlug(res.currentChallengeSlug);
+        }
+      } catch (_) {}
+    }
+    checkProgress();
+    return () => { cancelled = true; };
+  }, [participant]);
+
+  const targetUrl = participant && currentChallengeSlug
+    ? `/challenge?id=${currentChallengeSlug}`
+    : '/challenges';
+
   const steps = [
     { title: 'Solve Quiz', desc: 'Solve MCQ, predict output, fill-in-the-blank to earn keys.', icon: ClipboardList },
     { title: 'Earn Key', desc: 'Answer correctly to get keys.', icon: KeyRound },
@@ -13,25 +37,24 @@ export default function Home() {
   ];
 
   const highlights = [
+    { title: 'Linear Progression', desc: 'Complete Easy to unlock Medium, then Medium to unlock Hard.', icon: Layers },
     { title: 'Quiz to Keys', desc: 'Solve MCQ, predict output, fill-in-the-blank to earn keys.', icon: Zap },
     { title: 'Treasure Chests', desc: 'Unlock and collect shuffled code fragments.', icon: Package },
     { title: 'Fragment Assembly', desc: 'Arrange the fragments in logical order.', icon: Puzzle },
-    { title: 'Real Execution', desc: 'Run your assembled code against sample input.', icon: Play },
+    { title: 'Real Execution', desc: 'Run your assembled code against sample input via Judge0.', icon: Play },
     { title: 'Timed Challenge', desc: '20-minute countdown with fair penalties.', icon: Clock },
-    { title: 'Live Leaderboard', desc: 'Track your position based on completion time and accuracy.', icon: BarChart2 },
   ];
 
   return (
     <div className="bg-white min-h-screen font-sans text-slate-800 overflow-hidden relative">
       
-      {/* Decorative background shapes mimicking the design */}
+      {/* Decorative background shapes */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-orange-100/40 to-transparent rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
       <div className="absolute top-[40%] left-0 w-[400px] h-[400px] bg-orange-50/50 rounded-full -translate-x-1/2 pointer-events-none"></div>
       
       <div className="max-w-7xl mx-auto px-6">
         
         <section className="relative pt-2 pb-12 lg:pt-4 lg:pb-16 flex flex-col lg:flex-row items-center justify-between gap-12">
-
 
           <div className="w-full lg:w-1/2 space-y-6 z-10">
 
@@ -44,11 +67,11 @@ export default function Home() {
             </p>
 
             <p className="text-slate-600 text-lg max-w-lg leading-relaxed pt-2 font-medium">
-              Solve programming quizzes to earn keys, open treasure chests to collect code fragments, assemble them in the right order, and submit your solution before time runs out.
+              Route through a strict linear sequence: complete Easy to unlock Medium, then solve Medium to unlock Hard. Solve programming quizzes to earn keys, open treasure chests to collect code fragments, assemble them in the right order, and clear all test cases before time runs out.
             </p>
 
             <div className="flex flex-wrap gap-4 pt-6">
-              <Link to="/challenges" className="px-10 py-4 text-lg rounded-full bg-[#F28C0F] hover:bg-orange-500 text-slate-900 font-bold transition flex items-center gap-2 shadow-lg shadow-orange-500/30">
+              <Link to={targetUrl} className="px-10 py-4 text-lg rounded-full bg-[#F28C0F] hover:bg-orange-500 text-slate-900 font-bold transition flex items-center gap-2 shadow-lg shadow-orange-500/30">
                 Enter Challenge <ArrowRight className="w-6 h-6" />
               </Link>
               <Link to="/rules" className="px-10 py-4 text-lg rounded-full border-2 border-slate-900 hover:bg-slate-900 hover:text-white text-slate-900 font-bold transition">
@@ -59,16 +82,41 @@ export default function Home() {
 
           <div className="w-full lg:w-1/2 relative z-10 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-lg aspect-square">
-               {/* 
-                 A placeholder for the hero image if the exact asset is not available. 
-                 You can replace src with the exact image from the design.
-               */}
                <div className="absolute inset-0 bg-gradient-to-tr from-orange-100 to-transparent rounded-full opacity-60 animate-pulse"></div>
                <img 
                  src="/hero-illustration.png" 
                  alt="Mind Craft Arena Illustration" 
                  className="absolute inset-0 w-full h-full object-contain scale-110 drop-shadow-2xl relative z-10"
                />
+            </div>
+          </div>
+        </section>
+
+        {/* 3-TIER LINEAR MISSION PATH */}
+        <section className="py-8">
+          <div className="p-8 bg-orange-50/60 border border-orange-200/80 rounded-3xl text-center space-y-4 max-w-3xl mx-auto shadow-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F28C0F]/10 border border-[#F28C0F]/30 text-[#F28C0F] text-xs font-bold tracking-wider uppercase">
+              <Layers className="w-3.5 h-3.5" />
+              <span>Linear Progression Sequence</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+              3-TIER LINEAR MISSION PATH
+            </h3>
+            <p className="text-sm text-slate-600 max-w-lg mx-auto">
+              Complete Easy to unlock Medium, then Medium to unlock Hard. Challenges cannot be skipped or chosen freely.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs pt-2">
+              <span className="px-4 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 font-bold rounded-xl shadow-sm">
+                1. Easy (100 PTS)
+              </span>
+              <span className="text-slate-400 font-black">→</span>
+              <span className="px-4 py-2 bg-amber-50 border border-amber-300 text-amber-700 font-bold rounded-xl shadow-sm">
+                2. Medium (200 PTS)
+              </span>
+              <span className="text-slate-400 font-black">→</span>
+              <span className="px-4 py-2 bg-rose-50 border border-rose-300 text-rose-700 font-bold rounded-xl shadow-sm">
+                3. Hard (300 PTS)
+              </span>
             </div>
           </div>
         </section>
@@ -133,7 +181,6 @@ export default function Home() {
             <path d="M0,0 C50,0 70,50 0,100 Z" fill="#FFEDC2" opacity="0.6"/>
             <path d="M0,20 C40,30 50,80 0,100 Z" fill="#FFD37A" opacity="0.5"/>
             <path d="M0,40 C30,50 35,90 0,100 Z" fill="#FFB733" opacity="0.4"/>
-            {/* Outline curve mimicking the design */}
             <path d="M0,10 C60,20 80,70 10,100" fill="none" stroke="#FFC04D" strokeWidth="0.5" opacity="0.8"/>
           </svg>
         </div>
@@ -147,8 +194,6 @@ export default function Home() {
             <path d="M0,10 C60,20 80,70 10,100" fill="none" stroke="#FFC04D" strokeWidth="0.5" opacity="0.8"/>
           </svg>
         </div>
-
-
 
         {/* Right Side Sparkle */}
         <div className="absolute top-[40%] right-[15%] md:right-[25%] text-[#F28C0F] opacity-70 w-4 h-4 z-10">

@@ -15,6 +15,7 @@ const settingsSchema = new mongoose.Schema(
     leaderboardVisibility: { type: String, enum: ['Public', 'AdminOnly', 'Frozen'], default: 'Public' },
     autoSubmit: { type: Boolean, default: true },
     sessionTimeout: { type: Number, default: 60 }, // minutes
+    enforceProgression: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
