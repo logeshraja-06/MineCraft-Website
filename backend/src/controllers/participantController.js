@@ -27,16 +27,45 @@ exports.registerParticipant = asyncHandler(async (req, res) => {
   const cleanCollege = college.trim();
   const cleanDepartment = department.trim();
 
-  // 2. Uniqueness checks with clear 409 messages
+  // 2. Uniqueness & Resumption checks
   const existingId = await User.findOne({ participantId: cleanParticipantId });
-  if (existingId) {
-    return res.status(409).json({
-      success: false,
-      message: `Participant ID '${cleanParticipantId}' is already registered. Please use your unique ID.`,
+  const existingEmail = await User.findOne({ email: cleanEmail });
+
+  // 2a. If BOTH exist and refer to the SAME user, or if auto-login is needed:
+  // allow the participant to seamlessly log back in and resume their session!
+  if (existingId && existingEmail && existingId._id.toString() === existingEmail._id.toString()) {
+    if (cleanName) existingId.name = cleanName;
+    if (cleanCollege) existingId.college = cleanCollege;
+    if (cleanDepartment) existingId.department = cleanDepartment;
+    await existingId.save();
+
+    const token = generateToken(existingId._id, 'participant');
+    return res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: existingId._id,
+        _id: existingId._id,
+        name: existingId.name,
+        participantId: existingId.participantId,
+        email: existingId.email,
+        college: existingId.college,
+        department: existingId.department,
+        role: 'participant',
+      },
+      message: `Welcome back, ${existingId.name}! Existing session loaded.`,
     });
   }
 
-  const existingEmail = await User.findOne({ email: cleanEmail });
+  // 2b. If participantId is already taken by someone else
+  if (existingId) {
+    return res.status(409).json({
+      success: false,
+      message: `Participant ID '${cleanParticipantId}' is already registered. Please use your unique ID or log in.`,
+    });
+  }
+
+  // 2c. If email is already taken by someone else
   if (existingEmail) {
     return res.status(409).json({
       success: false,
@@ -133,4 +162,47 @@ exports.deleteMe = asyncHandler(async (req, res) => {
     message: `Participant '${user.name}' (${user.participantId || user.email}) and all test progress deleted successfully.`,
   });
 });
+
+exports.loginParticipant = asyncHandler(async (req, res) => {
+  const { email, participantId, phone } = req.body || {};
+  const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+  const cleanId = (participantId || phone) ? String(participantId || phone).trim().toUpperCase() : null;
+
+  if (!cleanEmail && !cleanId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide your registered Email or Phone/Participant ID.',
+    });
+  }
+
+  const query = [];
+  if (cleanEmail) query.push({ email: cleanEmail });
+  if (cleanId) query.push({ participantId: cleanId });
+
+  const user = await User.findOne({ $or: query, role: 'participant' });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'No registered participant found with these details. Please register first.',
+    });
+  }
+
+  const token = generateToken(user._id, 'participant');
+  res.json({
+    success: true,
+    token,
+    user: {
+      id: user._id,
+      _id: user._id,
+      name: user.name,
+      participantId: user.participantId,
+      email: user.email,
+      college: user.college,
+      department: user.department,
+      role: 'participant',
+    },
+    message: `Welcome back, ${user.name}!`,
+  });
+});
+
 

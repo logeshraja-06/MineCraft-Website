@@ -6,11 +6,11 @@ import { clearCompetitionStorage } from '../utils/constants';
 const ParticipantContext = createContext(null);
 
 export function ParticipantProvider({ children }) {
-  const { user, setAuthSession, logout } = useAuthContext() || {};
+  const { user, token, setAuthSession, logout } = useAuthContext() || {};
 
   // Participant identity is strictly derived from the authenticated user token
   const participant = useMemo(() => {
-    if (!user) return null;
+    if (!user || !token) return null;
     if (user.role === 'participant' || user.participantId) {
       return {
         id: user.id || user._id,
@@ -24,13 +24,22 @@ export function ParticipantProvider({ children }) {
       };
     }
     return null;
-  }, [user]);
+  }, [user, token]);
 
   const registerParticipant = async (details) => {
     // Clear all previous competition session data from local storage
     clearCompetitionStorage();
 
     const res = await participantApi.register(details);
+    if (res.token && res.user && setAuthSession) {
+      setAuthSession(res.token, res.user);
+    }
+    return res;
+  };
+
+  const loginParticipant = async (credentials) => {
+    clearCompetitionStorage();
+    const res = await participantApi.login(credentials);
     if (res.token && res.user && setAuthSession) {
       setAuthSession(res.token, res.user);
     }
@@ -62,6 +71,7 @@ export function ParticipantProvider({ children }) {
         participant,
         isRegistered: !!participant && !!participant.participantId,
         registerParticipant,
+        loginParticipant,
         clearParticipant,
         logoutAndDeleteParticipant,
       }}

@@ -7,6 +7,12 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('mindcraft_token'));
   const [user, setUser] = useState(() => {
     try {
+      const storedToken = localStorage.getItem('mindcraft_token');
+      if (!storedToken) {
+        localStorage.removeItem('mindcraft_user');
+        localStorage.removeItem('mindcraft_participant');
+        return null;
+      }
       const savedUser = localStorage.getItem('mindcraft_user');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch {
@@ -103,6 +109,7 @@ export const AuthProvider = ({ children }) => {
     }
     if (newUser) {
       localStorage.setItem('mindcraft_user', JSON.stringify(newUser));
+      localStorage.setItem('mindcraft_participant', JSON.stringify(newUser));
       setUser(newUser);
     }
   };

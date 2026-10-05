@@ -4,6 +4,7 @@ const participantController = require('../controllers/participantController');
 const optionalAuth = require('../middleware/optionalAuth');
 
 router.post('/register', participantController.registerParticipant);
+router.post('/login', participantController.loginParticipant);
 router.post('/join', participantController.registerParticipant);
 router.get('/status', participantController.getStatus);
 router.delete('/me', optionalAuth, participantController.deleteMe);

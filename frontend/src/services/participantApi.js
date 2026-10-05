@@ -5,6 +5,10 @@ export const participantApi = {
     const { data } = await api.post('/participants/register', participantData);
     return data;
   },
+  login: async (credentials) => {
+    const { data } = await api.post('/participants/login', credentials);
+    return data;
+  },
   joinSession: async (sessionCode) => {
     const { data } = await api.post('/participants/join', { sessionCode });
     return data;

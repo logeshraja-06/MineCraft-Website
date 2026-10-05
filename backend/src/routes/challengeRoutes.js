@@ -6,7 +6,7 @@ const optionalAuth = require('../middleware/optionalAuth');
 const protect = require('../middleware/authMiddleware');
 
 // ── Progression info ──
-router.get('/progress', protect, challengeController.getUserProgress);
+router.get('/progress', optionalAuth, challengeController.getUserProgress);
 
 // ── Public challenge info ──
 router.get('/', challengeController.getChallenges);

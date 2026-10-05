@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useParticipant } from '../context/ParticipantContext';
-import { User, Mail, Phone, Building2, BookOpen, GraduationCap, ArrowRight, AlertCircle } from 'lucide-react';
+import { participantApi } from '../services/participantApi';
+import { User, Mail, Phone, Building2, BookOpen, GraduationCap, ArrowRight, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import api from '../services/api';
 
 export default function Register() {
-  const { registerParticipant, participant } = useParticipant();
+  const { registerParticipant, loginParticipant, participant } = useParticipant();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
@@ -22,6 +23,7 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
+  const [canDirectLogin, setCanDirectLogin] = useState(false);
 
   const validate = () => {
     const errs = {};
@@ -41,12 +43,12 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError(null);
+    setCanDirectLogin(false);
     if (!validate()) return;
     
     try {
       setIsSubmitting(true);
       
-      // Update this to use the context's async method from the remote
       await registerParticipant({
         name: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
@@ -57,12 +59,57 @@ export default function Register() {
         participantId: form.phone.trim() // using phone as fallback
       });
       
-      // Navigate to /rules based on the remote's new flow
       navigate(redirectUrl || '/rules');
       
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Registration failed. Please check your credentials.';
       setServerError(msg);
+      if (err.response?.status === 409 || msg.toLowerCase().includes('already registered')) {
+        setCanDirectLogin(true);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDirectLogin = async () => {
+    try {
+      setIsSubmitting(true);
+      setServerError(null);
+      await loginParticipant({
+        email: form.email.trim().toLowerCase(),
+        participantId: form.phone.trim(),
+        phone: form.phone.trim(),
+      });
+      navigate(redirectUrl || '/rules');
+    } catch (err) {
+      setServerError(err.response?.data?.message || 'Login failed. Please verify your phone and email.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetAndRegister = async () => {
+    try {
+      setIsSubmitting(true);
+      setServerError(null);
+      await participantApi.logoutAndDelete({
+        email: form.email.trim().toLowerCase(),
+        participantId: form.phone.trim(),
+      });
+      // Now re-register fresh
+      await registerParticipant({
+        name: form.fullName.trim(),
+        email: form.email.trim().toLowerCase(),
+        college: form.college.trim(),
+        department: form.department.trim(),
+        phone: form.phone.trim(),
+        yearOfStudy: form.yearOfStudy,
+        participantId: form.phone.trim(),
+      });
+      navigate(redirectUrl || '/rules');
+    } catch (err) {
+      setServerError(err.response?.data?.message || 'Failed to reset profile. Please try logging in instead.');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,9 +133,33 @@ export default function Register() {
         </div>
 
         {serverError && (
-          <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2 relative z-10">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-            <span>{serverError}</span>
+          <div className="mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs space-y-2.5 relative z-10 animate-fadeIn">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
+              <span className="font-semibold text-[13px] leading-snug">{serverError}</span>
+            </div>
+            {canDirectLogin && (
+              <div className="pt-2 border-t border-rose-200 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleDirectLogin}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FFBE4D] hover:bg-[#FFAB1A] text-[#0B1A28] font-bold rounded-lg text-xs transition shadow-sm"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  Continue with this Account
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleResetAndRegister}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-300 text-rose-700 hover:bg-rose-100 font-semibold rounded-lg text-xs transition"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Reset & Register Fresh
+                </button>
+              </div>
+            )}
           </div>
         )}
 

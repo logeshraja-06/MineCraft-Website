@@ -15,10 +15,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    const participant = localStorage.getItem('mindcraft_participant');
-    if (participant) {
+    const participantRaw = localStorage.getItem('mindcraft_participant') || localStorage.getItem('mindcraft_user');
+    if (participantRaw) {
       try {
-        const p = JSON.parse(participant);
+        const p = JSON.parse(participantRaw);
         if (p?.participantId) {
           config.headers['x-participant-id'] = p.participantId;
         }
@@ -42,10 +42,12 @@ api.interceptors.response.use(
       // Only invalidate token and redirect if this was an admin route or /auth/me verification failure
       if (url.includes('/auth/me') || (currentPath.startsWith('/admin') && currentPath !== '/admin/login')) {
         localStorage.removeItem('mindcraft_token');
+        localStorage.removeItem('mindcraft_user');
+        localStorage.removeItem('mindcraft_participant');
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('mindcraft_auth_expired'));
 
-          if (!isRedirecting) {
+          if (currentPath.startsWith('/admin') && !isRedirecting) {
             isRedirecting = true;
             setTimeout(() => {
               window.location.href = '/admin/login';
