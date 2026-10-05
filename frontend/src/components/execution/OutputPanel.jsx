@@ -3,6 +3,13 @@ import TestCaseResult from './TestCaseResult';
 import { Terminal, CheckCircle2, AlertOctagon, Clock, Cpu } from 'lucide-react';
 
 export default function OutputPanel({ compileOutput, submissionResult, sampleInput, sampleOutput }) {
+  const isCompileSuccess = compileOutput && (
+    compileOutput.status === 'ACCEPTED' ||
+    compileOutput.status === 'Accepted' ||
+    compileOutput.status === 'success' ||
+    (Boolean(compileOutput.success) && !compileOutput.stderr?.trim() && !compileOutput.compileOutput?.trim())
+  );
+
   return (
     <div className="p-4 bg-white/80 border border-slate-200 rounded-2xl space-y-4">
       <div className="flex items-center justify-between border-b border-slate-200 pb-2">
@@ -17,11 +24,11 @@ export default function OutputPanel({ compileOutput, submissionResult, sampleInp
         <div className="grid grid-cols-2 gap-3 pt-1">
           <div>
             <span className="text-slate-500 block text-[10px]">Input:</span>
-            <code className="text-cyan-300 text-xs">{sampleInput || '5'}</code>
+            <code className="text-cyan-600 text-xs font-bold">{sampleInput || '5'}</code>
           </div>
           <div>
             <span className="text-slate-500 block text-[10px]">Expected Output:</span>
-            <code className="text-emerald-300 text-xs">{sampleOutput || '15'}</code>
+            <code className="text-emerald-600 text-xs font-bold">{sampleOutput || '15'}</code>
           </div>
         </div>
       </div>
@@ -32,14 +39,14 @@ export default function OutputPanel({ compileOutput, submissionResult, sampleInp
           <div
             className={`p-3 rounded-xl border flex items-center gap-3 ${
               submissionResult.status === 'ACCEPTED'
-                ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
-                : 'bg-rose-950/40 border-rose-500/50 text-rose-300'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                : 'bg-rose-50 border-rose-300 text-rose-800'
             }`}
           >
             {submissionResult.status === 'ACCEPTED' ? (
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600" />
             ) : (
-              <AlertOctagon className="w-5 h-5 flex-shrink-0" />
+              <AlertOctagon className="w-5 h-5 flex-shrink-0 text-rose-600" />
             )}
             <div>
               <h5 className="font-mono font-bold text-sm">{submissionResult.title}</h5>
@@ -61,34 +68,40 @@ export default function OutputPanel({ compileOutput, submissionResult, sampleInp
         <div className="space-y-2 text-xs font-mono">
           <div className="flex items-center justify-between text-slate-600 text-[11px]">
             <span>
-              Status: <strong className={(compileOutput.status === 'success' || compileOutput.status === 'Accepted' || compileOutput.success) ? 'text-emerald-400' : 'text-rose-400'}>{compileOutput.status.toUpperCase()}</strong>
+              Status: <strong className={isCompileSuccess ? 'text-emerald-600' : 'text-rose-600'}>{String(compileOutput.status || (isCompileSuccess ? 'ACCEPTED' : 'ERROR')).toUpperCase()}</strong>
             </span>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-orange-400" /> {compileOutput.executionTime}</span>
-              <span className="flex items-center gap-1"><Cpu className="w-3 h-3 text-orange-400" /> {compileOutput.memory}</span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-orange-400" /> {compileOutput.executionTime || '0.04s'}</span>
+              <span className="flex items-center gap-1"><Cpu className="w-3 h-3 text-orange-400" /> {compileOutput.memory || '0.0 MB'}</span>
             </div>
           </div>
 
-          {compileOutput.stdout && (
+          {Boolean(compileOutput.stdout?.trim()) && (
             <div>
               <span className="text-[10px] text-slate-600 block mb-1">Standard Output:</span>
-              <pre className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-emerald-300 whitespace-pre-wrap">
+              <pre className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-emerald-700 whitespace-pre-wrap font-mono">
                 {compileOutput.stdout}
               </pre>
             </div>
           )}
 
-          {compileOutput.stderr && (
+          {Boolean(compileOutput.stderr?.trim()) && (
             <div>
-              <span className="text-[10px] text-rose-400 block mb-1">Standard Error:</span>
-              <pre className="p-3 bg-rose-950/30 rounded-lg border border-rose-500/30 text-rose-200 whitespace-pre-wrap">
+              <span className="text-[10px] text-rose-600 font-bold block mb-1">Standard Error:</span>
+              <pre className="p-3 bg-rose-50 rounded-lg border border-rose-300 text-rose-700 whitespace-pre-wrap font-mono">
                 {compileOutput.stderr}
               </pre>
             </div>
           )}
 
-          {compileOutput.compileOutput && (
-            <p className="text-[10px] text-slate-500 italic">{compileOutput.compileOutput}</p>
+          {Boolean(compileOutput.compileOutput?.trim()) && (
+            <p className="text-[10px] text-rose-600 font-mono italic bg-rose-50 p-2 rounded border border-rose-200">{compileOutput.compileOutput}</p>
+          )}
+
+          {isCompileSuccess && !compileOutput.stdout?.trim() && (
+            <p className="text-xs text-emerald-600 font-mono py-1">
+              ✓ Program compiled and executed cleanly with no output.
+            </p>
           )}
         </div>
       )}

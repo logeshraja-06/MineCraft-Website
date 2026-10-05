@@ -132,8 +132,8 @@ exports.runSingleTestCase = async ({ sourceCode, language, input = '', expectedO
     const stdout = (result.stdout ? Buffer.from(result.stdout, 'base64').toString('utf8') : '').slice(0, 10000);
     const stderr = (result.stderr ? Buffer.from(result.stderr, 'base64').toString('utf8') : '').slice(0, 10000);
     const compileOutput = (result.compile_output ? Buffer.from(result.compile_output, 'base64').toString('utf8') : '').slice(0, 10000);
-
-    const passed = result.status?.id === 3 || compareOutputs(stdout, expectedOutput);
+    const isAccepted = result.status?.id === 3;
+    const passed = isAccepted && (!expectedOutput || compareOutputs(stdout, expectedOutput));
 
     return {
       passed,

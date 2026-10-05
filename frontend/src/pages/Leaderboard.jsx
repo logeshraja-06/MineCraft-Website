@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { useParticipant } from '../context/ParticipantContext';
 import { leaderboardApi } from '../services/leaderboardApi';
 import LeaderboardTable from '../components/leaderboard/LeaderboardTable';
@@ -6,11 +8,43 @@ import Podium from '../components/leaderboard/Podium';
 import { Trophy, Users, RefreshCw, Sparkles, Activity, Search, Target, BarChart2 } from 'lucide-react';
 
 export default function Leaderboard() {
+  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const { participant } = useParticipant();
   const [rankings, setRankings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (isAdmin) {
+      navigate('/admin/leaderboard', { replace: true });
+    }
+  }, [isAdmin, navigate]);
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50/50 text-center font-sans">
+        <div className="max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200 space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+            <Trophy className="w-8 h-8 text-[#F28C0F]" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Admin Only Access</h2>
+          <p className="text-slate-600 text-sm leading-relaxed">
+            The competition leaderboard is restricted to event administrators. Official final standings and tournament winners will be announced by the coordinators.
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/challenges"
+              className="inline-flex items-center justify-center px-6 py-3 bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black rounded-xl text-xs tracking-wider transition shadow-sm hover:shadow"
+            >
+              RETURN TO CHALLENGES
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchLeaderboard = async () => {
     try {

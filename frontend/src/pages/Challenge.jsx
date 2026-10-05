@@ -90,6 +90,7 @@ export default function Challenge() {
     isCompiling,
     isValidating,
     compileOutput,
+    setCompileOutput,
 
     // result
     finalResult,
@@ -263,12 +264,35 @@ export default function Challenge() {
     return result;
   }, [submitQuizAnswer, isTimeExpired, taskAttemptsCount, showToast]);
 
+  // ── Fragment reordering with stale error clearing ──
+  const handleReorder = useCallback((sourceIdx, destIdx) => {
+    setSubmissionResult(null);
+    if (setCompileOutput) setCompileOutput(null);
+    reorderAssembly(sourceIdx, destIdx);
+  }, [reorderAssembly, setCompileOutput]);
+
+  const handleClearAssembly = useCallback(() => {
+    setSubmissionResult(null);
+    if (setCompileOutput) setCompileOutput(null);
+    resetAssemblyOrder();
+  }, [resetAssemblyOrder, setCompileOutput]);
+
   // ── run code with 3 free runs, -10 pts after 3 ──
   const handleRunCode = useCallback(async () => {
     if (isTimeExpired) { showToast('Time expired. Execution locked.', 'error'); return; }
     if (!assembledCode.trim()) { showToast('No code assembled yet. Arrange fragments first.', 'warning'); return; }
+
+    // Clear previous submission results so old submission errors don't linger
+    setSubmissionResult(null);
+
     const res = await executeCode();
-    if (res.status === 'success' || res.status === 'Accepted' || res.success) {
+    const isAccepted =
+      res.status === 'ACCEPTED' ||
+      res.status === 'Accepted' ||
+      res.status === 'success' ||
+      (Boolean(res.success) && !res.stderr?.trim() && !res.compileOutput?.trim());
+
+    if (isAccepted) {
       if (res.runPenaltyApplied > 0) {
         showToast(`⚠️ Compilation successful! Extra run #${res.runCount} (-10 pts penalty applied).`, 'warning');
       } else {
@@ -278,7 +302,7 @@ export default function Challenge() {
       if (res.runPenaltyApplied > 0) {
         showToast(`⚠️ Execution returned error. Run #${res.runCount} (-10 pts applied). Check output.`, 'warning');
       } else {
-        showToast(res.message || 'Execution returned an error. Check output panel.', 'info');
+        showToast(res.stderr || res.message || 'Execution returned an error. Check output panel.', 'error');
       }
     }
   }, [isTimeExpired, assembledCode, executeCode, showToast]);
@@ -287,6 +311,9 @@ export default function Challenge() {
   const handleSubmit = useCallback(async () => {
     if (isTimeExpired) { showToast('Time expired. Submissions closed.', 'error'); return; }
     if (!assembledCode.trim()) { showToast('Cannot submit empty assembly.', 'warning'); return; }
+
+    if (setCompileOutput) setCompileOutput(null);
+
     const res = await submitSolution(participant);
     setSubmissionResult(res);
     if (res?.status === 'ACCEPTED') {
@@ -294,7 +321,7 @@ export default function Challenge() {
     } else {
       showToast('❌ Wrong answer. Some test cases failed. Check output panel.', 'error');
     }
-  }, [isTimeExpired, assembledCode, submitSolution, participant, showToast]);
+  }, [isTimeExpired, assembledCode, submitSolution, participant, showToast, setCompileOutput]);
 
   // ─── SETUP phase UI ─────────────────────────────────────────────────────
   if (phase === 'SETUP') {
@@ -586,9 +613,9 @@ export default function Challenge() {
 
               <AssemblyBoard
                 blocks={assemblyFragments}
-                onReorder={reorderAssembly}
+                onReorder={handleReorder}
                 onRemove={() => {}}
-                onClear={resetAssemblyOrder}
+                onClear={handleClearAssembly}
               />
 
               <AssemblyPreview combinedCode={assembledCode} />
@@ -596,7 +623,7 @@ export default function Challenge() {
               {/* Reset button */}
               <div className="flex gap-2">
                 <button
-                  onClick={resetAssemblyOrder}
+                  onClick={handleClearAssembly}
                   className="flex-1 py-1.5 text-[11px] font-mono text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-400 rounded-xl flex items-center justify-center gap-1.5 transition"
                 >
                   <Shuffle className="w-3.5 h-3.5" /> Reset Order

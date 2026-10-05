@@ -12,7 +12,7 @@ const settingsSchema = new mongoose.Schema(
     allowReattempt: { type: Boolean, default: true },
     revealPenalty: { type: Number, default: 5 },
     wrongSubmissionPenalty: { type: Number, default: 2 },
-    leaderboardVisibility: { type: String, enum: ['Public', 'AdminOnly', 'Frozen'], default: 'Public' },
+    leaderboardVisibility: { type: String, enum: ['Public', 'AdminOnly', 'Frozen'], default: 'AdminOnly' },
     autoSubmit: { type: Boolean, default: true },
     sessionTimeout: { type: Number, default: 60 }, // minutes
     enforceProgression: { type: Boolean, default: true },

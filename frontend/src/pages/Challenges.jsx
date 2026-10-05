@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useChallenge } from '../hooks/useChallenge';
 import { useParticipant } from '../context/ParticipantContext';
+import { useAuth } from '../hooks/useAuth';
 import { challengeApi } from '../services/challengeApi';
 import { sessionApi } from '../services/sessionApi';
 import Toast from '../components/common/Toast';
@@ -22,6 +23,7 @@ export default function Challenges() {
   const navigate = useNavigate();
   const location = useLocation();
   const { participant } = useParticipant();
+  const { isAdmin } = useAuth();
   const { selectChallenge } = useChallenge();
 
   const [loading, setLoading] = useState(true);
@@ -339,12 +341,18 @@ export default function Challenges() {
                 </p>
               </div>
             </div>
-            <Link
-              to="/leaderboard"
-              className="px-5 py-2.5 rounded-xl bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black text-xs tracking-wider transition shrink-0"
-            >
-              VIEW FINAL STANDINGS
-            </Link>
+            {isAdmin ? (
+              <Link
+                to="/admin/leaderboard"
+                className="px-5 py-2.5 rounded-xl bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black text-xs tracking-wider transition shrink-0"
+              >
+                VIEW FINAL STANDINGS
+              </Link>
+            ) : (
+              <div className="px-4 py-2.5 rounded-xl bg-amber-200/80 border border-amber-300 text-amber-950 font-bold text-xs tracking-wider shrink-0 text-center">
+                RESULTS MANAGED BY ADMIN
+              </div>
+            )}
           </div>
         )}
 

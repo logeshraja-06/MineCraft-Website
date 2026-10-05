@@ -180,16 +180,18 @@ exports.runCode = asyncHandler(async (req, res) => {
       expectedOutput: '',
     });
 
-    const isAccepted = outcome.status === 'ACCEPTED' || outcome.status === 'Accepted' || outcome.passed;
+    const isAccepted = (outcome.status === 'ACCEPTED' || outcome.status === 'Accepted') && Boolean(outcome.passed);
 
     return res.status(200).json({
-      success: true,
-      status: outcome.status || 'Accepted',
+      success: isAccepted,
+      status: outcome.status || (isAccepted ? 'Accepted' : 'Error'),
       stdout: outcome.stdout || '',
       stderr: outcome.stderr || '',
       compileOutput: outcome.compileOutput || '',
       output: outcome.stdout || outcome.stderr || outcome.compileOutput || '',
-      message: isAccepted ? 'Execution completed successfully.' : 'Execution finished with output.',
+      message: isAccepted
+        ? 'Execution completed successfully.'
+        : (outcome.stderr || outcome.compileOutput || 'Execution finished with output.'),
       executionTime: outcome.time || '0.04s',
       memory: outcome.memory || 0,
       time: outcome.time || '0.04s',

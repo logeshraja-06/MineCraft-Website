@@ -572,6 +572,7 @@ export function ChallengeProvider({ children }) {
 
       return next;
     });
+    setCompileOutput(null);
   }, [fragmentMap, syncAssemblyToServer]);
 
   const resetAssemblyOrder = useCallback(() => {
@@ -585,6 +586,7 @@ export function ChallengeProvider({ children }) {
     const newFragments = mixed.map((id) => fragmentMap[id]).filter(Boolean);
     const newCode = combineFragments(newFragments);
     syncAssemblyToServer(mixed, newCode);
+    setCompileOutput(null);
   }, [activeChallengeInfo, language, collectedFragmentIds, shuffledVaultOrder, fragmentMap, syncAssemblyToServer]);
 
   // ── Execution (Real backend / Judge0) ──
@@ -867,6 +869,7 @@ export function ChallengeProvider({ children }) {
         isCompiling,
         isValidating,
         compileOutput,
+        setCompileOutput,
 
         // result
         finalResult,

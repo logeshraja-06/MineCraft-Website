@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useParticipant } from '../context/ParticipantContext';
 import { useChallenge } from '../hooks/useChallenge';
+import { useAuth } from '../hooks/useAuth';
 import { challengeApi } from '../services/challengeApi';
 import Button from '../components/common/Button';
 import { Trophy, Award, ArrowRight, CheckCircle2, RotateCcw } from 'lucide-react';
@@ -9,6 +10,7 @@ import { Trophy, Award, ArrowRight, CheckCircle2, RotateCcw } from 'lucide-react
 export default function Result() {
   const navigate = useNavigate();
   const { participant } = useParticipant();
+  const { isAdmin } = useAuth();
   const { challenge, finalResult, isTimeExpired, startChallenge, selectChallenge } = useChallenge();
 
   const [nextChallenge, setNextChallenge] = useState(null);
@@ -84,8 +86,8 @@ export default function Result() {
         </h1>
         <p className="text-xs text-slate-600 max-w-md mx-auto">
           {isAccepted
-            ? 'All test cases verified! Your solution and completion duration have been committed to the live leaderboard.'
-            : 'Challenge session concluded. Review official rankings or retry your current challenge below.'}
+            ? 'All test cases verified! Your solution and completion duration have been successfully submitted.'
+            : 'Challenge session concluded. Review diagnostics or retry your current challenge below.'}
         </p>
 
         {isAccepted && allCompleted && (
@@ -141,17 +143,29 @@ export default function Result() {
           </Button>
         )}
 
-        {/* On ACCEPTED and ALL completed: primary button is View Leaderboard */}
+        {/* On ACCEPTED and ALL completed: primary button */}
         {isAccepted && allCompleted && (
-          <Link to="/leaderboard">
-            <Button
-              variant="primary"
-              size="lg"
-              className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
-            >
-              VIEW LEADERBOARD 🏆
-            </Button>
-          </Link>
+          isAdmin ? (
+            <Link to="/admin/leaderboard">
+              <Button
+                variant="primary"
+                size="lg"
+                className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
+              >
+                VIEW LEADERBOARD 🏆
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/challenges">
+              <Button
+                variant="primary"
+                size="lg"
+                className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
+              >
+                MISSION SUMMARY 🏆
+              </Button>
+            </Link>
+          )
         )}
 
         {/* Roadmap button */}
@@ -161,9 +175,9 @@ export default function Result() {
           </Button>
         </Link>
 
-        {/* Not all completed leaderboard link */}
-        {!allCompleted && (
-          <Link to="/leaderboard">
+        {/* Admin only: Leaderboard link if not all completed */}
+        {!allCompleted && isAdmin && (
+          <Link to="/admin/leaderboard">
             <Button variant="secondary" size="lg">
               LEADERBOARD →
             </Button>
