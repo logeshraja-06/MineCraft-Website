@@ -63,7 +63,7 @@ api.interceptors.response.use(
  * Execute code via real backend (Judge0)
  * POST /api/submissions/run
  */
-export async function runCode(language, sourceCode, stdin = '') {
+export async function runCode(language, sourceCode, stdin = '', challengeId = null) {
   if (!sourceCode || !sourceCode.trim()) {
     return {
       success: false,
@@ -82,6 +82,7 @@ export async function runCode(language, sourceCode, stdin = '') {
       language,
       sourceCode,
       stdin: stdin || '',
+      challengeId,
     });
 
     const data = response.data;
@@ -97,6 +98,17 @@ export async function runCode(language, sourceCode, stdin = '') {
         ? `${(data.memory / 1024).toFixed(1)} MB`
         : (data.memory || '0.0 MB'),
       time: data.time || '',
+      runCount: data.runCount,
+      runsRemainingFree: data.runsRemainingFree,
+      runPenaltyApplied: data.runPenaltyApplied,
+      runPenaltyPoints: data.runPenaltyPoints,
+      taskPenaltyPoints: data.taskPenaltyPoints,
+      timePenaltyPoints: data.timePenaltyPoints,
+      totalPenaltyPoints: data.totalPenaltyPoints,
+      currentScore: data.currentScore,
+      previousChallengesPenalty: data.previousChallengesPenalty,
+      overallTotalPenaltyPoints: data.overallTotalPenaltyPoints,
+      overallScore: data.overallScore,
     };
   } catch (error) {
     if (error.response?.data) {

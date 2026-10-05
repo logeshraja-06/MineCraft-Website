@@ -6,7 +6,7 @@ const Settings = require('../../models/Settings');
  * Returns participant-facing challenges ordered strictly by sequenceOrder (1 -> 2 -> 3).
  */
 async function getSequence() {
-  const list = await Challenge.find({
+  let list = await Challenge.find({
     isActive: true,
     status: 'Published',
     sequenceOrder: { $in: [1, 2, 3] },
@@ -15,6 +15,21 @@ async function getSequence() {
     .lean();
 
   if (list.length > 0) return list;
+
+  list = await Challenge.find({
+    isActive: true,
+    status: 'Published',
+    slug: { $in: ['ch-05', 'ch-06', 'ch-07'] },
+  }).lean();
+
+  if (list.length > 0) {
+    const order = { 'ch-05': 1, 'ch-06': 2, 'ch-07': 3, easy: 1, medium: 2, hard: 3 };
+    return list.sort((a, b) => {
+      const aVal = order[a.slug] || order[a.difficulty?.toLowerCase()] || 99;
+      const bVal = order[b.slug] || order[b.difficulty?.toLowerCase()] || 99;
+      return aVal - bVal;
+    });
+  }
 
   // Fallback if sequenceOrder has not been seeded yet
   return await Challenge.find({ isActive: true, status: 'Published' })

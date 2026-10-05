@@ -44,6 +44,18 @@ export function ParticipantProvider({ children }) {
     }
   };
 
+  const logoutAndDeleteParticipant = async () => {
+    try {
+      const currentParticipantId = participant?.participantId || user?.participantId;
+      const currentEmail = participant?.email || user?.email;
+      await participantApi.deleteMe({ participantId: currentParticipantId, email: currentEmail });
+    } catch (err) {
+      console.warn('Failed to delete participant details on server:', err);
+    } finally {
+      clearParticipant();
+    }
+  };
+
   return (
     <ParticipantContext.Provider
       value={{
@@ -51,8 +63,10 @@ export function ParticipantProvider({ children }) {
         isRegistered: !!participant && !!participant.participantId,
         registerParticipant,
         clearParticipant,
+        logoutAndDeleteParticipant,
       }}
     >
+
       {children}
     </ParticipantContext.Provider>
   );

@@ -2,8 +2,11 @@ const crypto = require('crypto');
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
 const Event = require('../models/Event');
+const Submission = require('../models/Submission');
+const ParticipantSession = require('../models/ParticipantSession');
 const generateToken = require('../utils/generateToken');
 const { validateParticipantRegister } = require('../validators/participantValidator');
+
 
 exports.registerParticipant = asyncHandler(async (req, res) => {
   const { name, participantId, email, college, department, sessionCode } = req.body || {};
@@ -91,3 +94,43 @@ exports.getStatus = asyncHandler(async (req, res) => {
     user,
   });
 });
+
+exports.deleteMe = asyncHandler(async (req, res) => {
+  let user = null;
+  if (req.user?._id) {
+    user = await User.findById(req.user._id);
+  }
+
+  // Fallback to participantId or email from body/query/headers if user is not found via token
+  const participantId = req.body?.participantId || req.query?.participantId || req.headers['x-participant-id'];
+  const email = req.body?.email || req.query?.email;
+
+  if (!user && participantId) {
+    user = await User.findOne({ participantId: String(participantId).trim().toUpperCase() });
+  }
+  if (!user && email) {
+    user = await User.findOne({ email: String(email).trim().toLowerCase() });
+  }
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Participant account not found or already deleted.',
+    });
+  }
+
+  const targetUserId = user._id;
+
+  // Delete User, ParticipantSession, and Submissions
+  await Promise.all([
+    User.findByIdAndDelete(targetUserId),
+    ParticipantSession.deleteMany({ userId: targetUserId }),
+    Submission.deleteMany({ userId: targetUserId }),
+  ]);
+
+  res.json({
+    success: true,
+    message: `Participant '${user.name}' (${user.participantId || user.email}) and all test progress deleted successfully.`,
+  });
+});
+

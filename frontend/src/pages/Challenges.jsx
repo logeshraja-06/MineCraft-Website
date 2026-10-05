@@ -82,9 +82,43 @@ export default function Challenges() {
     };
   }, [participant]);
 
+  const CANONICAL_FALLBACKS = [
+    {
+      _id: 'ch-05',
+      slug: 'ch-05',
+      title: 'Challenge 5 – Greatest Among Three Numbers',
+      difficulty: 'Easy',
+      points: 100,
+      sequenceOrder: 1,
+      timeLimitSeconds: 1200,
+      description: 'Find the greatest among three integers with optimal comparison logic and edge-case validation.',
+    },
+    {
+      _id: 'ch-06',
+      slug: 'ch-06',
+      title: 'Challenge 6 – Count Primes up to N',
+      difficulty: 'Medium',
+      points: 200,
+      sequenceOrder: 2,
+      timeLimitSeconds: 1200,
+      description: 'Implement an efficient primality count algorithm (Sieve of Eratosthenes) up to integer N.',
+    },
+    {
+      _id: 'ch-07',
+      slug: 'ch-07',
+      title: 'Challenge 7 – Longest Increasing Subsequence',
+      difficulty: 'Hard',
+      points: 300,
+      sequenceOrder: 3,
+      timeLimitSeconds: 1200,
+      description: 'Determine the length of the longest strictly increasing subsequence in an array using dynamic programming.',
+    },
+  ];
+
   // Map the 3 canonical challenges into roadmap steps (Easy -> Medium -> Hard)
   const roadmapSteps = useMemo(() => {
-    const list = [...challenges].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+    const sourceList = challenges.length > 0 ? challenges : CANONICAL_FALLBACKS;
+    const list = [...sourceList].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
 
     return list.map((c, idx) => {
       const seq = c.sequenceOrder || idx + 1;
@@ -103,9 +137,11 @@ export default function Challenges() {
         );
         if (item) {
           status = item.status; // 'COMPLETED' | 'CURRENT' | 'LOCKED'
+        } else if (seq === 1) {
+          status = 'CURRENT';
         }
-      } else if (!participant) {
-        // Guest / unregistered: Step 1 is available to preview, Step 2 & 3 locked
+      } else {
+        // Guest or pending progress data: Step 1 is CURRENT
         status = seq === 1 ? 'CURRENT' : 'LOCKED';
       }
 
@@ -134,6 +170,11 @@ export default function Challenges() {
       };
     });
   }, [challenges, progressData, activeSessions, participant]);
+
+  const currentStep = useMemo(() => {
+    return roadmapSteps.find((s) => s.status === 'CURRENT') || roadmapSteps[0] || null;
+  }, [roadmapSteps]);
+
 
   const completedCount = useMemo(() => {
     return roadmapSteps.filter((s) => s.status === 'COMPLETED').length;
@@ -190,7 +231,7 @@ export default function Challenges() {
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2.5 max-w-xl">
+            <div className="space-y-3 max-w-xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 text-[11px] font-bold uppercase tracking-widest">
                 <Layers className="w-3.5 h-3.5" /> LINEAR ARENA SEQUENCE
               </div>
@@ -201,6 +242,30 @@ export default function Challenges() {
                 Progress through a strict linear sequence: Easy first, unlock Medium upon acceptance, then Hard.
                 Challenges cannot be skipped or chosen freely.
               </p>
+
+              {currentStep && (
+                <div className="pt-2">
+                  {participant ? (
+                    <button
+                      onClick={() => handleStartChallenge(currentStep)}
+                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25 cursor-pointer"
+                    >
+                      <Play className="w-4 h-4 fill-slate-950" />
+                      <span>{currentStep.hasActiveSession ? 'RESUME ARENA' : 'START CHALLENGE'} (Step {currentStep.sequenceOrder}: {currentStep.difficulty})</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <Link
+                      to="/register"
+                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>REGISTER TO START CHALLENGE</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Header Stats */}
@@ -373,20 +438,22 @@ export default function Challenges() {
                     {isCurrent && participant && (
                       <button
                         onClick={() => handleStartChallenge(step)}
-                        className="w-full md:w-auto px-6 py-3 rounded-xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs tracking-wider uppercase transition shadow-md shadow-orange-500/20 flex items-center justify-center gap-2"
+                        className="w-full md:w-auto px-7 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Play className="w-4 h-4 fill-slate-950" />
-                        <span>{step.hasActiveSession ? 'RESUME ARENA' : 'START'}</span>
+                        <span>{step.hasActiveSession ? 'RESUME ARENA' : 'START CHALLENGE'}</span>
+                        <ArrowRight className="w-4 h-4" />
                       </button>
                     )}
 
                     {isCurrent && !participant && (
                       <Link
                         to="/register"
-                        className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-bold text-xs tracking-wider uppercase transition flex items-center justify-center gap-1.5"
+                        className="w-full md:w-auto px-7 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
                       >
-                        <span>Register to begin</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <UserPlus className="w-4 h-4" />
+                        <span>REGISTER TO START</span>
+                        <ArrowRight className="w-4 h-4" />
                       </Link>
                     )}
 

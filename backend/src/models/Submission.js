@@ -21,6 +21,10 @@ const submissionSchema = new mongoose.Schema(
     testCasesPassed: { type: Number, default: 0 },
     totalTestCases: { type: Number, default: 0 },
     score: { type: Number, default: 0 },
+    taskPenaltyPoints: { type: Number, default: 0 },
+    runPenaltyPoints: { type: Number, default: 0 },
+    timePenaltyPoints: { type: Number, default: 0 },
+    totalPenaltyPoints: { type: Number, default: 0 },
     revealPenalty: { type: Number, default: 0 },
     wrongSubmissionPenalty: { type: Number, default: 0 },
     testCaseResults: [

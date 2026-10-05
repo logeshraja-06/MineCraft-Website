@@ -85,6 +85,18 @@ exports.runCode = asyncHandler(async (req, res) => {
     });
   }
 
+  // New points system: first 3 runs are free; after 3 runs, each run gets -10 pts
+  let runInfo = {
+    runCount: 0,
+    runsRemainingFree: 3,
+    runPenaltyApplied: 0,
+    runPenaltyPoints: 0,
+    taskPenaltyPoints: 0,
+    timePenaltyPoints: 0,
+    totalPenaltyPoints: 0,
+    currentScore: 0,
+  };
+
   // If challengeId is provided, enforce session active/expiry check
   if (challengeId && req.user) {
     let challenge = null;
@@ -115,6 +127,48 @@ exports.runCode = asyncHandler(async (req, res) => {
         isExpired: true,
       });
     }
+
+    if (session) {
+      session.runCount = (session.runCount || 0) + 1;
+      let penaltyApplied = 0;
+      if (session.runCount > 3) {
+        penaltyApplied = 10;
+        session.runPenaltyPoints = (session.runPenaltyPoints || 0) + 10;
+      }
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(session.startTime)) / 1000));
+      session.timePenaltyPoints = Math.floor(elapsedSec / 60) * 10;
+      session.totalPenaltyPoints = (session.taskPenaltyPoints || 0) + session.runPenaltyPoints + session.timePenaltyPoints;
+      session.currentScore = -session.totalPenaltyPoints;
+      session.lastActivityAt = new Date();
+      await session.save();
+
+      let previousChallengesPenalty = 0;
+      if (req.user) {
+        const otherSessions = await ParticipantSession.find({
+          userId: req.user._id,
+          challengeId: { $ne: targetChallengeId },
+        }).lean();
+        for (const s of otherSessions) {
+          previousChallengesPenalty += (s.totalPenaltyPoints || 0);
+        }
+      }
+      const overallTotalPenaltyPoints = previousChallengesPenalty + session.totalPenaltyPoints;
+      const overallScore = -overallTotalPenaltyPoints;
+
+      runInfo = {
+        runCount: session.runCount,
+        runsRemainingFree: Math.max(0, 3 - session.runCount),
+        runPenaltyApplied: penaltyApplied,
+        runPenaltyPoints: session.runPenaltyPoints,
+        taskPenaltyPoints: session.taskPenaltyPoints || 0,
+        timePenaltyPoints: session.timePenaltyPoints,
+        totalPenaltyPoints: session.totalPenaltyPoints,
+        currentScore: session.currentScore,
+        previousChallengesPenalty,
+        overallTotalPenaltyPoints,
+        overallScore,
+      };
+    }
   }
 
   try {
@@ -139,6 +193,7 @@ exports.runCode = asyncHandler(async (req, res) => {
       executionTime: outcome.time || '0.04s',
       memory: outcome.memory || 0,
       time: outcome.time || '0.04s',
+      ...(runInfo || {}),
     });
   } catch (error) {
     console.error('[SubmissionController.runCode] Error:', error.message);
@@ -263,18 +318,28 @@ exports.submitSolution = asyncHandler(async (req, res) => {
   const isAccepted = evalResult.overallStatus === 'ACCEPTED';
   const wrongAttempts = (session?.wrongAttemptsCount || 0) + (isAccepted ? 0 : 1);
 
-  // 5. Calculate scores
-  const scoreBreakdown = calculateSubmissionScore({
-    challenge: challenge || { points: 100 },
-    testCases,
-    testResults: evalResult.details,
-    revealsCount: session?.revealsCount || 0,
-    wrongAttemptsCount: wrongAttempts,
-  });
-
-  // Calculate server-authoritative timeTakenSeconds and attemptNumber
+  // 5. Calculate scores with new points system (0 initial, negative penalties)
   const sessionStart = session?.startTime ? new Date(session.startTime).getTime() : Date.now();
-  const timeTakenSeconds = Math.max(0, Math.floor((Date.now() - sessionStart) / 1000));
+  const timeTakenSeconds = Math.max(1, Math.floor((Date.now() - sessionStart) / 1000));
+  const timeMinutesExhausted = Math.floor(timeTakenSeconds / 60);
+  const timePenaltyPoints = timeMinutesExhausted * 10;
+  const taskPenaltyPoints = session?.taskPenaltyPoints || 0;
+  const runPenaltyPoints = session?.runPenaltyPoints || 0;
+  const totalPenaltyPoints = taskPenaltyPoints + runPenaltyPoints + timePenaltyPoints;
+  const finalScore = -totalPenaltyPoints;
+
+  let previousChallengesPenalty = 0;
+  if (req.user && targetChallengeId) {
+    const otherSessions = await ParticipantSession.find({
+      userId: req.user._id,
+      challengeId: { $ne: targetChallengeId },
+    }).lean();
+    for (const s of otherSessions) {
+      previousChallengesPenalty += (s.totalPenaltyPoints || 0);
+    }
+  }
+  const overallTotalPenaltyPoints = previousChallengesPenalty + totalPenaltyPoints;
+  const overallScore = -overallTotalPenaltyPoints;
 
   let attemptNumber = 1;
   if (req.user && targetChallengeId) {
@@ -303,9 +368,13 @@ exports.submitSolution = asyncHandler(async (req, res) => {
         executionTimeMs: evalResult.executionTimeMs || 0,
         memoryKb: evalResult.memoryKb || 0,
         compileOutput: evalResult.compileOutput || '',
-        score: scoreBreakdown.finalScore,
-        revealPenalty: scoreBreakdown.revealPenalty,
-        wrongSubmissionPenalty: scoreBreakdown.wrongSubmissionPenalty,
+        score: finalScore,
+        taskPenaltyPoints,
+        runPenaltyPoints,
+        timePenaltyPoints,
+        totalPenaltyPoints,
+        revealPenalty: 0,
+        wrongSubmissionPenalty: 0,
         testCaseResults: evalResult.details.map((d) => {
           const tc = testCases.find((t) => String(t._id) === String(d.testCaseId));
           return {
@@ -330,12 +399,17 @@ exports.submitSolution = asyncHandler(async (req, res) => {
   // 7. Update session if exists
   if (session) {
     session.wrongAttemptsCount = wrongAttempts;
-    if (scoreBreakdown.finalScore > (session.scoreAwarded || 0)) {
-      session.scoreAwarded = scoreBreakdown.finalScore;
-    }
+    session.taskPenaltyPoints = taskPenaltyPoints;
+    session.runPenaltyPoints = runPenaltyPoints;
+    session.timePenaltyPoints = timePenaltyPoints;
+    session.totalPenaltyPoints = totalPenaltyPoints;
+    session.currentScore = finalScore;
+    session.scoreAwarded = finalScore;
+
     if (isAccepted) {
       session.isCompleted = true;
       session.status = 'COMPLETED';
+      session.durationSeconds = timeTakenSeconds;
       session.endTime = new Date();
     }
     session.lastActivityAt = new Date();
@@ -370,10 +444,18 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     message: isAccepted
       ? 'All test cases passed successfully!'
       : 'Some test cases failed. Re-evaluate your block arrangement.',
-    score: scoreBreakdown.finalScore,
+    score: finalScore,
+    currentScore: finalScore,
+    previousChallengesPenalty,
+    overallTotalPenaltyPoints,
+    overallScore,
     passedCount: evalResult.passedCount,
     totalCount: evalResult.totalCount,
-    penalties: scoreBreakdown.totalPenalties,
+    penalties: totalPenaltyPoints,
+    taskPenaltyPoints,
+    runPenaltyPoints,
+    timePenaltyPoints,
+    totalPenaltyPoints,
     testResults: sanitizedResults,
     executionTime: evalResult.details[0]?.time || '0.04s',
     memory: '12.0 MB',

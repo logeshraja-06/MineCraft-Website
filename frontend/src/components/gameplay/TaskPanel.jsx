@@ -26,12 +26,26 @@ export default function TaskPanel({
   lastResult = null,
   lastExplain = '',
   isSubmitting = false,
+  attemptsCount = 0,
+  maxAttempts = 3,
+  revealedAnswerInfo = null,
+  onDismissReveal = null,
 }) {
   const [answer, setAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
   const [localFeedback, setLocalFeedback] = useState(null);
 
   const quiz = task?.quiz;
+
+  // Auto-dismiss reveal banner after 12s if user doesn't dismiss it manually
+  useEffect(() => {
+    if (revealedAnswerInfo?.revealed && onDismissReveal) {
+      const timer = setTimeout(() => {
+        onDismissReveal();
+      }, 12000);
+      return () => clearTimeout(timer);
+    }
+  }, [revealedAnswerInfo?.revealed, onDismissReveal]);
 
   // Reset answer when task/quiz changes
   useEffect(() => {
@@ -46,9 +60,10 @@ export default function TaskPanel({
       setLocalFeedback({
         correct: lastResult,
         explain: lastExplain,
+        attemptsCount,
       });
     }
-  }, [lastResult, lastExplain]);
+  }, [lastResult, lastExplain, attemptsCount]);
 
   const handleSubmit = useCallback(async () => {
     if (disabled || cooldown > 0 || isSubmitting) return;
@@ -106,10 +121,70 @@ export default function TaskPanel({
             <span className="text-[10px] text-slate-500 font-mono uppercase">{typeLabel}</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-cyan-300 font-bold font-mono">
-          {taskIndex + 1} / {totalTasks}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+            attemptsCount >= 2
+              ? 'bg-rose-100 text-rose-700 border border-rose-300'
+              : 'bg-amber-100 text-amber-800 border border-amber-300'
+          }`}>
+            Attempt {Math.min(attemptsCount + 1, maxAttempts)}/{maxAttempts} (-20 pts)
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-700 font-bold font-mono">
+            {taskIndex + 1} / {totalTasks}
+          </span>
+        </div>
       </div>
+
+      {/* 3 Wrong Attempts Answer Revealed Banner */}
+      {revealedAnswerInfo?.revealed && (
+        <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-400 text-xs font-mono space-y-2.5 animate-fadeIn shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <span>
+                {revealedAnswerInfo.forTaskTitle
+                  ? `${revealedAnswerInfo.forTaskTitle} — Answer Revealed`
+                  : 'Previous Task: 3 Attempts Exhausted — Answer Revealed!'}
+              </span>
+            </div>
+            {onDismissReveal && (
+              <button
+                type="button"
+                onClick={onDismissReveal}
+                className="px-2.5 py-1 text-[11px] rounded-lg bg-amber-200/90 hover:bg-amber-300 text-amber-900 font-bold transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
+                title="Dismiss answer banner"
+              >
+                <span>Dismiss</span>
+                <span>✕</span>
+              </button>
+            )}
+          </div>
+          <div className="p-2.5 bg-white rounded-lg border border-amber-300">
+            <span className="text-[10px] text-slate-500 uppercase font-bold block">
+              {revealedAnswerInfo.forTaskTitle ? `${revealedAnswerInfo.forTaskTitle} Correct Answer:` : 'Correct Answer:'}
+            </span>
+            <span className="text-sm font-bold text-amber-900">{revealedAnswerInfo.answer}</span>
+          </div>
+          {revealedAnswerInfo.explain && (
+            <p className="text-slate-600 text-[11px] leading-relaxed">{revealedAnswerInfo.explain}</p>
+          )}
+          <div className="flex items-center justify-between pt-1 border-t border-amber-200/60">
+            <p className="text-emerald-700 font-bold text-[11px] flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              Code fragment unlocked! Answer the current task below.
+            </p>
+            {onDismissReveal && (
+              <button
+                type="button"
+                onClick={onDismissReveal}
+                className="text-[11px] text-amber-800 underline hover:text-amber-950 font-bold cursor-pointer"
+              >
+                Continue to {task.title || `Task ${taskIndex + 1}`} →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Quiz prompt */}
       <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-line bg-slate-50/60 p-4 rounded-xl border border-slate-200/60">
@@ -141,6 +216,7 @@ export default function TaskPanel({
                     if (!disabled && cooldown <= 0 && !isSubmitting) {
                       setSelectedOption(idx);
                       setLocalFeedback(null);
+                      if (onDismissReveal) onDismissReveal();
                     }
                   }}
                   disabled={disabled || cooldown > 0 || isSubmitting}
@@ -178,6 +254,7 @@ export default function TaskPanel({
               onChange={(e) => {
                 setAnswer(e.target.value);
                 setLocalFeedback(null);
+                if (onDismissReveal) onDismissReveal();
               }}
               onKeyDown={handleKeyDown}
               placeholder={
@@ -199,6 +276,7 @@ export default function TaskPanel({
             onChange={(e) => {
               setAnswer(e.target.value);
               setLocalFeedback(null);
+              if (onDismissReveal) onDismissReveal();
             }}
             placeholder="Enter the correct order (comma-separated or one per line)"
             disabled={disabled || cooldown > 0 || isSubmitting}
@@ -213,18 +291,20 @@ export default function TaskPanel({
         <div
           className={`p-3 rounded-xl text-xs font-mono flex items-start gap-2 animate-fadeIn ${
             localFeedback.correct
-              ? 'bg-emerald-950/30 border border-emerald-500/30 text-emerald-300'
-              : 'bg-rose-950/30 border border-rose-500/30 text-rose-300'
+              ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+              : 'bg-rose-50 border border-rose-300 text-rose-800'
           }`}
         >
           {localFeedback.correct ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           ) : (
-            <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           )}
           <div className="space-y-1">
             <span className="font-bold">
-              {localFeedback.correct ? '✅ Correct! Code block unlocked.' : '❌ Wrong Answer (Penalty Added)'}
+              {localFeedback.correct
+                ? '✅ Correct! Code block unlocked.'
+                : `❌ Wrong Answer (-20 pts). Attempt ${localFeedback.attemptsCount || 1} of 3.`}
             </span>
             {localFeedback.explain && (
               <p className="text-slate-600 leading-relaxed">{localFeedback.explain}</p>

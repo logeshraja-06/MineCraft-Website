@@ -42,8 +42,8 @@ exports.calculateSubmissionScore = ({
   const wrongSubmissionPenalty = (wrongAttemptsCount || 0) * wrongPenaltyRate;
   const totalPenalties = revealPenalty + wrongSubmissionPenalty;
 
-  // 3. Final score: cannot be negative, max capped at challenge points
-  const finalScore = Math.max(0, Math.min(totalBasePoints, rawScore - totalPenalties));
+  // 3. Final score: 0 initially, negative penalties
+  const finalScore = -totalPenalties;
 
   return {
     rawScore,

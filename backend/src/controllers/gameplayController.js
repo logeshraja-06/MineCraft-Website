@@ -38,17 +38,32 @@ function normalizeStr(s) {
 
 /**
  * Sanitise a task for participant (strip answer, explain)
+ * Dynamically prefixes title as "Task {displayIndex + 1}: {cleanTitle}"
  */
-function sanitiseTask(task, quizIdx = 0) {
+function sanitiseTask(task, quizIdx = 0, displayIndex = null) {
   if (!task) return null;
   const pool = task.quizPool || [];
   if (pool.length === 0) return null;
   const quiz = pool[quizIdx % pool.length];
+
+  let rawTitle = task.title || '';
+  // Strip hardcoded "Task 1:", "Task 2 -", "Task 03:", etc. from beginning
+  const cleanTitle = rawTitle.replace(/^Task\s*\d+\s*[:\-]\s*/i, '').trim();
+
+  let finalTitle = rawTitle;
+  let finalOrder = task.order;
+
+  if (displayIndex !== null && displayIndex !== undefined) {
+    const num = displayIndex + 1;
+    finalTitle = cleanTitle ? `Task ${num}: ${cleanTitle}` : `Task ${num}`;
+    finalOrder = num;
+  }
+
   return {
     taskId: task.taskId,
-    title: task.title,
+    title: finalTitle,
     description: task.description || '',
-    order: task.order,
+    order: finalOrder,
     quiz: {
       quizId: quiz.quizId,
       type: quiz.type,
@@ -108,6 +123,168 @@ function getTasksForLanguage(challenge, language) {
 }
 
 /**
+ * Fisher-Yates array shuffle
+ */
+function shuffleArray(arr) {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Generate a shuffled sequence of task IDs, guaranteed not identical to canonical order if length > 1
+ */
+function getShuffledTaskOrder(baseTasks) {
+  if (!baseTasks || baseTasks.length <= 1) {
+    return (baseTasks || []).map((t) => t.taskId);
+  }
+  const baseIds = baseTasks.map((t) => t.taskId);
+  let shuffled = shuffleArray(baseIds);
+  let attempts = 0;
+  while (attempts < 10 && shuffled.every((id, idx) => id === baseIds[idx])) {
+    shuffled = shuffleArray(baseIds);
+    attempts++;
+  }
+  if (shuffled.every((id, idx) => id === baseIds[idx]) && shuffled.length > 1) {
+    [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+  }
+  return shuffled;
+}
+
+/**
+ * Get ordered tasks for a participant session.
+ * Preserves existing session.taskOrder if valid, or generates and saves a new shuffled order.
+ */
+async function getSessionOrderedTasks(challenge, session, language) {
+  const baseTasks = getTasksForLanguage(challenge, language);
+  if (!baseTasks || baseTasks.length === 0) return [];
+  if (baseTasks.length === 1) return baseTasks;
+
+  const taskMap = new Map(baseTasks.map((t) => [t.taskId, t]));
+  const baseTaskIds = baseTasks.map((t) => t.taskId);
+
+  // Check if session already has a valid taskOrder containing all base task IDs
+  const existingOrder = session?.taskOrder;
+  const isValid =
+    Array.isArray(existingOrder) &&
+    existingOrder.length === baseTasks.length &&
+    existingOrder.every((id) => taskMap.has(id));
+
+  if (isValid) {
+    return existingOrder.map((id) => taskMap.get(id)).filter(Boolean);
+  }
+
+  // If session already had some completed tasks, preserve completed ones first, shuffle remaining
+  if (Array.isArray(session?.completedTaskIds) && session.completedTaskIds.length > 0) {
+    const completedSet = new Set(session.completedTaskIds);
+    const completedList = baseTaskIds.filter((id) => completedSet.has(id));
+    const remainingList = baseTaskIds.filter((id) => !completedSet.has(id));
+    const shuffledRemaining = shuffleArray(remainingList);
+    const combined = [...completedList, ...shuffledRemaining];
+    if (session) {
+      session.taskOrder = combined;
+      await session.save();
+    }
+    return combined.map((id) => taskMap.get(id)).filter(Boolean);
+  }
+
+  // Generate new shuffled task order
+  const shuffledIds = getShuffledTaskOrder(baseTasks);
+  if (session) {
+    session.taskOrder = shuffledIds;
+    await session.save();
+  }
+
+  return shuffledIds.map((id) => taskMap.get(id)).filter(Boolean);
+}
+
+/**
+ * Computes current live points breakdown for a session.
+ * - Initial points: 0.
+ * - Wrong task answers: -20 pts each (taskPenaltyPoints).
+ * - Runs after 3 free runs: -10 pts each (runPenaltyPoints).
+ * - Exhausted minutes: -10 pts per 1 min (timePenaltyPoints).
+ * - Total penalty = taskPenaltyPoints + runPenaltyPoints + timePenaltyPoints.
+ * - Current score = -totalPenalty.
+ */
+function computeSessionPoints(session) {
+  if (!session) {
+    return {
+      currentScore: 0,
+      totalPenaltyPoints: 0,
+      taskPenaltyPoints: 0,
+      runPenaltyPoints: 0,
+      timePenaltyPoints: 0,
+      runCount: 0,
+      runsRemainingFree: 3,
+      timeMinutesExhausted: 0,
+    };
+  }
+
+  const start = session.startTime ? new Date(session.startTime) : new Date();
+  const end = session.endTime ? new Date(session.endTime) : new Date();
+  const elapsedSec = Math.max(0, Math.floor((end - start) / 1000));
+  const timeMinutesExhausted = Math.floor(elapsedSec / 60);
+  const timePenaltyPoints = timeMinutesExhausted * 10;
+
+  const taskPenaltyPoints = session.taskPenaltyPoints || 0;
+  const runPenaltyPoints = session.runPenaltyPoints || 0;
+  const runCount = session.runCount || 0;
+  const runsRemainingFree = Math.max(0, 3 - runCount);
+
+  const totalPenaltyPoints = taskPenaltyPoints + runPenaltyPoints + timePenaltyPoints;
+  const currentScore = -totalPenaltyPoints;
+
+  return {
+    currentScore,
+    totalPenaltyPoints,
+    taskPenaltyPoints,
+    runPenaltyPoints,
+    timePenaltyPoints,
+    runCount,
+    runsRemainingFree,
+    timeMinutesExhausted,
+  };
+}
+
+/**
+ * Computes live points for this session PLUS cumulative history from previous challenges.
+ */
+async function computeSessionPointsWithHistory(session) {
+  const base = computeSessionPoints(session);
+  if (!session || !session.userId) {
+    return {
+      ...base,
+      previousChallengesPenalty: 0,
+      overallTotalPenaltyPoints: base.totalPenaltyPoints,
+      overallScore: base.currentScore,
+    };
+  }
+
+  const otherSessions = await ParticipantSession.find({
+    userId: session.userId,
+    _id: { $ne: session._id },
+  }).lean();
+
+  let previousChallengesPenalty = 0;
+  for (const s of otherSessions) {
+    previousChallengesPenalty += (s.totalPenaltyPoints || 0);
+  }
+
+  const overallTotalPenaltyPoints = previousChallengesPenalty + base.totalPenaltyPoints;
+  const overallScore = -overallTotalPenaltyPoints;
+
+  return {
+    ...base,
+    previousChallengesPenalty,
+    overallTotalPenaltyPoints,
+    overallScore,
+  };
+}
+
 /**
  * Resolve authenticated user
  */
@@ -157,8 +334,11 @@ exports.startSession = asyncHandler(async (req, res) => {
     });
   }
 
-  // Sort tasks by order for selected language
-  const sortedTasks = getTasksForLanguage(challenge, language);
+  const durationLimit = challenge.timeLimitSeconds || 900;
+
+  // Base tasks for selected language
+  const baseTasks = getTasksForLanguage(challenge, language);
+  const newShuffledTaskOrder = getShuffledTaskOrder(baseTasks);
 
   // Check for existing session
   let session = null;
@@ -169,23 +349,33 @@ exports.startSession = asyncHandler(async (req, res) => {
     });
   }
 
-
   if (session && (session.status === 'COMPLETED' || session.status === 'EXPIRED' || session.isCompleted)) {
     // Participant is retrying the challenge after timeout / non-accepted conclusion
     session.status = 'ACTIVE';
     session.isCompleted = false;
     session.selectedLanguage = language;
     session.completedTaskIds = [];
+    session.taskOrder = newShuffledTaskOrder;
     session.currentTaskIndex = 0;
     session.currentQuizIndex = 0;
     session.taskAttempts = [];
+    session.scannedBlocks = [];
+    session.assemblyOrder = [];
+    session.assembledCode = '';
     session.revealedBlockIds = [];
     session.revealsCount = 0;
     session.revealEvents = [];
-    session.durationSeconds = challenge.timeLimitSeconds || 1200;
+    session.durationSeconds = durationLimit;
+    session.taskPenaltyPoints = 0;
+    session.runCount = 0;
+    session.runPenaltyPoints = 0;
+    session.timePenaltyPoints = 0;
+    session.totalPenaltyPoints = 0;
+    session.currentScore = 0;
     session.totalPenaltySeconds = 0;
     session.wrongAttemptsCount = 0;
     session.startedAt = new Date();
+    session.startTime = new Date();
     session.lastActivityAt = new Date();
     session.completedAt = null;
     await session.save();
@@ -194,6 +384,11 @@ exports.startSession = asyncHandler(async (req, res) => {
     if (session.completedTaskIds.length === 0) {
       session.selectedLanguage = language;
     }
+    const taskMap = new Map(baseTasks.map((t) => [t.taskId, t]));
+    if (!Array.isArray(session.taskOrder) || session.taskOrder.length !== baseTasks.length || !session.taskOrder.every((id) => taskMap.has(id))) {
+      session.taskOrder = newShuffledTaskOrder;
+    }
+    session.durationSeconds = durationLimit;
     session.lastActivityAt = new Date();
     await session.save();
   } else if (user) {
@@ -203,21 +398,34 @@ exports.startSession = asyncHandler(async (req, res) => {
       challengeId: challenge._id,
       selectedLanguage: language,
       completedTaskIds: [],
+      taskOrder: newShuffledTaskOrder,
       currentTaskIndex: 0,
       currentQuizIndex: 0,
       taskAttempts: [],
+      scannedBlocks: [],
+      assemblyOrder: [],
+      assembledCode: '',
       revealedBlockIds: [],
       revealsCount: 0,
       revealEvents: [],
-      durationSeconds: challenge.timeLimitSeconds || 1200,
+      durationSeconds: durationLimit,
+      taskPenaltyPoints: 0,
+      runCount: 0,
+      runPenaltyPoints: 0,
+      timePenaltyPoints: 0,
+      totalPenaltyPoints: 0,
+      currentScore: 0,
       totalPenaltySeconds: 0,
     });
   }
 
+  const orderedTasks = await getSessionOrderedTasks(challenge, session, language);
+
   // Build response: first task (sanitised), no blocks yet
   const currentTaskIdx = session?.currentTaskIndex || 0;
-  const currentTask = sortedTasks[currentTaskIdx];
+  const currentTask = orderedTasks[currentTaskIdx];
   const quizIdx = session?.currentQuizIndex || 0;
+  const pointsInfo = await computeSessionPointsWithHistory(session);
 
   res.json({
     success: true,
@@ -226,16 +434,19 @@ exports.startSession = asyncHandler(async (req, res) => {
       challengeId: challenge._id,
       language,
       startTime: session?.startTime || Date.now(),
-      durationSeconds: challenge.timeLimitSeconds || 1200,
+      durationSeconds: durationLimit,
       completedTaskIds: session?.completedTaskIds || [],
       currentTaskIndex: currentTaskIdx,
-      totalTasks: sortedTasks.length,
+      totalTasks: orderedTasks.length,
       totalPenaltySeconds: session?.totalPenaltySeconds || 0,
+      points: pointsInfo,
+      currentScore: pointsInfo.currentScore,
       unlockedBlocks: buildUnlockedBlocks(challenge, session, language),
       status: session?.status || 'ACTIVE',
     },
-    currentTask: sanitiseTask(currentTask, quizIdx),
-    totalTasks: sortedTasks.length,
+    currentTask: sanitiseTask(currentTask, quizIdx, currentTaskIdx),
+    totalTasks: orderedTasks.length,
+    points: pointsInfo,
   });
 });
 
@@ -265,21 +476,21 @@ exports.getCurrentTask = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No active session found. Please start the challenge first.' });
   }
 
-  const sortedTasks = getTasksForLanguage(challenge, session.selectedLanguage);
+  const orderedTasks = await getSessionOrderedTasks(challenge, session, session.selectedLanguage);
 
   // Check if all tasks completed
-  if (session.currentTaskIndex >= sortedTasks.length) {
+  if (session.currentTaskIndex >= orderedTasks.length) {
     return res.json({
       success: true,
       allTasksCompleted: true,
       currentTask: null,
       completedTaskIds: session.completedTaskIds,
-      totalTasks: sortedTasks.length,
+      totalTasks: orderedTasks.length,
       unlockedBlocks: buildUnlockedBlocks(challenge, session, session.selectedLanguage),
     });
   }
 
-  const currentTask = sortedTasks[session.currentTaskIndex];
+  const currentTask = orderedTasks[session.currentTaskIndex];
   const quizIdx = session.currentQuizIndex || 0;
 
   // Check if there's a cooldown active
@@ -289,16 +500,24 @@ exports.getCurrentTask = asyncHandler(async (req, res) => {
     cooldownRemaining = Math.max(0, Math.ceil((new Date(taskAttempt.cooldownUntil) - Date.now()) / 1000));
   }
 
+  const pointsInfo = await computeSessionPointsWithHistory(session);
+  const attemptsCount = taskAttempt?.wrongAnswers || 0;
+
   res.json({
     success: true,
     allTasksCompleted: false,
-    currentTask: sanitiseTask(currentTask, quizIdx),
+    currentTask: sanitiseTask(currentTask, quizIdx, session.currentTaskIndex),
     currentTaskIndex: session.currentTaskIndex,
     completedTaskIds: session.completedTaskIds,
-    totalTasks: sortedTasks.length,
+    totalTasks: orderedTasks.length,
     totalPenaltySeconds: session.totalPenaltySeconds || 0,
     cooldownRemaining,
     unlockedBlocks: buildUnlockedBlocks(challenge, session, session.selectedLanguage),
+    points: pointsInfo,
+    currentScore: pointsInfo.currentScore,
+    attemptsCount,
+    maxAttempts: 3,
+    attemptsRemaining: Math.max(0, 3 - attemptsCount),
   });
 });
 
@@ -339,13 +558,13 @@ exports.submitTaskAnswer = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Challenge already completed' });
   }
 
-  const sortedTasks = getTasksForLanguage(challenge, session.selectedLanguage);
+  const orderedTasks = await getSessionOrderedTasks(challenge, session, session.selectedLanguage);
 
-  if (session.currentTaskIndex >= sortedTasks.length) {
+  if (session.currentTaskIndex >= orderedTasks.length) {
     return res.status(400).json({ success: false, message: 'All tasks already completed' });
   }
 
-  const currentTask = sortedTasks[session.currentTaskIndex];
+  const currentTask = orderedTasks[session.currentTaskIndex];
   const language = session.selectedLanguage;
   const quizIdx = session.currentQuizIndex || 0;
   const pool = currentTask.quizPool || [];
@@ -355,15 +574,10 @@ exports.submitTaskAnswer = asyncHandler(async (req, res) => {
 
   const quiz = pool[quizIdx % pool.length];
 
-  // ── Check cooldown ──
+  // ── Task attempt tracking (penalties are applied instead of cooldown lockout) ──
   let taskAttempt = session.taskAttempts.find((ta) => ta.taskId === currentTask.taskId);
-  if (taskAttempt?.cooldownUntil && new Date(taskAttempt.cooldownUntil) > Date.now()) {
-    const remaining = Math.ceil((new Date(taskAttempt.cooldownUntil) - Date.now()) / 1000);
-    return res.status(429).json({
-      success: false,
-      message: `Cooldown active. Wait ${remaining} seconds.`,
-      cooldownRemaining: remaining,
-    });
+  if (taskAttempt && taskAttempt.cooldownUntil) {
+    taskAttempt.cooldownUntil = null;
   }
 
   // ── Validate answer ──
@@ -423,6 +637,12 @@ exports.submitTaskAnswer = asyncHandler(async (req, res) => {
           role: blockData.role,
           language,
         };
+        // Also keep session.scannedBlocks synced for assembly/judging validation
+        if (!session.scannedBlocks) session.scannedBlocks = [];
+        const alreadyScanned = session.scannedBlocks.some((b) => (b.blockId || b._id) === blockData.blockId);
+        if (!alreadyScanned) {
+          session.scannedBlocks.push(unlockedBlock);
+        }
       }
     }
 
@@ -431,13 +651,16 @@ exports.submitTaskAnswer = asyncHandler(async (req, res) => {
     session.currentQuizIndex = 0;
 
     // Check if all tasks done
-    const allDone = session.currentTaskIndex >= sortedTasks.length;
+    const allDone = session.currentTaskIndex >= orderedTasks.length;
 
+    const pointsInfo = await computeSessionPointsWithHistory(session);
+    session.totalPenaltyPoints = pointsInfo.totalPenaltyPoints;
+    session.currentScore = pointsInfo.currentScore;
     session.lastActivityAt = new Date();
     await session.save();
 
     // Build next task
-    const nextTask = allDone ? null : sortedTasks[session.currentTaskIndex];
+    const nextTask = allDone ? null : orderedTasks[session.currentTaskIndex];
 
     return res.json({
       success: true,
@@ -445,38 +668,134 @@ exports.submitTaskAnswer = asyncHandler(async (req, res) => {
       explain: quiz.explain || '',
       unlockedBlock,
       allTasksCompleted: allDone,
-      nextTask: sanitiseTask(nextTask, 0),
+      nextTask: sanitiseTask(nextTask, 0, session.currentTaskIndex),
       currentTaskIndex: session.currentTaskIndex,
       completedTaskIds: session.completedTaskIds,
-      totalTasks: sortedTasks.length,
+      totalTasks: orderedTasks.length,
       totalPenaltySeconds: session.totalPenaltySeconds || 0,
+      points: pointsInfo,
+      currentScore: pointsInfo.currentScore,
       unlockedBlocks: buildUnlockedBlocks(challenge, session, language),
     });
   } else {
     // ── WRONG ANSWER ──
-    // Keep that task and provide ONLY -penalty (no cycling to next question, no cooldown lockout)
-    const penalty = currentTask.penalty || 20;
+    // In tasks in MCQ if one time ans is wrong give -20 pts for fill in the blanks provide -20 pts for wrong
+    // after 3 wrong attempts reveal an answer and unlock fragment
+    const penalty = 20;
 
-    taskAttempt.wrongAnswers += 1;
-    taskAttempt.penaltySeconds += penalty;
+    taskAttempt.wrongAnswers = (taskAttempt.wrongAnswers || 0) + 1;
+    taskAttempt.penaltySeconds = (taskAttempt.penaltySeconds || 0) + penalty;
     taskAttempt.cooldownUntil = null; // No cooldown lockout
 
+    session.taskPenaltyPoints = (session.taskPenaltyPoints || 0) + penalty;
     session.totalPenaltySeconds = (session.totalPenaltySeconds || 0) + penalty;
     session.wrongAttemptsCount = (session.wrongAttemptsCount || 0) + 1;
 
-    // KEEP THAT EXACT SAME TASK AND QUESTION (do NOT cycle currentQuizIndex)
-    // session.currentQuizIndex remains unchanged
+    // Check if 3 wrong attempts reached -> reveal answer & unlock fragment
+    if (taskAttempt.wrongAnswers >= 3) {
+      taskAttempt.answerRevealed = true;
+      taskAttempt.completedAt = new Date();
+      if (!session.completedTaskIds.includes(currentTask.taskId)) {
+        session.completedTaskIds.push(currentTask.taskId);
+      }
 
+      // Unlock the reward block so participant is not stuck
+      const rewardBlockId = getRewardBlockId(currentTask, language);
+      let unlockedBlock = null;
+
+      if (rewardBlockId) {
+        const langConfig = getLangConfig(challenge, language);
+        const blockData = getBlockData(langConfig, rewardBlockId);
+        if (blockData && !session.revealedBlockIds.includes(rewardBlockId)) {
+          session.revealedBlockIds.push(rewardBlockId);
+          session.revealsCount += 1;
+          session.revealEvents.push({
+            taskId: currentTask.taskId,
+            blockId: rewardBlockId,
+            penalty: 0,
+            timestamp: new Date(),
+          });
+          unlockedBlock = {
+            blockId: blockData.blockId,
+            code: blockData.code,
+            role: blockData.role,
+            language,
+          };
+          if (!session.scannedBlocks) session.scannedBlocks = [];
+          const alreadyScanned = session.scannedBlocks.some((b) => (b.blockId || b._id) === blockData.blockId);
+          if (!alreadyScanned) {
+            session.scannedBlocks.push(unlockedBlock);
+          }
+        }
+      }
+
+      // Format readable revealed answer
+      let revealedAnswer = '';
+      if (quiz.type === 'MCQ') {
+        const opt = quiz.options?.[Number(quiz.answer)];
+        revealedAnswer = opt !== undefined ? `${opt}` : String(quiz.answer);
+      } else if (quiz.type === 'FILL_BLANK') {
+        revealedAnswer = Array.isArray(quiz.answer) ? quiz.answer.join(' / ') : String(quiz.answer);
+      } else if (quiz.type === 'CODE_ORDER') {
+        revealedAnswer = Array.isArray(quiz.answer) ? quiz.answer.join(' -> ') : String(quiz.answer);
+      } else {
+        revealedAnswer = String(quiz.answer || '');
+      }
+
+      // Advance to next task
+      session.currentTaskIndex += 1;
+      session.currentQuizIndex = 0;
+
+      const allDone = session.currentTaskIndex >= orderedTasks.length;
+      const nextTask = allDone ? null : orderedTasks[session.currentTaskIndex];
+
+      const pointsInfo = await computeSessionPointsWithHistory(session);
+      session.totalPenaltyPoints = pointsInfo.totalPenaltyPoints;
+      session.currentScore = pointsInfo.currentScore;
+      session.lastActivityAt = new Date();
+      await session.save();
+
+      return res.json({
+        success: true,
+        correct: false,
+        answerRevealed: true,
+        revealedAnswer,
+        explain: quiz.explain || '',
+        penalty,
+        attemptsCount: taskAttempt.wrongAnswers,
+        maxAttempts: 3,
+        attemptsRemaining: 0,
+        unlockedBlock,
+        allTasksCompleted: allDone,
+        nextTask: sanitiseTask(nextTask, 0, session.currentTaskIndex),
+        currentTaskIndex: session.currentTaskIndex,
+        completedTaskIds: session.completedTaskIds,
+        totalTasks: orderedTasks.length,
+        points: pointsInfo,
+        currentScore: pointsInfo.currentScore,
+        unlockedBlocks: buildUnlockedBlocks(challenge, session, language),
+        message: '3 attempts exhausted. Correct answer revealed and code block unlocked!',
+      });
+    }
+
+    // Wrong answer with attempts remaining (< 3)
+    const pointsInfo = await computeSessionPointsWithHistory(session);
+    session.totalPenaltyPoints = pointsInfo.totalPenaltyPoints;
+    session.currentScore = pointsInfo.currentScore;
     session.lastActivityAt = new Date();
     await session.save();
 
     return res.json({
       success: true,
       correct: false,
-      explain: quiz.explain || 'Incorrect answer. Try again!',
+      answerRevealed: false,
+      attemptsCount: taskAttempt.wrongAnswers,
+      maxAttempts: 3,
+      attemptsRemaining: Math.max(0, 3 - taskAttempt.wrongAnswers),
       penalty,
-      cooldownSeconds: 0,
-      cooldownRemaining: 0,
+      explain: quiz.explain || 'Incorrect answer. Try again!',
+      points: pointsInfo,
+      currentScore: pointsInfo.currentScore,
       totalPenaltySeconds: session.totalPenaltySeconds,
     });
   }
@@ -530,11 +849,11 @@ exports.getProgress = asyncHandler(async (req, res) => {
   }
 
   const language = session.selectedLanguage;
-  const sortedTasks = getTasksForLanguage(challenge, language);
-  const allDone = session.currentTaskIndex >= sortedTasks.length;
+  const orderedTasks = await getSessionOrderedTasks(challenge, session, language);
+  const allDone = session.currentTaskIndex >= orderedTasks.length;
 
   // Current task
-  const currentTask = allDone ? null : sortedTasks[session.currentTaskIndex];
+  const currentTask = allDone ? null : orderedTasks[session.currentTaskIndex];
   const quizIdx = session.currentQuizIndex || 0;
 
   // Cooldown
@@ -546,6 +865,9 @@ exports.getProgress = asyncHandler(async (req, res) => {
     cooldownRemaining = Math.max(0, Math.ceil((new Date(taskAttempt.cooldownUntil) - Date.now()) / 1000));
   }
 
+  const pointsInfo = await computeSessionPointsWithHistory(session);
+  const attemptsCount = taskAttempt?.wrongAnswers || 0;
+
   res.json({
     success: true,
     hasSession: true,
@@ -554,18 +876,25 @@ exports.getProgress = asyncHandler(async (req, res) => {
       challengeId: challenge._id,
       language,
       startTime: session.startTime,
-      durationSeconds: session.durationSeconds || challenge.timeLimitSeconds || 1200,
+      durationSeconds: session.durationSeconds || challenge.timeLimitSeconds || 900,
       completedTaskIds: session.completedTaskIds,
       currentTaskIndex: session.currentTaskIndex,
-      totalTasks: sortedTasks.length,
+      totalTasks: orderedTasks.length,
       totalPenaltySeconds: session.totalPenaltySeconds || 0,
       wrongAttemptsCount: session.wrongAttemptsCount || 0,
+      points: pointsInfo,
+      currentScore: pointsInfo.currentScore,
       status: session.status,
     },
-    currentTask: sanitiseTask(currentTask, quizIdx),
+    currentTask: sanitiseTask(currentTask, quizIdx, session.currentTaskIndex),
     allTasksCompleted: allDone,
     cooldownRemaining,
     unlockedBlocks: buildUnlockedBlocks(challenge, session, language),
+    points: pointsInfo,
+    currentScore: pointsInfo.currentScore,
+    attemptsCount,
+    maxAttempts: 3,
+    attemptsRemaining: Math.max(0, 3 - attemptsCount),
     challenge: {
       id: challenge._id,
       title: challenge.title,
@@ -582,7 +911,7 @@ exports.getProgress = asyncHandler(async (req, res) => {
         name: lc.languageName || lc.language,
         blockCount: lc.blocks?.length || 0,
       })),
-      totalTasks: sortedTasks.length,
+      totalTasks: orderedTasks.length,
     },
   });
 });

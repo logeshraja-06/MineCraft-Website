@@ -746,6 +746,29 @@ exports.resetParticipant = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Participant session and submission progress reset successfully' });
 });
 
+exports.deleteParticipant = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Participant not found' });
+  }
+  if (user.role === 'admin') {
+    return res.status(400).json({ success: false, message: 'Cannot delete admin account' });
+  }
+
+  await Promise.all([
+    User.findByIdAndDelete(userId),
+    ParticipantSession.deleteMany({ userId }),
+    Submission.deleteMany({ userId }),
+  ]);
+
+  res.json({
+    success: true,
+    message: `Participant '${user.name}' (${user.participantId || user.email}) deleted successfully.`,
+  });
+});
+
+
 /**
  * SESSION MANAGEMENT
  */

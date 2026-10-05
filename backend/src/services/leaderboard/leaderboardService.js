@@ -43,8 +43,20 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
     return [];
   }
 
-  // 2. Aggregate submissions per participant and per challenge
-  // Find all submissions populated with challenge info
+  // 2. Fetch all sessions for penalty breakdown fallback
+  const ParticipantSession = require('../../models/ParticipantSession');
+  const allSessions = await ParticipantSession.find({}).lean();
+  const sessionUserMap = new Map();
+  allSessions.forEach((s) => {
+    if (!s.userId) return;
+    const uId = String(s.userId);
+    if (!sessionUserMap.has(uId)) {
+      sessionUserMap.set(uId, new Map());
+    }
+    sessionUserMap.get(uId).set(String(s.challengeId), s);
+  });
+
+  // 3. Aggregate submissions per participant and per challenge
   const rawSubmissions = await Submission.aggregate([
     {
       $lookup: {
@@ -79,6 +91,7 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
   const leaderboardRows = participants.map((user) => {
     const uId = String(user._id);
     const userSubs = userSubsMap.get(uId) || [];
+    const userSessions = sessionUserMap.get(uId) || new Map();
 
     // Group submissions by challenge
     const challengeMap = new Map();
@@ -93,6 +106,10 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
     let totalScore = 0;
     let totalTimeSeconds = 0;
     let challengesSolved = 0;
+    let totalTaskPenalties = 0;
+    let totalRunPenalties = 0;
+    let totalTimePenalties = 0;
+    let totalPenalties = 0;
     let lastAcceptedTime = null;
     let lastSubmissionTime = null;
 
@@ -101,21 +118,35 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
     }
 
     challengeMap.forEach((subs, cId) => {
-      // Find the first accepted submission for this challenge
+      // Find the accepted submission for this challenge
       const acceptedIndex = subs.findIndex((s) => s.status === 'ACCEPTED');
       if (acceptedIndex !== -1) {
         const acceptedSub = subs[acceptedIndex];
+        const session = userSessions.get(cId);
         challengesSolved++;
 
-        // Challenge points
-        const points = Number(acceptedSub.challengeInfo?.points) || Number(acceptedSub.score) || 100;
-        totalScore += points;
-
-        // Failed attempts strictly before this accepted submission
-        const failedBefore = acceptedIndex; // each index before was non-accepted
         const timeTaken = Number(acceptedSub.timeTakenSeconds) || 0;
-        const penaltySeconds = failedBefore * 300; // 5 minutes (300s) penalty per failed attempt
-        totalTimeSeconds += (timeTaken + penaltySeconds);
+        totalTimeSeconds += timeTaken;
+
+        // Calculate penalties in new points system
+        const taskPenalty = Number(acceptedSub.taskPenaltyPoints) || Number(session?.taskPenaltyPoints) || 0;
+        const runPenalty = Number(acceptedSub.runPenaltyPoints) || Number(session?.runPenaltyPoints) || 0;
+        const timePenalty = Number(acceptedSub.timePenaltyPoints) || Number(session?.timePenaltyPoints) || (Math.floor(timeTaken / 60) * 10);
+        const challengePenalty = Number(acceptedSub.totalPenaltyPoints) || (taskPenalty + runPenalty + timePenalty);
+
+        // Challenge score is negative points (e.g. -40) or 0
+        let challengeScore = 0;
+        if (typeof acceptedSub.score === 'number' && acceptedSub.score <= 0) {
+          challengeScore = acceptedSub.score;
+        } else {
+          challengeScore = -challengePenalty;
+        }
+
+        totalTaskPenalties += taskPenalty;
+        totalRunPenalties += runPenalty;
+        totalTimePenalties += timePenalty;
+        totalPenalties += challengePenalty;
+        totalScore += challengeScore;
 
         const acceptedDate = new Date(acceptedSub.createdAt);
         if (!lastAcceptedTime || acceptedDate > lastAcceptedTime) {
@@ -134,6 +165,10 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
       challengesSolved,
       score: totalScore,
       totalScore,
+      taskPenaltyPoints: totalTaskPenalties,
+      runPenaltyPoints: totalRunPenalties,
+      timePenaltyPoints: totalTimePenalties,
+      totalPenaltyPoints: totalPenalties,
       totalTimeSeconds,
       formattedTime: formatTime(totalTimeSeconds),
       timeFormatted: formatTime(totalTimeSeconds),
@@ -144,11 +179,15 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
     };
   });
 
-  // Sort by:
-  // 1. Score descending
-  // 2. Total time ascending
-  // 3. Earliest final accepted timestamp ascending (tiebreaker)
+  // Sort centrally managed rankings:
+  // 1. Challenges solved descending (3/3 completed first)
+  // 2. Score descending (since scores are negative e.g. -20 > -80, minimum negative points is winner!)
+  // 3. Total time ascending (tiebreaker)
+  // 4. Earliest final accepted timestamp ascending (tiebreaker)
   leaderboardRows.sort((a, b) => {
+    if (b.challengesSolved !== a.challengesSolved) {
+      return b.challengesSolved - a.challengesSolved;
+    }
     if (b.score !== a.score) {
       return b.score - a.score;
     }
@@ -163,9 +202,10 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
     return new Date(a.id.getTimestamp ? a.id.getTimestamp() : 0) - new Date(b.id.getTimestamp ? b.id.getTimestamp() : 0);
   });
 
-  // Assign ranks
+  // Assign ranks and winner status
   const ranked = leaderboardRows.map((entry, index) => ({
     rank: index + 1,
+    isWinner: index === 0 && entry.challengesSolved === 3,
     ...entry,
   }));
 

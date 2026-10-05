@@ -81,3 +81,44 @@ export function seededShuffle(arr, seed) {
 export function normalizeOutput(str = '') {
   return str.replace(/\r\n/g, '\n').trim();
 }
+
+/**
+ * Generates a thoroughly mixed order (derangement) where blocks are scrambled
+ * and guaranteed not to match the real program order.
+ */
+export function getThoroughlyMixedOrder(fragmentIds = [], correctOrder = []) {
+  if (!Array.isArray(fragmentIds) || fragmentIds.length <= 1) return fragmentIds || [];
+  const ids = [...fragmentIds];
+  const n = ids.length;
+
+  let mixed = [...ids];
+  let isMixed = false;
+  let attempts = 0;
+
+  while (!isMixed && attempts < 50) {
+    attempts++;
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [mixed[i], mixed[j]] = [mixed[j], mixed[i]];
+    }
+
+    const matchesCorrect = correctOrder.length === n && mixed.some((id, idx) => id === correctOrder[idx]);
+    const matchesOriginal = mixed.every((id, idx) => id === ids[idx]);
+
+    if (!matchesCorrect && !matchesOriginal) {
+      isMixed = true;
+    }
+  }
+
+  // Force rotation/swap if any element still occupies canonical slot
+  if (correctOrder.length === n) {
+    for (let i = 0; i < n; i++) {
+      if (mixed[i] === correctOrder[i]) {
+        const swapWith = (i + 1) % n;
+        [mixed[i], mixed[swapWith]] = [mixed[swapWith], mixed[i]];
+      }
+    }
+  }
+
+  return mixed;
+}

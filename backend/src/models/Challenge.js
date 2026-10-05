@@ -75,7 +75,7 @@ const challengeSchema = new mongoose.Schema(
     outputFormat: { type: String, default: '' },
     constraints: { type: String, default: '' },
     sampleOutput: { type: String, default: '' },
-    timeLimitSeconds: { type: Number, default: 1200 }, // 20 minutes default
+    timeLimitSeconds: { type: Number, default: 900 }, // 15 minutes default
     maxAttempts: { type: Number, default: 5 },
     supportedLanguages: [{ type: String, default: ['java', 'python', 'cpp', 'c', 'javascript'] }],
     sourceLanguage: { type: String, default: 'java' },
