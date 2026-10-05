@@ -98,6 +98,139 @@ body {
   animation: phaseBurst 0.5s ease-out forwards;
 }
 
+/* ── Modern Floating & Shimmer Animations ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(1.5deg); }
+}
+
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(12px) rotate(-1.5deg); }
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.06); }
+}
+
+@keyframes shimmerGleam {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes subtleWave {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(-20px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 5.5s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 4.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmerGleam 3s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
+}
+
+.animate-subtle-wave {
+  animation: subtleWave 8s ease-in-out infinite alternate;
+}
+
+/* ── Gaming & Arcade Visual Effects ── */
+@keyframes hudBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes scanlineSweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
+@keyframes radarSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-hud-blink {
+  animation: hudBlink 1.4s ease-in-out infinite;
+}
+
+.animate-scanline {
+  animation: scanlineSweep 8s linear infinite;
+}
+
+.animate-radar {
+  animation: radarSpin 12s linear infinite;
+}
+
+/* Subtle arcade dot grid pattern */
+.bg-arcade-grid {
+  background-image: radial-gradient(rgba(242, 140, 15, 0.12) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+/* Subtle dark arcade grid pattern */
+.bg-arcade-grid-dark {
+  background-image: radial-gradient(rgba(242, 140, 15, 0.25) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* Minecraft-inspired corner bracket borders */
+.corner-brackets {
+  position: relative;
+}
+.corner-brackets::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 14px;
+  height: 14px;
+  border-top: 3px solid #F28C0F;
+  border-left: 3px solid #F28C0F;
+  pointer-events: none;
+}
+.corner-brackets::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-bottom: 3px solid #F28C0F;
+  border-right: 3px solid #F28C0F;
+  pointer-events: none;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-chestLid,
@@ -124,4 +257,46 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ── Quest Console animations ── */
+@keyframes consoleFloat {
+  0%,  100% { transform: translateY(0px);   }
+  50%        { transform: translateY(-6px);  }
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+@keyframes dashMove {
+  0%   { stroke-dashoffset: 0; background-position: 0 0; }
+  100% { background-position: -20px 0; }
+}
+
+/* Animated dashed line via background trick */
+.dash-animated {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(242, 140, 15, 0.7) 0px,
+    rgba(242, 140, 15, 0.7) 6px,
+    transparent 6px,
+    transparent 14px
+  );
+  background-size: 20px 2px;
+  background-repeat: repeat-x;
+  background-position: 0 center;
+  animation: dashMove 0.9s linear infinite;
+  height: 2px;
+}
+
+/* Respect prefers-reduced-motion for Quest Console */
+@media (prefers-reduced-motion: reduce) {
+  [style*="consoleFloat"],
+  [style*="cursorBlink"],
+  [style*="dashMove"],
+  .dash-animated {
+    animation: none !important;
+  }
 }
