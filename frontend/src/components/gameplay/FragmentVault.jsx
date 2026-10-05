@@ -1,5 +1,6 @@
-import React from 'react';
-import { Lock, Code2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Lock, Code2, Unlock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 /**
  * FragmentVault — right-column panel.
@@ -13,7 +14,11 @@ export default function FragmentVault({
   shuffledOrder = [],      // seeded shuffle for ASSEMBLE phase
   phase = 'HUNT',
   totalExpected = 0,       // total expected fragment count (from server)
+  pendingKeyDrop = false,
+  onKeyDropped = null,
 }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const totalCount     = totalExpected || fragments.length;
   const collectedCount = collectedIds.length;
 
@@ -69,18 +74,71 @@ export default function FragmentVault({
         })}
       </div>
 
-      {/* locked silhouettes */}
+      {/* locked silhouettes & treasure box */}
       {phase === 'HUNT' && collectedCount < totalCount && (
         <div className="space-y-1.5">
-          {Array.from({ length: totalCount - collectedCount }).map((_, i) => (
-            <div
-              key={i}
-              className="p-2.5 bg-white/40 border border-dashed border-slate-200 rounded-xl flex items-center gap-2 text-[11px] font-mono text-slate-600"
-            >
-              <Lock className="w-3.5 h-3.5 text-slate-700" />
-              <span>??? FRAGMENT LOCKED — solve a quiz to unlock</span>
-            </div>
-          ))}
+          {Array.from({ length: totalCount - collectedCount }).map((_, i) => {
+            // Render the treasure box on the first locked fragment when key is earned
+            if (i === 0 && pendingKeyDrop) {
+              return (
+                <motion.div
+                  key={`treasure-box-${i}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    if (e.dataTransfer.getData('key') && onKeyDropped) {
+                      onKeyDropped();
+                    }
+                  }}
+                  animate={{
+                    scale: isDragOver ? 1.05 : 1,
+                    boxShadow: isDragOver
+                      ? '0px 0px 20px 5px rgba(234, 179, 8, 0.6)'
+                      : '0px 0px 10px 2px rgba(234, 179, 8, 0.3)',
+                  }}
+                  className={`p-4 border-2 rounded-xl flex items-center gap-4 text-sm font-mono font-bold transition-colors ${
+                    isDragOver
+                      ? 'bg-amber-900/30 border-amber-400 text-amber-300'
+                      : 'bg-gradient-to-r from-amber-950/40 to-yellow-900/20 border-yellow-500/60 text-yellow-500'
+                  }`}
+                >
+                  <motion.div
+                    animate={{ rotate: isDragOver ? [-5, 5, -5] : 0, scale: isDragOver ? 1.1 : 1 }}
+                    transition={{ repeat: Infinity, duration: 0.5 }}
+                    className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(234,179,8,0.5)] border border-yellow-500/50"
+                  >
+                    <img src="/treasure-chest.jpg" alt="Treasure Chest" className="w-full h-full object-cover" />
+                  </motion.div>
+                  <div className="flex flex-col">
+                    <span className="uppercase tracking-wider">
+                      {isDragOver ? 'Drop Key to Unlock!' : 'Treasure Box Ready'}
+                    </span>
+                    <span className="text-[10px] text-amber-500/80 font-normal">
+                      Drag the glowing key here
+                    </span>
+                  </div>
+                  {isDragOver && (
+                    <Unlock className="w-5 h-5 ml-auto text-amber-300 animate-pulse" />
+                  )}
+                </motion.div>
+              );
+            }
+
+            return (
+              <div
+                key={i}
+                className="p-2.5 bg-white/40 border border-dashed border-slate-200 rounded-xl flex items-center gap-2 text-[11px] font-mono text-slate-600"
+              >
+                <Lock className="w-3.5 h-3.5 text-slate-700" />
+                <span>??? FRAGMENT LOCKED — solve a quiz to unlock</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
