@@ -103,6 +103,7 @@ export default function Challenge() {
   const [toastType, setToastType] = useState('info');
   const [submissionResult, setSubmissionResult] = useState(null);
   const [userProgress, setUserProgress] = useState([]);
+  const [pendingKeyDrop, setPendingKeyDrop] = useState(false);
 
   const showToast = useCallback((msg, type = 'info') => {
     setToastMessage(msg);
@@ -253,7 +254,8 @@ export default function Challenge() {
     if (isTimeExpired) return { correct: false, explain: '' };
     const result = await submitQuizAnswer(answer);
     if (result?.correct) {
-      showToast('✅ Correct! Code fragment unlocked.', 'success');
+      setPendingKeyDrop(true);
+      showToast('🔑 Key earned! Drag it to the Treasure Box to unlock the fragment.', 'success');
     } else if (result?.answerRevealed) {
       showToast(`⚠️ 3 wrong attempts reached! Correct answer revealed: ${result.revealedAnswer}. Fragment unlocked!`, 'info');
     } else if (result?.penalty) {
@@ -555,6 +557,7 @@ export default function Challenge() {
                   maxAttempts={3}
                   revealedAnswerInfo={revealedAnswerInfo}
                   onDismissReveal={dismissRevealedAnswer}
+                  pendingKeyDrop={pendingKeyDrop}
                 />
               )}
 
@@ -606,7 +609,6 @@ export default function Challenge() {
           )}
         </div>
 
-        {/* ── COLUMN 3: Fragment Vault (col-span-4) ── */}
         <div className="lg:col-span-4 space-y-4">
           <FragmentVault
             fragments={collectedFragments.map((f) => ({
@@ -614,10 +616,12 @@ export default function Challenge() {
               code: f.code,
               role: f.role,
             }))}
-            collectedIds={collectedFragmentIds}
+            collectedIds={pendingKeyDrop ? collectedFragmentIds.slice(0, -1) : collectedFragmentIds}
             shuffledOrder={shuffledVaultOrder}
             phase={phase}
             totalExpected={totalFragments}
+            pendingKeyDrop={pendingKeyDrop}
+            onKeyDropped={() => setPendingKeyDrop(false)}
           />
         </div>
       </div>

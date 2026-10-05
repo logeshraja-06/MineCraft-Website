@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { HelpCircle, CheckCircle2, XCircle, Clock, Send, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 /**
  * TaskPanel – renders the current server-sent task quiz.
@@ -30,6 +31,7 @@ export default function TaskPanel({
   maxAttempts = 3,
   revealedAnswerInfo = null,
   onDismissReveal = null,
+  pendingKeyDrop = false,
 }) {
   const [answer, setAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
@@ -287,26 +289,41 @@ export default function TaskPanel({
       </div>
 
       {/* Feedback */}
-      {localFeedback && (
+      {(localFeedback || pendingKeyDrop) && (
         <div
           className={`p-3 rounded-xl text-xs font-mono flex items-start gap-2 animate-fadeIn ${
-            localFeedback.correct
+            pendingKeyDrop || localFeedback?.correct
               ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
               : 'bg-rose-50 border border-rose-300 text-rose-800'
           }`}
         >
-          {localFeedback.correct ? (
+          {pendingKeyDrop ? (
+            <motion.div
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('key', 'true');
+              }}
+              animate={{ y: [0, -10, 0], scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-3xl cursor-grab active:cursor-grabbing drop-shadow-[0_0_15px_rgba(234,179,8,0.8)]"
+              title="Drag me to the Treasure Box!"
+            >
+              🔑
+            </motion.div>
+          ) : localFeedback?.correct ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           ) : (
             <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           )}
           <div className="space-y-1">
             <span className="font-bold">
-              {localFeedback.correct
+              {pendingKeyDrop
+                ? '✅ Correct! Drag the glowing key to the Treasure Box on the right.'
+                : localFeedback?.correct
                 ? '✅ Correct! Code block unlocked.'
-                : `❌ Wrong Answer (-20 pts). Attempt ${localFeedback.attemptsCount || 1} of 3.`}
+                : `❌ Wrong Answer (-20 pts). Attempt ${localFeedback?.attemptsCount || 1} of 3.`}
             </span>
-            {localFeedback.explain && (
+            {localFeedback?.explain && !pendingKeyDrop && (
               <p className="text-slate-600 leading-relaxed">{localFeedback.explain}</p>
             )}
           </div>
