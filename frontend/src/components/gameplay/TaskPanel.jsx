@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Key, HelpCircle, CheckCircle2, XCircle, Clock, Send, AlertTriangle, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PremiumGoldenKey from './PremiumGoldenKey';
+import { playKeyUnlockFanfare } from '../../utils/gameAudio';
 
 // Web Audio sound generator for fireworks and sparkles
 function playMagicSparkleSound() {
@@ -79,7 +81,7 @@ export default function TaskPanel({
     if (pendingKey && (!prevPendingKeyRef.current || prevPendingKeyRef.current.taskIndex !== pendingKey.taskIndex)) {
       setShowKeyModal(true);
       setShowFireworkBurst(true);
-      playMagicSparkleSound();
+      playKeyUnlockFanfare();
       const t = setTimeout(() => setShowFireworkBurst(false), 2400);
       return () => clearTimeout(t);
     } else if (!pendingKey) {
@@ -424,53 +426,34 @@ export default function TaskPanel({
                 </p>
               </div>
 
-              {/* Glowing Draggable Key Centerpiece */}
-              <div className="py-6 flex items-center justify-center relative z-10">
-                <motion.div
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('mindcraft-key', JSON.stringify(pendingKey));
-                    e.dataTransfer.setData('key', 'true');
-                  }}
+              {/* Glowing Draggable Premium Golden Key Centerpiece */}
+              <div className="py-5 flex items-center justify-center relative z-10">
+                <PremiumGoldenKey
+                  size="xl"
+                  keyData={pendingKey}
+                  interactive={true}
                   onClick={() => {
                     setShowKeyModal(false);
                     if (onUnlockKey) onUnlockKey(pendingKey);
                   }}
-                  animate={{
-                    scale: [1, 1.12, 1],
-                    rotate: [-6, 6, -6],
-                  }}
-                  transition={{
-                    scale: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
-                    rotate: { repeat: Infinity, duration: 3, ease: 'easeInOut' },
-                  }}
-                  whileHover={{ scale: 1.25, rotate: 0 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="relative cursor-grab active:cursor-grabbing w-28 h-28 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.8)] border-4 border-yellow-200 flex items-center justify-center select-none group"
-                  title="Golden Key! Drag to Chest or Click to Open"
-                >
-                  <div className="absolute inset-0 rounded-full bg-amber-400/50 blur-xl group-hover:blur-2xl transition-all pointer-events-none" />
-                  <Sparkles className="absolute -top-3 -right-2 w-7 h-7 text-yellow-100 animate-spin pointer-events-none" />
-                  <Sparkles className="absolute -bottom-2 -left-2 w-6 h-6 text-amber-200 animate-bounce pointer-events-none" />
-                  <span className="text-6xl drop-shadow-[0_4px_10px_rgba(0,0,0,0.4)] relative z-10 transition-transform group-hover:scale-115">
-                    🔑
-                  </span>
-                </motion.div>
+                />
               </div>
 
               {/* Big Action Button */}
               <div className="space-y-2 relative z-10">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => {
                     setShowKeyModal(false);
                     if (onUnlockKey) onUnlockKey(pendingKey);
                   }}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(245,158,11,0.5)] transition active:scale-95 cursor-pointer"
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition cursor-pointer border border-yellow-200/50"
                 >
                   <span>Open Treasure Box #{pendingKey.taskIndex + 1}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                  <ArrowRight className="w-4 h-4 stroke-[3]" />
+                </motion.button>
 
                 <p className="text-[11px] text-amber-300/80 font-semibold">
                   (You can also drag this key to the chest on the right!)
@@ -484,40 +467,20 @@ export default function TaskPanel({
       {/* ── INLINE GOLDEN KEY IN TASK CARD (DRAGGABLE BACKUP) ── */}
       {pendingKey ? (
         <div className="pt-3 pb-2 flex flex-col items-center justify-center animate-fadeIn">
-          {/* Draggable & Clickable Pure Golden Key with Radiant Aura */}
-          <motion.div
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData('mindcraft-key', JSON.stringify(pendingKey));
-              e.dataTransfer.setData('key', 'true');
-            }}
+          <PremiumGoldenKey
+            size="md"
+            keyData={pendingKey}
+            interactive={true}
+            showLabel={true}
             onClick={() => onUnlockKey && onUnlockKey(pendingKey)}
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{
-              scale: [1, 1.1, 1],
-              rotate: [-5, 5, -5],
-            }}
-            transition={{
-              scale: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
-              rotate: { repeat: Infinity, duration: 3, ease: 'easeInOut' },
-            }}
-            whileHover={{ scale: 1.2, rotate: 0 }}
-            whileTap={{ scale: 0.9 }}
-            className="relative cursor-grab active:cursor-grabbing w-24 h-24 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 shadow-[0_0_35px_rgba(245,158,11,0.7)] border-3 border-yellow-200 flex items-center justify-center select-none group"
-            title="Golden Key! Drag to Treasure Chest or Click to Open"
+          />
+          <button
+            type="button"
+            onClick={() => onUnlockKey && onUnlockKey(pendingKey)}
+            className="mt-2 text-xs font-mono font-bold text-amber-600 hover:text-amber-500 underline cursor-pointer"
           >
-            {/* Ambient golden aura glow */}
-            <div className="absolute inset-0 rounded-full bg-amber-400/50 blur-xl group-hover:blur-2xl transition-all pointer-events-none" />
-
-            {/* Orbiting sparkles */}
-            <Sparkles className="absolute -top-2 -right-1 w-6 h-6 text-yellow-100 animate-spin pointer-events-none" />
-            <Sparkles className="absolute -bottom-2 -left-1 w-5 h-5 text-amber-200 animate-bounce pointer-events-none" />
-
-            {/* Glowing Golden Key Icon */}
-            <span className="text-5xl drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] relative z-10 transition-transform group-hover:scale-110">
-              🔑
-            </span>
-          </motion.div>
+            Click or drag to open Chest #{pendingKey.taskIndex + 1} →
+          </button>
         </div>
       ) : (
         <div className="space-y-3 pt-1">

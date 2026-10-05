@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Lock, Code2, Unlock, Key, Copy, Check, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CinematicChestModal from './CinematicChestModal';
 
 // Web Audio sound generator for triumphant chest opening
 function playChestOpenFanfare() {
@@ -83,13 +84,10 @@ export default function FragmentVault({
 
   // Execute opening animation when a key is dropped or triggered
   const triggerChestUnlock = useCallback((keyData) => {
-    if (!keyData || isOpeningAnimation) return;
+    if (!keyData) return;
 
     const chestIdx = keyData.taskIndex !== undefined ? keyData.taskIndex : collectedCount;
     setActiveChestIndex(chestIdx);
-    setIsOpeningAnimation(true);
-    setChestLidOpen(false);
-    playChestOpenFanfare();
 
     // Extract the fragment from keyData or fallback
     const frag = keyData.unlockedBlock ||
@@ -97,26 +95,13 @@ export default function FragmentVault({
       (fragments[chestIdx]) ||
       null;
 
-    // Launch front-and-center heroic chest modal!
+    // Launch front-and-center heroic cinematic chest modal!
     setHeroModal({
       keyData,
       chestIndex: chestIdx,
-      stage: 'opening',
       fragment: frag,
     });
-
-    // At 600ms: Chest lid swings wide open to reveal radiant treasure interior!
-    setTimeout(() => {
-      setChestLidOpen(true);
-    }, 600);
-
-    // At 1200ms: Box opens and code rises out from inside!
-    setTimeout(() => {
-      setIsOpeningAnimation(false);
-      setRevealedChestIndices((prev) => new Set(prev).add(chestIdx));
-      setHeroModal((prev) => (prev ? { ...prev, stage: 'revealed' } : null));
-    }, 1200);
-  }, [isOpeningAnimation, collectedCount, fragments]);
+  }, [collectedCount, fragments]);
 
   // Watch for external opening trigger
   useEffect(() => {
@@ -333,18 +318,18 @@ export default function FragmentVault({
               rotate: isOpeningAnimation ? [0, -4, 4, 0] : isDragOver ? [-2, 2, -2] : 0,
             }}
             transition={{ repeat: isCurrentChestTarget && !isOpeningAnimation ? Infinity : 0, duration: 1.6 }}
-            className={`relative w-40 h-40 max-w-full rounded-2xl overflow-hidden shadow-xl border-2 transition-all bg-white ${
+            className={`relative w-44 h-44 max-w-full rounded-2xl overflow-hidden shadow-2xl border-2 transition-all bg-[#080d1a] ${
               isCurrentChestUnlocked
-                ? 'border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]'
+                ? 'border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
                 : isCurrentChestTarget
-                ? 'border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.4)]'
-                : 'border-slate-200'
+                ? 'border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)] ring-2 ring-amber-300'
+                : 'border-slate-800'
             }`}
           >
             <img
-              src={isCurrentChestUnlocked ? "/treasure-chest-open.jpg" : "/treasure-chest.jpg"}
+              src={isCurrentChestUnlocked ? "/treasure-chest-open.png" : "/treasure-chest-closed.png"}
               alt="Treasure Chest"
-              className="w-full h-full object-cover select-none transition-all duration-500"
+              className="w-full h-full object-contain select-none transition-all duration-500 drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
             />
 
             {/* Glowing Aura inside Chest when Open */}
@@ -530,214 +515,24 @@ export default function FragmentVault({
         ) : null}
       </AnimatePresence>
 
-      {/* ── CINEMATIC FRONT-AND-CENTER TREASURE CHEST OPENING STAGE ── */}
-      <AnimatePresence>
-        {heroModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto"
-          >
-            <motion.div
-              initial={{ scale: 0.6, y: 40 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.6, y: 40 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-              className="relative w-full max-w-xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-3xl p-6 shadow-[0_0_60px_rgba(245,158,11,0.45)] text-center overflow-hidden font-mono"
-            >
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (onUnlockKey && heroModal.keyData) onUnlockKey(heroModal.keyData);
-                  setHeroModal(null);
-                }}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer z-20 text-xs font-bold"
-              >
-                ✕
-              </button>
-
-              {/* Radiant Light Flare / Halo */}
-              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
-
-              {/* 3D Chest Container in Front */}
-              <div className="relative flex flex-col items-center justify-center pt-2">
-                {/* Rotating Sunbeam Rays when Lid Opens */}
-                {chestLidOpen && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1.4, opacity: 0.7, rotate: 360 }}
-                    transition={{
-                      scale: { duration: 0.5 },
-                      rotate: { repeat: Infinity, duration: 15, ease: "linear" },
-                    }}
-                    className="absolute w-72 h-72 rounded-full pointer-events-none -z-0 bg-[conic-gradient(from_0deg,#fbbf24_0deg,transparent_25deg,#f59e0b_50deg,transparent_75deg,#fbbf24_100deg,transparent_125deg,#f59e0b_150deg,transparent_175deg,#fbbf24_200deg,transparent_225deg,#f59e0b_250deg,transparent_275deg,#fbbf24_300deg,transparent_325deg,#f59e0b_350deg,transparent_360deg)] blur-md"
-                  />
-                )}
-
-                <motion.div
-                  animate={{
-                    scale: heroModal.stage === 'opening' ? [1, 1.15, 1.05] : [1, 1.03, 1],
-                    rotate: !chestLidOpen && heroModal.stage === 'opening' ? [0, -5, 5, -3, 3, 0] : 0,
-                  }}
-                  transition={{
-                    scale: { duration: 0.6 },
-                    rotate: { duration: 0.6 },
-                  }}
-                  className="relative w-52 h-52 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(245,158,11,0.5)] border-3 border-amber-400 bg-black/40 z-10"
-                >
-                  <img
-                    src={chestLidOpen ? "/treasure-chest-open.jpg" : "/treasure-chest.jpg"}
-                    alt="Treasure Chest"
-                    className="w-full h-full object-cover select-none transition-all duration-300"
-                  />
-
-                  {/* Golden Aura Burst inside Chest */}
-                  <div className="absolute inset-0 bg-radial from-amber-400/40 via-yellow-300/20 to-transparent pointer-events-none animate-pulse" />
-
-                  {/* Flying Golden Key into Lock Animation */}
-                  {!chestLidOpen && (
-                    <motion.div
-                      initial={{ y: -70, opacity: 0, scale: 1.6 }}
-                      animate={{ y: 25, opacity: [0, 1, 1, 0], scale: 0.8 }}
-                      transition={{ duration: 0.55, ease: "easeIn" }}
-                      className="absolute inset-0 flex items-center justify-center text-4xl drop-shadow-[0_0_15px_rgba(245,158,11,1)] pointer-events-none"
-                    >
-                      🔑
-                    </motion.div>
-                  )}
-
-                  {/* Confetti & Golden Sparkles Burst when lid pops open */}
-                  {chestLidOpen && (
-                    <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center overflow-hidden">
-                      {Array.from({ length: 28 }).map((_, i) => {
-                        const angle = (i * 360) / 28;
-                        const distance = 95 + (i % 3) * 30;
-                        const rad = (angle * Math.PI) / 180;
-                        const x = Math.cos(rad) * distance;
-                        const y = Math.sin(rad) * distance - 35;
-                        const colors = ['#f59e0b', '#fbbf24', '#10b981', '#38bdf8', '#ec4899', '#ffffff'];
-
-                        return (
-                          <motion.div
-                            key={i}
-                            initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
-                            animate={{
-                              x: [0, x],
-                              y: [0, y],
-                              scale: [0, 1.5, 0],
-                              opacity: [1, 1, 0],
-                            }}
-                            transition={{ duration: 1.2, ease: 'easeOut' }}
-                            style={{ backgroundColor: colors[i % colors.length] }}
-                            className="absolute w-3.5 h-3.5 rounded-full shadow-lg"
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </motion.div>
-
-                <h3 className="mt-3.5 text-lg font-black text-amber-300 flex items-center gap-2 z-10">
-                  <Sparkles className="w-5 h-5 text-amber-400 animate-spin" />
-                  <span>
-                    Treasure Chest #{heroModal.chestIndex + 1} {chestLidOpen ? 'Opened!' : 'Unlocking...'}
-                  </span>
-                </h3>
-              </div>
-
-              {/* ── CODE FRAGMENT RISING OUT FROM INSIDE THE CHEST ── */}
-              <AnimatePresence>
-                {heroModal.stage === 'revealed' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 50, scale: 0.85 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.6, type: 'spring', damping: 16 }}
-                    className="mt-4 text-left space-y-3"
-                  >
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
-                        <span>✨ Code Fragment Unlocked!</span>
-                      </span>
-                      {heroModal.fragment?.role && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-700/60">
-                          {heroModal.fragment.role}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Code Box */}
-                    <div className="rounded-xl overflow-hidden border border-slate-700/80 bg-[#080d1a] shadow-xl text-xs">
-                      <div className="px-3 py-2 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <Code2 className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="text-[11px] font-bold text-slate-200">
-                            Fragment #{heroModal.chestIndex + 1}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyCode(heroModal.fragment?.code)}
-                          className="px-2 py-1 rounded bg-slate-700/80 hover:bg-slate-600 text-slate-200 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
-                        >
-                          {copied ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              <span className="text-emerald-400">Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3 text-slate-400" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="p-3.5 overflow-x-auto max-h-52 leading-relaxed text-[11px]">
-                        <table className="w-full border-collapse">
-                          <tbody>
-                            {(heroModal.fragment?.code || '// Code fragment ready').split('\n').map((line, idx) => (
-                              <tr key={idx} className="hover:bg-slate-800/40">
-                                <td className="pr-3 text-right text-slate-600 select-none text-[10px] w-6 align-top">
-                                  {idx + 1}
-                                </td>
-                                <td className="text-emerald-300 font-mono whitespace-pre font-medium pl-1">
-                                  {line || ' '}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Action Button: Collect & Continue */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const kData = heroModal.keyData;
-                        if (onUnlockKey && kData) {
-                          onUnlockKey(kData);
-                        }
-                        setHeroModal(null);
-                        if (kData?.allTasksCompleted && onProceedToAssembly) {
-                          onProceedToAssembly();
-                        }
-                      }}
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.45)] transition active:scale-95 cursor-pointer"
-                    >
-                      <span>Collect Fragment &amp; Continue</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── CINEMATIC FRONT-AND-CENTER TREASURE CHEST OPENING MODAL ── */}
+      <CinematicChestModal
+        isOpen={Boolean(heroModal)}
+        keyData={heroModal?.keyData}
+        chestIndex={heroModal?.chestIndex ?? activeChestIndex}
+        fragment={heroModal?.fragment}
+        onClose={() => setHeroModal(null)}
+        onCollect={(kData) => {
+          const targetIdx = heroModal?.chestIndex ?? activeChestIndex;
+          setRevealedChestIndices((prev) => new Set(prev).add(targetIdx));
+          if (onUnlockKey && kData) onUnlockKey(kData);
+          setHeroModal(null);
+          if (kData?.allTasksCompleted && onProceedToAssembly) {
+            onProceedToAssembly();
+          }
+        }}
+        isAllCompleted={allUnlocked}
+      />
     </div>
   );
 }

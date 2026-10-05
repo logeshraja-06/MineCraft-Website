@@ -664,51 +664,67 @@ export default function Challenge() {
             </button>
           </div>
 
-          {/* 2-COLUMN SPLIT WORKSPACE (RENDU PAKKAM VISIBLE ON SINGLE PAGE) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-
-            {/* ── LEFT SIDE (col-span-6): Problem Objective + Assembly Puzzle Board ── */}
-            <div className="lg:col-span-6 space-y-4">
-              {/* Problem Brief Summary */}
-              <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3 font-sans">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                    <BookOpen className="w-3.5 h-3.5 text-orange-500" />
-                    <span>Problem Objective</span>
-                  </h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-500 text-white font-mono">
-                    {challenge.difficulty || 'EASY'}
-                  </span>
-                </div>
-                <p className="text-slate-700 text-xs font-mono leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                  {challenge.description}
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold">Input:</span>
-                    <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] truncate">
-                      {challenge.sampleInput || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold">Expected Output:</span>
-                    <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-700 font-bold text-[11px] truncate">
-                      {challenge.sampleOutput || 'N/A'}
-                    </div>
-                  </div>
+          {/* 1. Problem Objective Summary Card (Full-width Top Overview) */}
+          <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3 font-sans">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <BookOpen className="w-3.5 h-3.5 text-orange-500" />
+                <span>Problem Objective</span>
+              </h3>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-emerald-500 text-white font-mono shadow-xs">
+                {challenge.difficulty || 'EASY'}
+              </span>
+            </div>
+            <p className="text-slate-700 text-xs font-mono leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              {challenge.description}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div>
+                <span className="text-[10px] text-slate-400 block mb-1 font-bold">Input:</span>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] font-mono">
+                  {challenge.sampleInput || 'N/A'}
                 </div>
               </div>
-
-              {/* Assembly Board (Drag and reorder code blocks) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono px-1">
-                  <span className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <Blocks className="w-4 h-4 text-orange-500" /> Assemble Code Sequence
-                  </span>
-                  <span className="text-slate-500 text-[11px]">
-                    {assemblyFragments.length} / {totalFragments} blocks
-                  </span>
+              <div>
+                <span className="text-[10px] text-slate-400 block mb-1 font-bold">Expected Output:</span>
+                <div className="p-2.5 bg-emerald-50/70 border border-emerald-300 rounded-lg text-emerald-700 font-bold text-[11px] font-mono">
+                  {challenge.sampleOutput || 'N/A'}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. UNIFIED CODE ASSEMBLY & LIVE PREVIEW WORKSPACE (IN THE SAME SECTION, PERFECTLY FITTED SIDE-BY-SIDE) */}
+          <div className="p-4 sm:p-5 bg-white/95 border-2 border-slate-200/90 rounded-2xl shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <Blocks className="w-4 h-4 text-orange-500" />
+                  <span>Assemble Code Sequence &amp; Live Preview</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  Arrange fragments on the left • Live assembled program synthesizes in real-time on the right
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                  {assemblyFragments.length} / {totalFragments} fragments
+                </span>
+                <button
+                  onClick={handleClearAssembly}
+                  className="px-3 py-1 text-xs font-mono font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
+                  title="Reset to default shuffled order"
+                >
+                  <Shuffle className="w-3.5 h-3.5 text-orange-500" />
+                  <span>Reset Order</span>
+                </button>
+              </div>
+            </div>
+
+            {/* SIDE-BY-SIDE IN THE SAME SECTION (EQUAL ALIGNMENT, ZERO AWKWARD SCROLLBAR TRAPPING) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* Left Column (col-span-6): Assemble Code Sequence */}
+              <div className="lg:col-span-6 flex flex-col">
                 <AssemblyBoard
                   blocks={assemblyFragments}
                   onReorder={handleReorder}
@@ -716,14 +732,21 @@ export default function Challenge() {
                   onClear={handleClearAssembly}
                 />
               </div>
+
+              {/* Right Column (col-span-6): Assembled Source Preview */}
+              <div className="lg:col-span-6 flex flex-col">
+                <AssemblyPreview
+                  combinedCode={assembledCode}
+                  language={language}
+                />
+              </div>
             </div>
+          </div>
 
-            {/* ── RIGHT SIDE (col-span-6): Assembled Code Preview + Compiler Controls + Output Panel (VISIBLE COMPILER & ERRORS) ── */}
-            <div className="lg:col-span-6 space-y-4">
-
-              {/* Assembled Code Preview */}
-              <AssemblyPreview combinedCode={assembledCode} />
-
+          {/* 3. COMPILER CONTROLS, PROGRESS & OUTPUT PANEL */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            {/* Left Column (col-span-5): Controls + Progress */}
+            <div className="lg:col-span-5 space-y-4">
               {/* Execution Controls: Run Code & Submit Buttons */}
               <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
@@ -733,7 +756,7 @@ export default function Challenge() {
                   </h4>
                   <button
                     onClick={resetAll}
-                    className="text-rose-500 hover:text-rose-700 flex items-center gap-1 text-[11px] font-mono transition"
+                    className="text-rose-500 hover:text-rose-700 flex items-center gap-1 text-[11px] font-mono transition cursor-pointer"
                   >
                     <RotateCcw className="w-3 h-3" /> Reset Session
                   </button>
@@ -771,14 +794,6 @@ export default function Challenge() {
                 </div>
               </div>
 
-              {/* Output Panel: Compilation result, errors, stdout, and test case pass/fail immediately visible on screen! */}
-              <OutputPanel
-                compileOutput={compileOutput}
-                submissionResult={submissionResult}
-                sampleInput={challenge.sampleInput}
-                sampleOutput={challenge.sampleOutput}
-              />
-
               {/* Live Score Summary */}
               <ProgressCard
                 collectedCount={collectedFragmentIds.length}
@@ -787,6 +802,16 @@ export default function Challenge() {
                 quizAttempts={quizAttempts}
                 phase={phase}
                 points={livePoints}
+              />
+            </div>
+
+            {/* Right Column (col-span-7): Live Output Panel */}
+            <div className="lg:col-span-7">
+              <OutputPanel
+                compileOutput={compileOutput}
+                submissionResult={submissionResult}
+                sampleInput={challenge.sampleInput}
+                sampleOutput={challenge.sampleOutput}
               />
             </div>
           </div>
