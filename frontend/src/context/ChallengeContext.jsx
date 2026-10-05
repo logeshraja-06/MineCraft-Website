@@ -41,6 +41,8 @@ export function ChallengeProvider({ children }) {
   const [lastQuizExplain, setLastQuizExplain] = useState('');
   const [lastQuizCorrect, setLastQuizCorrect] = useState(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const [pendingKey, setPendingKey] = useState(null);
+  const [lastUnlockedBlock, setLastUnlockedBlock] = useState(null);
 
   // ── Scoring & Points System (0 initial, negative penalties) ──
   const [penaltySeconds, setPenaltySeconds] = useState(0);
@@ -155,6 +157,7 @@ export function ChallengeProvider({ children }) {
           if (sess.scannedBlocks && sess.scannedBlocks.length > 0) {
             setCollectedFragments(sess.scannedBlocks);
             setCollectedFragmentIds(sess.scannedBlocks.map((b) => b.blockId || b._id));
+            setLastUnlockedBlock(sess.scannedBlocks[sess.scannedBlocks.length - 1]);
             setLanguageLocked(true);
           }
 
@@ -433,43 +436,22 @@ export function ChallengeProvider({ children }) {
         setRevealedAnswerInfo(null);
         setTaskAttemptsCount(0);
 
-        if (res.unlockedBlock) {
-          setCollectedFragments((prev) => {
-            if (prev.find((f) => (f.blockId || f._id) === (res.unlockedBlock.blockId || res.unlockedBlock._id))) return prev;
-            return [...prev, res.unlockedBlock];
-          });
-          setCollectedFragmentIds((prev) => {
-            const id = res.unlockedBlock.blockId || res.unlockedBlock._id;
-            return prev.includes(id) ? prev : [...prev, id];
-          });
-        }
+        const keyData = {
+          taskIndex: currentTaskIndex,
+          taskTitle: currentTask?.title || `Task ${currentTaskIndex + 1}`,
+          unlockedBlock: res.unlockedBlock,
+          nextTask: res.nextTask,
+          nextTaskIndex: res.currentTaskIndex,
+          allTasksCompleted: res.allTasksCompleted || false,
+          completedTaskIds: res.completedTaskIds || [],
+          totalPenaltySeconds: res.totalPenaltySeconds || 0,
+          unlockedBlocks: res.unlockedBlocks,
+          points: res.points,
+          explain: res.explain || '',
+        };
+        setPendingKey(keyData);
 
-        setCompletedTaskIds(res.completedTaskIds || []);
-        setCurrentTaskIndex(res.currentTaskIndex || 0);
-        setCurrentTask(res.nextTask || null);
-        setAllTasksCompleted(res.allTasksCompleted || false);
-        setPenaltySeconds(res.totalPenaltySeconds || 0);
-
-        if (res.allTasksCompleted) {
-          const unlocked = res.unlockedBlocks || collectedFragments;
-          setCollectedFragments(unlocked);
-          const unlockedIds = unlocked.map((b) => b.blockId || b._id);
-          setCollectedFragmentIds(unlockedIds);
-
-          const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
-          const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
-          const mixedOrder = getThoroughlyMixedOrder(unlockedIds, correctOrder);
-
-          setShuffledVaultOrder(mixedOrder);
-          setAssemblyOrder(mixedOrder);
-          const newFragments = mixedOrder.map((id) => fragmentMap[id]).filter(Boolean);
-          const newCode = combineFragments(newFragments);
-          syncAssemblyToServer(mixedOrder, newCode);
-
-          setTimeout(() => setPhase('ASSEMBLE'), 600);
-        }
-
-        return { correct: true, explain: res.explain || '', unlockedBlock: res.unlockedBlock, points: res.points };
+        return { correct: true, explain: res.explain || '', unlockedBlock: res.unlockedBlock, points: res.points, keyData };
       } else if (res.answerRevealed) {
         // 3 wrong attempts reached -> answer revealed, block unlocked, advance
         if (!languageLocked) setLanguageLocked(true);
@@ -485,41 +467,22 @@ export function ChallengeProvider({ children }) {
         });
         setTaskAttemptsCount(0);
 
-        if (res.unlockedBlock) {
-          setCollectedFragments((prev) => {
-            if (prev.find((f) => (f.blockId || f._id) === (res.unlockedBlock.blockId || res.unlockedBlock._id))) return prev;
-            return [...prev, res.unlockedBlock];
-          });
-          setCollectedFragmentIds((prev) => {
-            const id = res.unlockedBlock.blockId || res.unlockedBlock._id;
-            return prev.includes(id) ? prev : [...prev, id];
-          });
-        }
-
-        setCompletedTaskIds(res.completedTaskIds || []);
-        setCurrentTaskIndex(res.currentTaskIndex || 0);
-        setCurrentTask(res.nextTask || null);
-        setAllTasksCompleted(res.allTasksCompleted || false);
-        setPenaltySeconds(res.totalPenaltySeconds || 0);
-
-        if (res.allTasksCompleted) {
-          const unlocked = res.unlockedBlocks || collectedFragments;
-          setCollectedFragments(unlocked);
-          const unlockedIds = unlocked.map((b) => b.blockId || b._id);
-          setCollectedFragmentIds(unlockedIds);
-
-          const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
-          const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
-          const mixedOrder = getThoroughlyMixedOrder(unlockedIds, correctOrder);
-
-          setShuffledVaultOrder(mixedOrder);
-          setAssemblyOrder(mixedOrder);
-          const newFragments = mixedOrder.map((id) => fragmentMap[id]).filter(Boolean);
-          const newCode = combineFragments(newFragments);
-          syncAssemblyToServer(mixedOrder, newCode);
-
-          setTimeout(() => setPhase('ASSEMBLE'), 1200);
-        }
+        const keyData = {
+          taskIndex: currentTaskIndex,
+          taskTitle: prevTaskTitle,
+          unlockedBlock: res.unlockedBlock,
+          nextTask: res.nextTask,
+          nextTaskIndex: res.currentTaskIndex,
+          allTasksCompleted: res.allTasksCompleted || false,
+          completedTaskIds: res.completedTaskIds || [],
+          totalPenaltySeconds: res.totalPenaltySeconds || 0,
+          unlockedBlocks: res.unlockedBlocks,
+          points: res.points,
+          explain: res.explain || '',
+          answerRevealed: true,
+          revealedAnswer: res.revealedAnswer,
+        };
+        setPendingKey(keyData);
 
         return {
           correct: false,
@@ -529,6 +492,7 @@ export function ChallengeProvider({ children }) {
           penalty: res.penalty || 20,
           unlockedBlock: res.unlockedBlock,
           points: res.points,
+          keyData,
         };
       } else {
         setLastQuizCorrect(false);
@@ -552,6 +516,62 @@ export function ChallengeProvider({ children }) {
       setTaskSubmitting(false);
     }
   }, [challengeId, taskSubmitting, taskCooldownRemaining, languageLocked, penaltySeconds, currentTask, currentTaskIndex]);
+
+  const unlockKey = useCallback((keyInfo = null) => {
+    const k = keyInfo || pendingKey;
+    if (!k) return;
+
+    if (k.unlockedBlock) {
+      setCollectedFragments((prev) => {
+        if (prev.find((f) => (f.blockId || f._id) === (k.unlockedBlock.blockId || k.unlockedBlock._id))) return prev;
+        return [...prev, k.unlockedBlock];
+      });
+      setCollectedFragmentIds((prev) => {
+        const id = k.unlockedBlock.blockId || k.unlockedBlock._id;
+        return prev.includes(id) ? prev : [...prev, id];
+      });
+    }
+
+    if (k.completedTaskIds) {
+      setCompletedTaskIds(k.completedTaskIds);
+    }
+    if (k.totalPenaltySeconds !== undefined) {
+      setPenaltySeconds(k.totalPenaltySeconds);
+    }
+    if (k.points) {
+      setPoints(k.points);
+    }
+
+    setLastUnlockedBlock({
+      ...k.unlockedBlock,
+      taskIndex: k.taskIndex,
+      taskTitle: k.taskTitle,
+    });
+    setPendingKey(null);
+
+    if (k.allTasksCompleted) {
+      setAllTasksCompleted(true);
+      const unlocked = k.unlockedBlocks || [...collectedFragments, k.unlockedBlock].filter(Boolean);
+      const unlockedIds = unlocked.map((b) => b.blockId || b._id);
+      const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
+      const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
+      const mixedOrder = getThoroughlyMixedOrder(unlockedIds, correctOrder);
+
+      setShuffledVaultOrder(mixedOrder);
+      setAssemblyOrder(mixedOrder);
+      const newFragments = mixedOrder.map((id) => fragmentMap[id] || unlocked.find((u) => (u.blockId || u._id) === id)).filter(Boolean);
+      const newCode = combineFragments(newFragments);
+      syncAssemblyToServer(mixedOrder, newCode);
+    } else {
+      if (k.nextTask) setCurrentTask(k.nextTask);
+      if (k.nextTaskIndex !== undefined) setCurrentTaskIndex(k.nextTaskIndex);
+    }
+  }, [pendingKey, collectedFragments, activeChallengeInfo, language, fragmentMap, syncAssemblyToServer]);
+
+  const startAssemblyPhase = useCallback(() => {
+    setPhase('ASSEMBLE');
+  }, []);
+
   const dismissRevealedAnswer = useCallback(() => {
     setRevealedAnswerInfo(null);
   }, []);
@@ -836,6 +856,12 @@ export function ChallengeProvider({ children }) {
         revealedAnswerInfo,
         setRevealedAnswerInfo,
         dismissRevealedAnswer,
+        pendingKey,
+        setPendingKey,
+        lastUnlockedBlock,
+        setLastUnlockedBlock,
+        unlockKey,
+        startAssemblyPhase,
 
         // points & scoring
         points,

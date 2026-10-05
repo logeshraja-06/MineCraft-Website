@@ -98,13 +98,18 @@ export default function Challenge() {
     handleTimeExpired,
     resetAll,
     lockedNotice,
+
+    // key unlock & fragments
+    pendingKey,
+    unlockKey,
+    lastUnlockedBlock,
+    startAssemblyPhase,
   } = useChallenge();
 
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState('info');
   const [submissionResult, setSubmissionResult] = useState(null);
   const [userProgress, setUserProgress] = useState([]);
-  const [pendingKeyDrop, setPendingKeyDrop] = useState(false);
 
   const showToast = useCallback((msg, type = 'info') => {
     setToastMessage(msg);
@@ -255,16 +260,27 @@ export default function Challenge() {
     if (isTimeExpired) return { correct: false, explain: '' };
     const result = await submitQuizAnswer(answer);
     if (result?.correct) {
-      setPendingKeyDrop(true);
-      showToast('🔑 Key earned! Drag it to the Treasure Box to unlock the fragment.', 'success');
+      showToast('🔑 Key earned! Drag it to the Treasure Box to reveal the code.', 'success');
     } else if (result?.answerRevealed) {
-      showToast(`⚠️ 3 wrong attempts reached! Correct answer revealed: ${result.revealedAnswer}. Fragment unlocked!`, 'info');
+      showToast(`⚠️ 3 wrong attempts reached! Correct answer revealed: ${result.revealedAnswer}. Drag the key to unlock!`, 'info');
     } else if (result?.penalty) {
       const remaining = result.attemptsRemaining ?? Math.max(0, 3 - (taskAttemptsCount + 1));
       showToast(`❌ Wrong answer (-20 pts penalty applied, ${remaining} attempts left). Try again!`, 'error');
     }
     return result;
   }, [submitQuizAnswer, isTimeExpired, taskAttemptsCount, showToast]);
+
+  const [openingChestKey, setOpeningChestKey] = useState(null);
+
+  const handleOpenChest = useCallback((keyData) => {
+    setOpeningChestKey(keyData);
+  }, []);
+
+  const handleKeyUnlocked = useCallback((keyData) => {
+    setOpeningChestKey(null);
+    unlockKey(keyData);
+    showToast('✨ Fragment Unlocked! Code revealed in the Treasure Box.', 'success');
+  }, [unlockKey, showToast]);
 
   // ── Fragment reordering with stale error clearing ──
   const handleReorder = useCallback((sourceIdx, destIdx) => {
@@ -470,257 +486,309 @@ export default function Challenge() {
         totalCount={totalFragments}
       />
 
-      {/* ── 3-COLUMN MAIN LAYOUT ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* ── PHASE 1: HUNT PHASE (Task Hunt + Treasure Vault) ── */}
+      {phase === 'HUNT' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* COLUMN 1: Challenge Brief + Live Score (col-span-3) */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="p-5 bg-white/95 border border-slate-200/90 rounded-2xl space-y-4 shadow-md font-sans">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <span className="text-base">💡</span>
+                  <span>Challenge Brief</span>
+                </h3>
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-emerald-500 text-white font-mono shadow-xs">
+                  {challenge.difficulty || 'EASY'}
+                </span>
+              </div>
 
-        {/* ── COLUMN 1: Challenge Brief + Progress (col-span-3) ── */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="p-5 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-4 shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4 text-orange-400" /> CHALLENGE BRIEF
-              </h3>
-              <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-amber-950 text-amber-300 border border-amber-800/40">
-                {challenge.difficulty}
-              </span>
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-mono">
+                  Problem
+                </label>
+                <p className="text-slate-800 whitespace-pre-line bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/80 text-xs font-mono leading-relaxed">
+                  {challenge.description}
+                </p>
+              </div>
 
-            <div className="space-y-2 text-xs leading-relaxed">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Problem</label>
-              <p className="text-slate-700 whitespace-pre-line bg-slate-100 p-3 rounded-xl border border-slate-200/60">
-                {challenge.description}
-              </p>
-            </div>
-
-            {/* Sample I/O */}
-            <div className="space-y-2 pt-1 border-t border-slate-200">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sample Test</span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-500">Input:</span>
-                  <pre className="p-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-700 text-[11px]">
-                    {challenge.sampleInput || 'N/A'}
-                  </pre>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500">Output:</span>
-                  <pre className="p-2 bg-slate-100 border border-slate-200 rounded-lg text-emerald-400 text-[11px]">
-                    {challenge.sampleOutput || 'N/A'}
-                  </pre>
+              {/* Sample I/O */}
+              <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-mono">
+                  Sample Test
+                </span>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-1">Input:</span>
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-[11px] font-mono min-h-[38px] flex items-center">
+                      {challenge.sampleInput || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-1">Output:</span>
+                    <div className="p-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl text-emerald-700 font-bold text-[11px] font-mono min-h-[38px] flex items-center">
+                      {challenge.sampleOutput || 'N/A'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Progress Card */}
+            <ProgressCard
+              collectedCount={collectedFragmentIds.length}
+              totalCount={totalFragments}
+              penaltySeconds={penaltySeconds}
+              quizAttempts={quizAttempts}
+              phase={phase}
+              points={livePoints}
+            />
           </div>
 
-          {/* Progress Card */}
-          <ProgressCard
-            collectedCount={collectedFragmentIds.length}
-            totalCount={totalFragments}
-            penaltySeconds={penaltySeconds}
-            quizAttempts={quizAttempts}
-            phase={phase}
-            points={livePoints}
-          />
+          {/* COLUMN 2: Task Progression & Task Panel (col-span-5) */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Task progress bar & circular step badges */}
+            <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl space-y-3 shadow-md font-sans">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <span className="text-base">🎯</span>
+                  <span>Task Progress</span>
+                </h3>
+                <span className="text-xs font-bold text-cyan-600 font-mono">
+                  {completedTaskIds.length} / {totalTasks} tasks
+                </span>
+              </div>
+
+              {/* Circular step badges: 1, 2, 3, 4 */}
+              <div className="flex items-center gap-3 pt-0.5">
+                {Array.from({ length: totalTasks || 4 }, (_, i) => {
+                  const isDone = i < completedTaskIds.length;
+                  const isCurrent = i === currentTaskIndex && !isDone;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 ${
+                        isDone
+                          ? 'bg-emerald-500 text-white shadow-xs'
+                          : isCurrent
+                          ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
+                          : 'bg-slate-100 text-slate-400 border border-slate-200'
+                      }`}
+                    >
+                      {isDone ? '✓' : i + 1}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Task Panel: displays current quiz & key unlocking container */}
+            {currentTask && !allTasksCompleted && (
+              <TaskPanel
+                task={currentTask}
+                onSubmit={handleQuizAnswer}
+                cooldown={taskCooldownRemaining}
+                taskIndex={currentTaskIndex}
+                totalTasks={totalTasks}
+                disabled={isTimeExpired}
+                lastResult={lastQuizCorrect}
+                lastExplain={lastQuizExplain}
+                isSubmitting={taskSubmitting}
+                attemptsCount={taskAttemptsCount}
+                maxAttempts={3}
+                revealedAnswerInfo={revealedAnswerInfo}
+                onDismissReveal={dismissRevealedAnswer}
+                pendingKey={pendingKey}
+                onUnlockKey={handleOpenChest}
+              />
+            )}
+
+            {/* Waiting state: no current task but not all done */}
+            {!currentTask && !allTasksCompleted && (
+              <div className="p-6 bg-white/90 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500 font-mono shadow-sm">
+                Loading next task...
+              </div>
+            )}
+
+            {/* All tasks completed — transition message */}
+            {allTasksCompleted && (
+              <div className="p-5 bg-emerald-50 border border-emerald-300 rounded-2xl text-center space-y-2 animate-fadeIn shadow-sm">
+                <span className="text-3xl">🎉</span>
+                <p className="text-sm font-bold text-emerald-800">All Tasks Completed!</p>
+                <p className="text-xs text-slate-600">All code fragments unlocked in the Treasure Box.</p>
+                <button
+                  onClick={startAssemblyPhase}
+                  className="mt-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                >
+                  Proceed to Assembly Board →
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* COLUMN 3: Fragment Vault (col-span-4) */}
+          <div className="lg:col-span-4 space-y-4">
+            <FragmentVault
+              fragments={collectedFragments.map((f) => ({
+                id: f.blockId || f._id,
+                code: f.code,
+                role: f.role || f.type || 'LOGIC',
+              }))}
+              collectedIds={collectedFragmentIds}
+              shuffledOrder={shuffledVaultOrder}
+              phase={phase}
+              totalExpected={totalTasks || totalFragments || 4}
+              pendingKey={pendingKey}
+              openingKeyTrigger={openingChestKey}
+              onUnlockKey={handleKeyUnlocked}
+              lastUnlockedBlock={lastUnlockedBlock}
+              onProceedToAssembly={startAssemblyPhase}
+            />
+          </div>
         </div>
+      )}
 
-        {/* ── COLUMN 2: HUNT or ASSEMBLE (col-span-5) ── */}
-        <div className="lg:col-span-5 space-y-4">
+      {/* ── PHASE 2: ASSEMBLE / DONE PHASE (TREASURE VAULT HIDDEN! 2 VISIBLE SIDES: ASSEMBLY ON LEFT, COMPILER & OUTPUT ON RIGHT) ── */}
+      {(phase === 'ASSEMBLE' || phase === 'DONE') && (
+        <div className="space-y-4 animate-fadeIn">
+          {/* Phase Banner */}
+          <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs font-mono text-emerald-900 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🎉</span>
+              <span>All fragments collected! Arrange them in the correct sequence on the left, then run and submit on the right.</span>
+            </div>
+            <button
+              onClick={handleClearAssembly}
+              className="px-3 py-1.5 text-[11px] font-mono text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
+            >
+              <Shuffle className="w-3.5 h-3.5 text-orange-500" /> Reset Order
+            </button>
+          </div>
 
-          {/* HUNT phase: task-based progression */}
-          {phase === 'HUNT' && (
-            <>
-              {/* Task progress bar */}
-              <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Task Progress
+          {/* 2-COLUMN SPLIT WORKSPACE (RENDU PAKKAM VISIBLE ON SINGLE PAGE) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+            {/* ── LEFT SIDE (col-span-6): Problem Objective + Assembly Puzzle Board ── */}
+            <div className="lg:col-span-6 space-y-4">
+              {/* Problem Brief Summary */}
+              <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3 font-sans">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <BookOpen className="w-3.5 h-3.5 text-orange-500" />
+                    <span>Problem Objective</span>
                   </h3>
-                  <span className="text-[10px] text-cyan-300 font-mono">
-                    {completedTaskIds.length} / {totalTasks} tasks
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-500 text-white font-mono">
+                    {challenge.difficulty || 'EASY'}
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-orange-500 to-emerald-400 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${totalTasks > 0 ? (completedTaskIds.length / totalTasks) * 100 : 0}%` }}
-                  />
-                </div>
-                {/* Task dots */}
-                <div className="flex gap-1.5 flex-wrap">
-                  {Array.from({ length: totalTasks }, (_, i) => {
-                    const isDone = i < completedTaskIds.length;
-                    const isCurrent = i === currentTaskIndex;
-                    return (
-                      <div
-                        key={i}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
-                          isDone
-                            ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                            : isCurrent
-                            ? 'bg-orange-500/30 text-cyan-300 border border-orange-500/40 animate-pulse'
-                            : 'bg-slate-100/60 text-slate-600 border border-slate-300/40'
-                        }`}
-                      >
-                        {isDone ? '✓' : i + 1}
-                      </div>
-                    );
-                  })}
+                <p className="text-slate-700 text-xs font-mono leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  {challenge.description}
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold">Input:</span>
+                    <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] truncate">
+                      {challenge.sampleInput || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold">Expected Output:</span>
+                    <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-700 font-bold text-[11px] truncate">
+                      {challenge.sampleOutput || 'N/A'}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Task Panel: displays current quiz */}
-              {currentTask && !allTasksCompleted && (
-                <TaskPanel
-                  task={currentTask}
-                  onSubmit={handleQuizAnswer}
-                  cooldown={taskCooldownRemaining}
-                  taskIndex={currentTaskIndex}
-                  totalTasks={totalTasks}
-                  disabled={isTimeExpired}
-                  lastResult={lastQuizCorrect}
-                  lastExplain={lastQuizExplain}
-                  isSubmitting={taskSubmitting}
-                  attemptsCount={taskAttemptsCount}
-                  maxAttempts={3}
-                  revealedAnswerInfo={revealedAnswerInfo}
-                  onDismissReveal={dismissRevealedAnswer}
-                  pendingKeyDrop={pendingKeyDrop}
+              {/* Assembly Board (Drag and reorder code blocks) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono px-1">
+                  <span className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Blocks className="w-4 h-4 text-orange-500" /> Assemble Code Sequence
+                  </span>
+                  <span className="text-slate-500 text-[11px]">
+                    {assemblyFragments.length} / {totalFragments} blocks
+                  </span>
+                </div>
+                <AssemblyBoard
+                  blocks={assemblyFragments}
+                  onReorder={handleReorder}
+                  onRemove={() => {}}
+                  onClear={handleClearAssembly}
                 />
-              )}
-
-              {/* Waiting state: no current task but not all done */}
-              {!currentTask && !allTasksCompleted && (
-                <div className="p-4 bg-slate-100 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500 font-mono">
-                  Loading next task...
-                </div>
-              )}
-
-              {/* All tasks completed — transition message */}
-              {allTasksCompleted && (
-                <div className="p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl text-center space-y-2 animate-fadeIn">
-                  <span className="text-2xl">🎉</span>
-                  <p className="text-sm font-bold text-emerald-300">All Tasks Completed!</p>
-                  <p className="text-xs text-slate-600">Moving to Code Assembly phase...</p>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ASSEMBLE phase: assembly board + preview */}
-          {(phase === 'ASSEMBLE' || phase === 'DONE') && (
-            <>
-              <div className="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-2xl text-xs font-mono text-emerald-300 flex items-center gap-2 animate-fadeIn">
-                <span className="text-lg">🎉</span>
-                <span>All fragments collected! Arrange them in the correct order, then run and submit.</span>
               </div>
+            </div>
 
-              <AssemblyBoard
-                blocks={assemblyFragments}
-                onReorder={handleReorder}
-                onRemove={() => {}}
-                onClear={handleClearAssembly}
-              />
+            {/* ── RIGHT SIDE (col-span-6): Assembled Code Preview + Compiler Controls + Output Panel (VISIBLE COMPILER & ERRORS) ── */}
+            <div className="lg:col-span-6 space-y-4">
 
+              {/* Assembled Code Preview */}
               <AssemblyPreview combinedCode={assembledCode} />
 
-              {/* Reset button */}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleClearAssembly}
-                  className="flex-1 py-1.5 text-[11px] font-mono text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-400 rounded-xl flex items-center justify-center gap-1.5 transition"
-                >
-                  <Shuffle className="w-3.5 h-3.5" /> Reset Order
-                </button>
+              {/* Execution Controls: Run Code & Submit Buttons */}
+              <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <Terminal className="w-4 h-4 text-orange-500" />
+                    <span>Compiler Controls</span>
+                  </h4>
+                  <button
+                    onClick={resetAll}
+                    className="text-rose-500 hover:text-rose-700 flex items-center gap-1 text-[11px] font-mono transition"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Reset Session
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <RunButton
+                    onClick={handleRunCode}
+                    isLoading={isCompiling}
+                    disabled={isTimeExpired || !assembledCode.trim()}
+                  />
+                  <SubmitButton
+                    onClick={handleSubmit}
+                    isLoading={isValidating}
+                    disabled={isTimeExpired || !assembledCode.trim()}
+                  />
+                </div>
+
+                {/* Free Runs & Penalties indicator */}
+                <div className="flex items-center justify-between text-[11px] font-mono px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span>
+                    {(points?.runsRemainingFree ?? 3) > 0 ? (
+                      <span className="text-emerald-700 font-bold">
+                        ✓ {(points?.runsRemainingFree ?? 3)}/3 Free Runs Left
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 font-bold">
+                        ⚠️ Extra run: -10 pts each
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-slate-600 font-bold">
+                    Runs Used: {points?.runCount ?? 0}
+                  </span>
+                </div>
               </div>
-            </>
-          )}
-        </div>
 
-        <div className="lg:col-span-4 space-y-4">
-          <FragmentVault
-            fragments={collectedFragments.map((f) => ({
-              id: f.blockId,
-              code: f.code,
-              role: f.role,
-            }))}
-            collectedIds={pendingKeyDrop ? collectedFragmentIds.slice(0, -1) : collectedFragmentIds}
-            shuffledOrder={shuffledVaultOrder}
-            phase={phase}
-            totalExpected={totalFragments}
-            pendingKeyDrop={pendingKeyDrop}
-            onKeyDropped={() => setPendingKeyDrop(false)}
-          />
-        </div>
-      </div>
+              {/* Output Panel: Compilation result, errors, stdout, and test case pass/fail immediately visible on screen! */}
+              <OutputPanel
+                compileOutput={compileOutput}
+                submissionResult={submissionResult}
+                sampleInput={challenge.sampleInput}
+                sampleOutput={challenge.sampleOutput}
+              />
 
-      {/* ── BOTTOM: Execution Controls + Output Panel ── */}
-      {(phase === 'ASSEMBLE' || phase === 'DONE') && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-2">
-          {/* Execution controls */}
-          <div className="lg:col-span-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 flex flex-col justify-between">
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Terminal className="w-4 h-4 text-orange-400" /> EXECUTION CONTROLS
-              </h4>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Run against sample input to verify, then submit for official hidden test scoring.
-              </p>
+              {/* Live Score Summary */}
+              <ProgressCard
+                collectedCount={collectedFragmentIds.length}
+                totalCount={totalFragments}
+                penaltySeconds={penaltySeconds}
+                quizAttempts={quizAttempts}
+                phase={phase}
+                points={livePoints}
+              />
             </div>
-
-            <div className="space-y-2.5 pt-2 border-t border-slate-200">
-              <div className="grid grid-cols-2 gap-3">
-                <RunButton
-                  onClick={handleRunCode}
-                  isLoading={isCompiling}
-                  disabled={isTimeExpired || !assembledCode.trim()}
-                />
-                <SubmitButton
-                  onClick={handleSubmit}
-                  isLoading={isValidating}
-                  disabled={isTimeExpired || !assembledCode.trim()}
-                />
-              </div>
-
-              {/* Run count & free run counter indicator */}
-              <div className="flex items-center justify-between text-[11px] font-mono px-1 py-1 rounded bg-slate-100/80 border border-slate-200">
-                <span>
-                  {(points?.runsRemainingFree ?? 3) > 0 ? (
-                    <span className="text-emerald-700 font-bold">
-                      {(points?.runsRemainingFree ?? 3)}/3 Free Runs Left
-                    </span>
-                  ) : (
-                    <span className="text-amber-700 font-bold">
-                      Extra run: -10 pts each
-                    </span>
-                  )}
-                </span>
-                <span className="text-slate-500 font-bold">
-                  Runs: {points?.runCount ?? 0}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-[11px] font-mono text-slate-500">
-                  Fragments on board: {assemblyFragments.length}/{totalFragments}
-                </span>
-                <button
-                  onClick={resetAll}
-                  className="text-rose-400 hover:text-rose-300 flex items-center gap-1 text-[11px]"
-                >
-                  <RotateCcw className="w-3 h-3" /> Reset Session
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Output panel */}
-          <div className="lg:col-span-8">
-            <OutputPanel
-              compileOutput={compileOutput}
-              submissionResult={submissionResult}
-              sampleInput={challenge.sampleInput}
-              sampleOutput={challenge.sampleOutput}
-            />
           </div>
         </div>
       )}

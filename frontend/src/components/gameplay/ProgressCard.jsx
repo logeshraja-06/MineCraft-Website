@@ -34,25 +34,31 @@ export default function ProgressCard({
         <span className="text-[10px] text-slate-500">Starts @ 0 pts</span>
       </div>
 
-      {/* Prominent Score Card - Tournament Cumulative */}
-      <div className={`p-3 rounded-xl border flex items-center justify-between ${
-        overallScore < 0
-          ? 'bg-rose-50/80 border-rose-200 text-rose-800'
-          : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
-      }`}>
-        <div>
-          <span className="text-[10px] uppercase font-bold block text-slate-500">
-            {previousPenalties > 0 ? 'Overall Tournament Score' : 'Live Challenge Score'}
+      {/* Dual Score Cards - Side by Side as in Mockup */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="p-3 rounded-xl bg-emerald-50/90 border border-emerald-200/80 flex flex-col justify-between">
+          <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">
+            Live Challenge Score
           </span>
-          <span className="text-xl font-black">
-            {overallScore} <span className="text-xs font-normal">pts</span>
-          </span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="w-5 h-5 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-xs">
+              🛡️
+            </span>
+            <span className="text-base font-black text-emerald-800">
+              {currentScore} <span className="text-[10px] font-bold">pts</span>
+            </span>
+          </div>
         </div>
-        <div className="text-right">
-          <span className="text-[10px] uppercase font-bold block text-slate-500">Total Penalty</span>
-          <span className="text-sm font-bold text-rose-600">
-            -{overallTotalPenalties} pts
+
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+          <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">
+            Total Penalty
           </span>
+          <div className="mt-1">
+            <span className="text-base font-black text-rose-600">
+              -{currentChallengePenalties} <span className="text-[10px] font-bold">pts</span>
+            </span>
+          </div>
         </div>
       </div>
 

@@ -63,7 +63,7 @@ export default function Navbar() {
     { label: 'Home', to: '/' },
     { label: 'Challenges', to: '/challenges' },
     { label: 'Rules', to: '/rules' },
-    ...(isAdmin ? [{ label: 'Leaderboard', to: '/admin/leaderboard' }] : []),
+    { label: 'Leaderboard', to: '/leaderboard' },
     ...(isAdmin ? [{ label: 'Admin', to: '/admin' }] : []),
   ];
 
