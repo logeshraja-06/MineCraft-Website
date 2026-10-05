@@ -30,6 +30,11 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    // Allow any Vercel deployment preview or production domain (*.vercel.app)
+    if (/^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
     callback(new Error(`CORS policy blocked access from origin: ${origin}`));
   },
   credentials: true,

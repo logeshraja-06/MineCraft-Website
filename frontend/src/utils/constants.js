@@ -1,7 +1,36 @@
 export const APP_NAME = "MIND CRAFT";
 export const APP_SUBTITLE = "Quiz Hunt & Code Assembly Platform";
 
-export const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api';
+/**
+ * Backend API Base URL
+ * Reads strictly from .env (VITE_API_URL or VITE_API_BASE_URL).
+ * Normalizes trailing slashes and ensures the /api namespace is preserved.
+ */
+function resolveApiBaseUrl() {
+  const envUrl = (
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    ''
+  ).trim();
+
+  if (envUrl) {
+    const stripped = envUrl.replace(/\/+$/, '');
+    return stripped.endsWith('/api') ? stripped : `${stripped}/api`;
+  }
+
+  // Development fallback when local developer hasn't created .env yet
+  if (import.meta.env.DEV) {
+    return 'http://localhost:5000/api';
+  }
+
+  console.warn(
+    '[MindCraft API] Missing VITE_API_URL in production environment variables! ' +
+    'Please configure VITE_API_URL in your Vercel Project Settings > Environment Variables.'
+  );
+  return '/api';
+}
+
+export const API_URL = resolveApiBaseUrl();
 
 export const DEFAULT_DURATION_SECONDS = 20 * 60; // 20 minutes
 
