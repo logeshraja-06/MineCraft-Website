@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { useParticipant } from '../context/ParticipantContext';
 import { participantApi } from '../services/participantApi';
 import {
@@ -24,6 +25,13 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   const [form, setForm] = useState({
     fullName: participant?.name || '',
@@ -131,16 +139,32 @@ export default function Register() {
   const years = ['1st Year', '2nd Year', '3rd Year', 'Final Year'];
 
   return (
-    <div className="min-h-screen bg-[#07080D] text-slate-100 font-sans selection:bg-purple-600 selection:text-white py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+    <div className="min-h-screen bg-[#07080D] text-slate-100 font-sans selection:bg-purple-600 selection:text-white py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center relative overflow-hidden">
+
+      {/* ── TOP SCROLL PROGRESS BAR ── */}
+      <motion.div
+        style={{ scaleX }}
+        className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-fuchsia-400 to-amber-400 origin-left z-[100] shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+      />
 
       <div className="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
         {/* ── LEFT COLUMN: CREATIVE HERO VISUAL SHOWCASE ── */}
-        <div className="lg:col-span-6 border border-purple-900/30 bg-[#0B0D15] flex flex-col justify-between overflow-hidden relative">
+        <motion.div
+          initial={{ opacity: 0, x: -45 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="lg:col-span-6 border border-purple-900/30 bg-[#0B0D15] flex flex-col justify-between overflow-hidden relative shadow-md"
+        >
 
           {/* Top Hero Image Banner */}
           <div className="relative aspect-[16/10] overflow-hidden bg-black border-b border-purple-900/30">
-            <img
+            <motion.img
+              initial={{ scale: 1.08 }}
+              whileInView={{ scale: 1 }}
+              viewport={{ once: false }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
               src="/hero-adventure.jpg"
               alt="Mind Craft Nether Arena"
               className="w-full h-full object-cover"
@@ -148,7 +172,7 @@ export default function Register() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#0B0D15] via-transparent to-black/40" />
             
             {/* Overlay Title */}
-            <div className="absolute bottom-6 left-6 right-6 space-y-1">
+            <div className="absolute bottom-6 left-6 right-6 space-y-1 text-left">
               <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
                 Official Arena Enrollment
               </span>
@@ -159,36 +183,34 @@ export default function Register() {
           </div>
 
           {/* Middle: Mission Highlights */}
-          <div className="p-6 sm:p-8 space-y-6 flex-1 flex flex-col justify-between">
+          <div className="p-6 sm:p-8 space-y-6 flex-1 flex flex-col justify-between text-left">
             <p className="text-sm text-slate-400 font-normal leading-relaxed">
               Enrolling grants you verified entry into the 3-Tier Linear Mission Track. Solve checkpoints, earn golden keys, extract code from vault chests, and compile your solution under timed tournament conditions.
             </p>
 
             {/* 3 Editorial Feature Pillars */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              <div className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2">
-                <KeyRound className="w-5 h-5 text-amber-400" />
-                <h4 className="text-sm font-medium text-white">Checkpoint Tasks</h4>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  Solve MCQs &amp; predict code output to unlock keys.
-                </p>
-              </div>
-
-              <div className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2">
-                <Cpu className="w-5 h-5 text-purple-400" />
-                <h4 className="text-sm font-medium text-white">Judge0 Sandbox</h4>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  Execute C, C++, Java or Python with 3 free test runs.
-                </p>
-              </div>
-
-              <div className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2">
-                <Trophy className="w-5 h-5 text-emerald-400" />
-                <h4 className="text-sm font-medium text-white">Speed Scoring</h4>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  15-min countdown per level. Min negative points win.
-                </p>
-              </div>
+              {[
+                { icon: <KeyRound className="w-5 h-5 text-amber-400" />, title: 'Checkpoint Tasks', desc: 'Solve MCQs & predict code output to unlock keys.' },
+                { icon: <Cpu className="w-5 h-5 text-purple-400" />, title: 'Judge0 Sandbox', desc: 'Execute C, C++, Java or Python with 3 free test runs.' },
+                { icon: <Trophy className="w-5 h-5 text-emerald-400" />, title: 'Speed Scoring', desc: '15-min countdown per level. Min negative points win.' },
+              ].map((pillar, idx) => (
+                <motion.div
+                  key={pillar.title}
+                  initial={{ opacity: 0, y: 25 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: false }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  whileHover={{ y: -4, borderColor: '#9333ea' }}
+                  className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2 transition-colors"
+                >
+                  {pillar.icon}
+                  <h4 className="text-sm font-medium text-white">{pillar.title}</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                    {pillar.desc}
+                  </p>
+                </motion.div>
+              ))}
             </div>
 
             {/* Bottom Citation */}
@@ -203,10 +225,16 @@ export default function Register() {
             </div>
           </div>
 
-        </div>
+        </motion.div>
 
         {/* ── RIGHT COLUMN: CLEAN EDITORIAL REGISTRATION FORM (PURE WHITE BG) ── */}
-        <div className="lg:col-span-6 border border-slate-200 bg-white text-slate-900 p-8 sm:p-10 flex flex-col justify-between rounded-none shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, x: 45 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="lg:col-span-6 border border-slate-200 bg-white text-slate-900 p-8 sm:p-10 flex flex-col justify-between rounded-none shadow-sm"
+        >
 
           <div>
             {/* Header */}
@@ -221,7 +249,11 @@ export default function Register() {
 
             {/* Server Error Alert */}
             {serverError && (
-              <div className="mb-6 p-4 border border-rose-200 bg-rose-50 text-rose-800 text-xs space-y-3 text-left">
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 border border-rose-200 bg-rose-50 text-rose-800 text-xs space-y-3 text-left"
+              >
                 <div className="flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
                   <span className="font-normal text-sm leading-snug">{serverError}</span>
@@ -248,7 +280,7 @@ export default function Register() {
                     </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* Registration Form */}
@@ -359,7 +391,9 @@ export default function Register() {
                   {years.map((year) => {
                     const isSelected = form.yearOfStudy === year;
                     return (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         type="button"
                         key={year}
                         onClick={() => setForm({ ...form, yearOfStudy: year })}
@@ -370,7 +404,7 @@ export default function Register() {
                         }`}
                       >
                         {year}
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -378,14 +412,16 @@ export default function Register() {
 
               {/* Submit Button */}
               <div className="pt-4">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full py-4 px-8 bg-purple-700 hover:bg-purple-800 text-white font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <span>{isSubmitting ? 'Registering Contestant...' : 'Enter The Arena'}</span>
                   <ArrowRight className="w-4 h-4" />
-                </button>
+                </motion.button>
               </div>
 
             </form>
@@ -395,7 +431,7 @@ export default function Register() {
             Already enrolled? Contact tournament coordinators or use direct login above.
           </div>
 
-        </div>
+        </motion.div>
 
       </div>
 

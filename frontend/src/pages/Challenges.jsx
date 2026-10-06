@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { useChallenge } from '../hooks/useChallenge';
 import { useParticipant } from '../context/ParticipantContext';
 import { useAuth } from '../hooks/useAuth';
@@ -15,8 +16,6 @@ import {
   Clock,
   UserPlus,
   Flame,
-  Shield,
-  Zap,
 } from 'lucide-react';
 
 export default function Challenges() {
@@ -25,6 +24,13 @@ export default function Challenges() {
   const { participant } = useParticipant();
   const { isAdmin } = useAuth();
   const { selectChallenge } = useChallenge();
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   const [loading, setLoading] = useState(true);
   const [challenges, setChallenges] = useState([]);
@@ -120,11 +126,9 @@ export default function Challenges() {
     },
   ];
 
-  // Map the 3 canonical challenges into roadmap steps (Easy -> Medium -> Hard)
   const roadmapSteps = useMemo(() => {
     const sourceList = challenges.length > 0 ? challenges : CANONICAL_FALLBACKS;
     const list = [...sourceList].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
-
     const tierImages = ['/tier-easy.jpg', '/tier-medium.jpg', '/tier-hard.jpg'];
 
     return list.map((c, idx) => {
@@ -143,16 +147,14 @@ export default function Challenges() {
             String(p.slug || '').toLowerCase() === String(c.slug || '').toLowerCase()
         );
         if (item) {
-          status = item.status; // 'COMPLETED' | 'CURRENT' | 'LOCKED'
+          status = item.status;
         } else if (seq === 1) {
           status = 'CURRENT';
         }
       } else {
-        // Guest or pending progress data: Step 1 is CURRENT
         status = seq === 1 ? 'CURRENT' : 'LOCKED';
       }
 
-      // Check for active session on this challenge
       const hasActiveSession = activeSessions.some((s) => {
         const sessChalId = typeof s.challengeId === 'object' ? s.challengeId?._id : s.challengeId;
         return (
@@ -198,8 +200,6 @@ export default function Challenges() {
     return roadmapSteps.reduce((sum, s) => sum + (Number(s.points) || 0), 0);
   }, [roadmapSteps]);
 
-  const allCompleted = progressData?.allCompleted || completedCount === 3;
-
   const handleStartChallenge = (step) => {
     if (!participant) {
       navigate('/register');
@@ -211,7 +211,13 @@ export default function Challenges() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07080D] font-sans text-slate-100 selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#07080D] font-sans text-slate-100 selection:bg-purple-600 selection:text-white relative overflow-hidden">
+
+      {/* ── TOP SCROLL PROGRESS BAR ── */}
+      <motion.div
+        style={{ scaleX }}
+        className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-fuchsia-400 to-amber-400 origin-left z-[100] shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+      />
 
       {toastMessage && (
         <Toast
@@ -225,7 +231,13 @@ export default function Challenges() {
       <section className="w-full bg-[#07080D] py-16 sm:py-20 px-6 sm:px-8 lg:px-12 border-b border-purple-900/20">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
-          <div className="lg:col-span-8 space-y-6 text-left">
+          <motion.div
+            initial={{ opacity: 0, x: -35 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-8 space-y-6 text-left"
+          >
             <h1 className="text-4xl sm:text-5xl font-normal text-white tracking-tight leading-tight">
               Mission Roadmap
             </h1>
@@ -236,7 +248,9 @@ export default function Challenges() {
             <div className="pt-2 flex flex-wrap items-center gap-4">
               {currentStep && (
                 participant ? (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => handleStartChallenge(currentStep)}
                     className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
@@ -244,23 +258,31 @@ export default function Challenges() {
                     <Play className="w-4 h-4 fill-purple-800 text-purple-800" />
                     <span>{currentStep.hasActiveSession ? 'Resume Arena' : 'Enter The Portal'} ({currentStep.difficulty} · Tier {currentStep.sequenceOrder})</span>
                     <ArrowRight className="w-4 h-4" />
-                  </button>
+                  </motion.button>
                 ) : (
-                  <Link
-                    to="/register"
-                    className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Register To Enter The Portal</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                      to="/register"
+                      className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>Register To Enter The Portal</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </motion.div>
                 )
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Quick Stats Block */}
-          <div className="lg:col-span-4 border border-purple-900/40 bg-[#0B0D15] p-6 rounded-none space-y-4">
+          <motion.div
+            initial={{ opacity: 0, x: 35, scale: 0.95 }}
+            whileInView={{ opacity: 1, x: 0, scale: 1 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-4 border border-purple-900/40 bg-[#0B0D15] p-6 rounded-none space-y-4 text-left"
+          >
             <div className="text-xs font-mono text-purple-400 uppercase tracking-wider">
               Contestant Progress
             </div>
@@ -276,7 +298,7 @@ export default function Challenges() {
               <span className="text-slate-400">Active Challenge</span>
               <span className="font-mono text-purple-300 font-medium">Tier {currentStep?.sequenceOrder || 1} ({currentStep?.difficulty || 'Easy'})</span>
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </section>
@@ -286,18 +308,29 @@ export default function Challenges() {
         <div className="max-w-7xl mx-auto space-y-12">
 
           {/* Section Header */}
-          <div className="max-w-3xl text-left space-y-2">
+          <motion.div
+            initial={{ opacity: 0, y: 35 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-3xl text-left space-y-2"
+          >
             <h2 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
               Linear Arena Sequence
             </h2>
             <p className="text-sm text-slate-500 font-normal leading-relaxed">
               Each tier provides 15 minutes of countdown time. Clear all checkpoints and assemble the solution to unlock the next level.
             </p>
-          </div>
+          </motion.div>
 
           {/* Guest notice if unregistered */}
           {!participant && (
-            <div className="p-6 border border-slate-200 bg-slate-50 rounded-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false }}
+              className="p-6 border border-slate-200 bg-slate-50 rounded-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left"
+            >
               <div>
                 <h4 className="text-base font-medium text-slate-900">Registration Required</h4>
                 <p className="text-xs text-slate-600 font-normal mt-1">
@@ -310,29 +343,34 @@ export default function Challenges() {
               >
                 Register Now
               </Link>
-            </div>
+            </motion.div>
           )}
 
-          {/* 3 Challenge Steps with Editorial Image Pairing (No Repetitive Template Cards) */}
+          {/* 3 Challenge Steps Cascading In */}
           <div className="space-y-8">
             {loading ? (
               [1, 2, 3].map((i) => (
                 <div key={i} className="p-12 border border-slate-200 bg-slate-50 rounded-none animate-pulse h-48" />
               ))
             ) : (
-              roadmapSteps.map((step) => {
+              roadmapSteps.map((step, idx) => {
                 const isCompleted = step.status === 'COMPLETED';
                 const isCurrent = step.status === 'CURRENT';
                 const isLocked = step.status === 'LOCKED';
 
                 return (
-                  <div
+                  <motion.div
                     key={step.slug || step._id}
-                    className={`grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-8 rounded-none border transition-colors duration-300 ${
+                    initial={{ opacity: 0, y: 50, scale: 0.97 }}
+                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                    viewport={{ once: false, amount: 0.2 }}
+                    transition={{ duration: 0.7, delay: idx * 0.12, ease: [0.22, 1, 0.36, 1] }}
+                    whileHover={{ y: -6, transition: { duration: 0.25 } }}
+                    className={`grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-8 rounded-none border transition-all duration-300 text-left ${
                       isCurrent
-                        ? 'border-purple-600 bg-purple-50/30'
+                        ? 'border-purple-600 bg-purple-50/40 shadow-sm'
                         : isCompleted
-                        ? 'border-emerald-300 bg-emerald-50/20'
+                        ? 'border-emerald-300 bg-emerald-50/25'
                         : 'border-slate-200 bg-slate-50/40 opacity-75'
                     }`}
                   >
@@ -341,7 +379,7 @@ export default function Challenges() {
                       <img
                         src={step.image}
                         alt={step.title}
-                        className="w-full h-full object-cover rounded-none"
+                        className="w-full h-full object-cover rounded-none hover:scale-105 transition-transform duration-500"
                       />
                     </div>
 
@@ -385,24 +423,28 @@ export default function Challenges() {
                       )}
 
                       {isCurrent && participant && (
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           type="button"
                           onClick={() => handleStartChallenge(step)}
-                          className="w-full lg:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wider uppercase rounded-none transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                          className="w-full lg:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wider uppercase rounded-none transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                         >
                           <Play className="w-3.5 h-3.5 fill-white text-white" />
                           <span>{step.hasActiveSession ? 'Resume Arena' : 'Enter Portal'}</span>
-                        </button>
+                        </motion.button>
                       )}
 
                       {isCurrent && !participant && (
-                        <Link
-                          to="/register"
-                          className="w-full lg:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wider uppercase rounded-none transition-colors duration-200 flex items-center justify-center gap-2"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          <span>Register To Start</span>
-                        </Link>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full lg:w-auto">
+                          <Link
+                            to="/register"
+                            className="w-full lg:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wider uppercase rounded-none transition-colors duration-200 flex items-center justify-center gap-2 block text-center"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Register To Start</span>
+                          </Link>
+                        </motion.div>
                       )}
 
                       {isLocked && (
@@ -412,7 +454,7 @@ export default function Challenges() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })
             )}
@@ -425,45 +467,45 @@ export default function Challenges() {
       <section className="w-full bg-[#07080D] text-slate-100 py-20 px-6 sm:px-8 lg:px-12 border-t border-purple-900/20">
         <div className="max-w-7xl mx-auto space-y-12">
           
-          <div className="max-w-3xl text-left space-y-2">
+          <motion.div
+            initial={{ opacity: 0, y: 35 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-3xl text-left space-y-2"
+          >
             <h2 className="text-3xl sm:text-4xl font-normal text-white tracking-tight">
               Arena Protocol &amp; Penalties
             </h2>
             <p className="text-sm text-slate-400 font-normal leading-relaxed">
               Important tournament constraints to keep in mind while solving.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3">
-              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
-                Rule 01 // Elapsed Time
-              </span>
-              <h3 className="text-xl font-normal text-white">15-Min Timer (-10 pts / min)</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
-                Every minute that elapses during your hunt deducts -10 points. Minimize stalls and assemble fragments briskly.
-              </p>
-            </div>
-
-            <div className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3">
-              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
-                Rule 02 // Accuracy
-              </span>
-              <h3 className="text-xl font-normal text-white">-20 Pts Per Wrong Answer</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
-                Answering mini tasks incorrectly incurs an immediate -20 pts deduction. Max 3 attempts per task before explanation reveal.
-              </p>
-            </div>
-
-            <div className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3">
-              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
-                Rule 03 // Compiler
-              </span>
-              <h3 className="text-xl font-normal text-white">3 Free Runs Allowance</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
-                First 3 code test runs are 100% free. Any extra test run beyond 3 incurs a -10 pts penalty. Test thoughtfully!
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            {[
+              { rule: 'Rule 01 // Elapsed Time', title: '15-Min Timer (-10 pts / min)', desc: 'Every minute that elapses during your hunt deducts -10 points. Minimize stalls and assemble fragments briskly.' },
+              { rule: 'Rule 02 // Accuracy', title: '-20 Pts Per Wrong Answer', desc: 'Answering mini tasks incorrectly incurs an immediate -20 pts deduction. Max 3 attempts per task before explanation reveal.' },
+              { rule: 'Rule 03 // Compiler', title: '3 Free Runs Allowance', desc: 'First 3 code test runs are 100% free. Any extra test run beyond 3 incurs a -10 pts penalty. Test thoughtfully!' }
+            ].map((p, idx) => (
+              <motion.div
+                key={p.rule}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.25 }}
+                transition={{ duration: 0.6, delay: idx * 0.12 }}
+                whileHover={{ y: -6, borderColor: '#9333ea' }}
+                className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3 transition-colors"
+              >
+                <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                  {p.rule}
+                </span>
+                <h3 className="text-xl font-normal text-white">{p.title}</h3>
+                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                  {p.desc}
+                </p>
+              </motion.div>
+            ))}
           </div>
 
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Trophy, Medal, Award, Crown } from 'lucide-react';
 
 export default function Podium({ topThree = [] }) {
@@ -9,7 +10,14 @@ export default function Podium({ topThree = [] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-6 pb-6 max-w-5xl mx-auto">
       {/* 2nd Place */}
-      <div className="border border-purple-950/70 bg-[#0B0D15] p-6 text-center space-y-4 rounded-none order-2 md:order-1">
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, amount: 0.25 }}
+        transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ y: -6, transition: { duration: 0.2 } }}
+        className="border border-purple-950/70 bg-[#0B0D15] p-6 text-center space-y-4 rounded-none order-2 md:order-1 transition-colors"
+      >
         <div className="w-12 h-12 mx-auto bg-slate-800 text-slate-300 flex items-center justify-center rounded-none border border-slate-700">
           <Medal className="w-6 h-6 text-slate-300" />
         </div>
@@ -28,10 +36,17 @@ export default function Podium({ topThree = [] }) {
             {second.challengesSolved ?? 0}/3 Solved · {second.timeFormatted}
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* 1st Place */}
-      <div className="border border-purple-500/60 bg-[#100D1E] p-8 text-center space-y-4 rounded-none order-1 md:order-2 md:-translate-y-4 shadow-lg shadow-purple-950/50">
+      {/* 1st Place (Dramatic High Rise) */}
+      <motion.div
+        initial={{ opacity: 0, y: 70, scale: 0.92 }}
+        whileInView={{ opacity: 1, y: 0, scale: 1 }}
+        viewport={{ once: false, amount: 0.25 }}
+        transition={{ duration: 0.8, delay: 0.2, type: 'spring', bounce: 0.3 }}
+        whileHover={{ y: -8, transition: { duration: 0.2 } }}
+        className="border border-purple-500/60 bg-[#100D1E] p-8 text-center space-y-4 rounded-none order-1 md:order-2 md:-translate-y-4 shadow-xl shadow-purple-950/60 transition-colors"
+      >
         <div className="w-16 h-16 mx-auto bg-amber-400 text-slate-950 flex items-center justify-center rounded-none shadow-md">
           <Crown className="w-8 h-8 text-slate-950" />
         </div>
@@ -50,10 +65,17 @@ export default function Podium({ topThree = [] }) {
             {first.challengesSolved ?? 0}/3 Solved · {first.timeFormatted}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 3rd Place */}
-      <div className="border border-purple-950/70 bg-[#0B0D15] p-6 text-center space-y-4 rounded-none order-3">
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, amount: 0.25 }}
+        transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ y: -6, transition: { duration: 0.2 } }}
+        className="border border-purple-950/70 bg-[#0B0D15] p-6 text-center space-y-4 rounded-none order-3 transition-colors"
+      >
         <div className="w-12 h-12 mx-auto bg-amber-950 text-amber-300 flex items-center justify-center rounded-none border border-amber-800">
           <Award className="w-6 h-6 text-amber-300" />
         </div>
@@ -72,7 +94,7 @@ export default function Podium({ topThree = [] }) {
             {third.challengesSolved ?? 0}/3 Solved · {third.timeFormatted}
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

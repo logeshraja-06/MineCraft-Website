@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { useParticipant } from '../context/ParticipantContext';
 import { leaderboardApi } from '../services/leaderboardApi';
 import LeaderboardTable from '../components/leaderboard/LeaderboardTable';
 import Podium from '../components/leaderboard/Podium';
-import { Trophy, Users, RefreshCw, Search, Target, BarChart2, ArrowRight } from 'lucide-react';
+import { Trophy, Users, RefreshCw, Search, Target, BarChart2 } from 'lucide-react';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
@@ -16,6 +17,13 @@ export default function Leaderboard() {
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
 
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
   useEffect(() => {
     if (isAdmin) {
       navigate('/admin/leaderboard', { replace: true });
@@ -25,7 +33,12 @@ export default function Leaderboard() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#07080D] text-center font-sans">
-        <div className="max-w-md bg-[#0B0D15] p-8 sm:p-10 border border-purple-900/40 rounded-none space-y-5 text-left">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md bg-[#0B0D15] p-8 sm:p-10 border border-purple-900/40 rounded-none space-y-5 text-left"
+        >
           <div className="w-12 h-12 bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 rounded-none">
             <Trophy className="w-6 h-6 text-amber-400" />
           </div>
@@ -41,7 +54,7 @@ export default function Leaderboard() {
               Return To Challenges
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -101,14 +114,26 @@ export default function Leaderboard() {
   }, [rankings]);
 
   return (
-    <div className="min-h-screen bg-[#07080D] font-sans text-slate-100 selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#07080D] font-sans text-slate-100 selection:bg-purple-600 selection:text-white relative overflow-hidden">
+
+      {/* ── TOP SCROLL PROGRESS BAR ── */}
+      <motion.div
+        style={{ scaleX }}
+        className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-fuchsia-400 to-amber-400 origin-left z-[100] shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+      />
 
       {/* ── SECTION 1: HEADER & PODIUM (DARK SECTION) ── */}
       <section className="w-full bg-[#07080D] py-16 sm:py-20 px-6 sm:px-8 lg:px-12 border-b border-purple-900/20">
         <div className="max-w-7xl mx-auto space-y-12">
 
           {/* Header Row */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 35 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.3 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+          >
             <div className="space-y-3 max-w-2xl text-left">
               <h1 className="text-4xl sm:text-5xl font-normal text-white tracking-tight leading-tight">
                 Tournament Leaderboard
@@ -121,7 +146,7 @@ export default function Leaderboard() {
             {/* Auto Sync & Refresh */}
             <div className="flex items-center gap-3 text-xs font-mono text-slate-400">
               <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
                 Live: {lastRefreshed.toLocaleTimeString()}
               </span>
               <span>·</span>
@@ -135,7 +160,7 @@ export default function Leaderboard() {
                 <span>Refresh</span>
               </button>
             </div>
-          </div>
+          </motion.div>
 
           {/* Top 3 Podium Showcase */}
           {topThree.length >= 3 && (
@@ -151,47 +176,55 @@ export default function Leaderboard() {
       <section className="w-full bg-white text-slate-900 py-20 px-6 sm:px-8 lg:px-12 border-b border-slate-200">
         <div className="max-w-7xl mx-auto space-y-10">
 
-          {/* 3 Metrics Cards (Sharp, Editorial) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="border border-slate-200 bg-slate-50/70 p-6 rounded-none flex items-center gap-4">
-              <div className="w-12 h-12 bg-white border border-slate-200 flex items-center justify-center text-slate-700 rounded-none">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block">
-                  Total Ranked Contestants
-                </span>
-                <div className="text-2xl font-mono font-medium text-slate-900">{stats.totalRanked}</div>
-              </div>
-            </div>
-
-            <div className="border border-slate-200 bg-slate-50/70 p-6 rounded-none flex items-center gap-4">
-              <div className="w-12 h-12 bg-white border border-slate-200 flex items-center justify-center text-emerald-700 rounded-none">
-                <Target className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block">
-                  Completed Challenge Solves
-                </span>
-                <div className="text-2xl font-mono font-medium text-slate-900">{stats.totalSolves}</div>
-              </div>
-            </div>
-
-            <div className="border border-slate-200 bg-slate-50/70 p-6 rounded-none flex items-center gap-4">
-              <div className="w-12 h-12 bg-white border border-slate-200 flex items-center justify-center text-amber-700 rounded-none">
-                <BarChart2 className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block">
-                  Leading Score
-                </span>
-                <div className="text-2xl font-mono font-medium text-slate-900">{stats.topScore} pts</div>
-              </div>
-            </div>
+          {/* 3 Metrics Cards (Sharp, Editorial Staggered Pop-in) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            {[
+              {
+                icon: <Users className="w-6 h-6 text-slate-700" />,
+                label: 'Total Ranked Contestants',
+                val: stats.totalRanked
+              },
+              {
+                icon: <Target className="w-6 h-6 text-emerald-700" />,
+                label: 'Completed Challenge Solves',
+                val: stats.totalSolves
+              },
+              {
+                icon: <BarChart2 className="w-6 h-6 text-amber-700" />,
+                label: 'Leading Score',
+                val: `${stats.topScore} pts`
+              }
+            ].map((metric, idx) => (
+              <motion.div
+                key={metric.label}
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: false, amount: 0.2 }}
+                transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -5, borderColor: '#7c3aed' }}
+                className="border border-slate-200 bg-slate-50/70 p-6 rounded-none flex items-center gap-4 transition-colors shadow-xs"
+              >
+                <div className="w-12 h-12 bg-white border border-slate-200 flex items-center justify-center rounded-none shrink-0">
+                  {metric.icon}
+                </div>
+                <div>
+                  <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block">
+                    {metric.label}
+                  </span>
+                  <div className="text-2xl font-mono font-medium text-slate-900">{metric.val}</div>
+                </div>
+              </motion.div>
+            ))}
           </div>
 
           {/* Search Bar & Rank Rule Header */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-slate-200">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-slate-200 text-left"
+          >
             <div className="relative w-full sm:w-96">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
@@ -208,15 +241,21 @@ export default function Leaderboard() {
             <div className="text-xs font-mono text-slate-500">
               Rank Rule: Solves (3/3 first) → Minimum Negative Score → Cumulative Time
             </div>
-          </div>
+          </motion.div>
 
           {/* Full Standings Table */}
-          <div className="pt-2">
+          <motion.div
+            initial={{ opacity: 0, y: 35 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.15 }}
+            transition={{ duration: 0.7 }}
+            className="pt-2"
+          >
             <LeaderboardTable
               rankings={filteredRankings}
               currentParticipantId={participant?.participantId}
             />
-          </div>
+          </motion.div>
 
         </div>
       </section>
