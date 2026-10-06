@@ -26,149 +26,135 @@ export default function Hero({ participant, targetUrl }) {
   return (
     <section
       aria-label="Hero"
-      className="relative min-h-[calc(100vh-72px)] flex items-center overflow-hidden"
+      className="relative min-h-[92vh] flex items-center overflow-hidden bg-[#07080D]"
     >
-      {/* Faint dot grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden="true"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(242,140,15,0.055) 1.5px, transparent 1.5px)',
-          backgroundSize: '22px 22px',
-        }}
-      />
+      {/* Background Nether Portal Image from Reference */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="/portal-hero.jpg"
+          alt="Minecraft Nether Portal Universe"
+          className="w-full h-full object-cover object-center lg:object-right filter brightness-[0.88] contrast-[1.05]"
+        />
+        {/* Cinematic gradient overlays to blend text seamlessly */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#07080D] via-[#07080D]/40 to-[#07080D]/80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07080D] via-[#07080D]/75 to-transparent hidden md:block" />
+        {/* Subtle purple radial glow flare */}
+        <div className="absolute -top-24 -left-24 w-[600px] h-[600px] bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      </div>
 
-      {/* Ambient glow blobs */}
-      <div
-        className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full pointer-events-none animate-pulse-slow"
-        aria-hidden="true"
-        style={{ background: 'radial-gradient(circle, rgba(242,140,15,0.14) 0%, transparent 70%)' }}
-      />
-      <div
-        className="absolute top-1/2 -left-24 w-[380px] h-[380px] rounded-full pointer-events-none animate-float-slow"
-        aria-hidden="true"
-        style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.09) 0%, transparent 70%)' }}
-      />
-
-      {/* ─── Grid container ─────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[55fr_45fr] gap-10 lg:gap-14 items-center">
-
-          {/* ═══════════════ LEFT COLUMN ══════════════════ */}
+      {/* ─── Foreground Content ─────────────────────────────── */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-20 flex flex-col justify-between min-h-[85vh]">
+        
+        {/* Main Hero Column */}
+        <div className="max-w-2xl my-auto pt-6 lg:pt-0">
           <motion.div
-            className="flex flex-col gap-6 text-center lg:text-left"
+            className="flex flex-col gap-6 text-left"
             variants={container}
             initial="hidden"
             animate="show"
           >
-            {/* 1 ── Status pill */}
+            {/* 1 ── Creeper Badge Pill */}
             <motion.div
               variants={item}
-              className="inline-flex items-center gap-2 self-center lg:self-start px-3.5 py-1.5 rounded-full bg-slate-950 border border-orange-500/60 shadow-md"
+              className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0D0F18]/90 border border-emerald-500/40 shadow-lg shadow-emerald-950/40 w-fit backdrop-blur-md"
             >
-              <span className="relative flex h-2 w-2 flex-shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="font-mono text-[11px] font-bold tracking-widest text-amber-300 uppercase whitespace-nowrap">
-                Quest Online · Mind Craft Arena 2026
+              {/* Pixel Creeper Icon */}
+              <div className="w-4 h-4 rounded-xs bg-emerald-500 flex items-center justify-center p-0.5 shadow-[0_0_8px_rgba(34,197,94,0.6)]">
+                <div className="w-full h-full flex flex-col justify-between items-center">
+                  <div className="w-full flex justify-between">
+                    <span className="w-1 h-1 bg-[#07080D] rounded-xxs" />
+                    <span className="w-1 h-1 bg-[#07080D] rounded-xxs" />
+                  </div>
+                  <span className="w-1.5 h-1 bg-[#07080D]" />
+                </div>
+              </div>
+              <span className="font-mono text-[11px] font-black tracking-widest text-emerald-400 uppercase">
+                Built for Creators // Loved by Generations
               </span>
             </motion.div>
 
-            {/* 2 ── Headline — forced 2-line break via block spans */}
-            <motion.h1
-              variants={item}
-              className="text-[2.65rem] sm:text-5xl lg:text-[3.5rem] font-black tracking-tight text-slate-900"
-              style={{ lineHeight: 1.08 }}
-            >
-              <span className="block">Mine The Logic.</span>
-              <span className="block bg-gradient-to-r from-[#F28C0F] via-amber-500 to-[#F28C0F] bg-clip-text text-transparent animate-gradient-shift">
-                Craft The Solution.
-              </span>
-            </motion.h1>
+            {/* 2 ── Monumental Display Headline */}
+            <motion.div variants={item} className="space-y-0 tracking-tight font-black">
+              <h1 className="text-[3.6rem] sm:text-[4.8rem] lg:text-[5.8rem] leading-[0.92] text-white font-extrabold font-sans uppercase">
+                IMAGINE
+              </h1>
+              <h1 className="text-[3.6rem] sm:text-[4.8rem] lg:text-[5.8rem] leading-[0.92] text-slate-200 font-extrabold font-sans uppercase">
+                BUILD
+              </h1>
+              <h1 className="text-[3.6rem] sm:text-[4.8rem] lg:text-[5.8rem] leading-[0.92] font-extrabold font-sans uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-violet-300 to-fuchsia-400 drop-shadow-[0_0_30px_rgba(168,85,247,0.7)]">
+                BEYOND
+              </h1>
+            </motion.div>
 
-            {/* 3 ── Subtext */}
+            {/* 3 ── Subtext uppercase tracked */}
             <motion.p
               variants={item}
-              className="max-w-lg mx-auto lg:mx-0 text-[1.05rem] text-slate-600 leading-relaxed font-medium"
+              className="max-w-lg text-xs sm:text-sm font-semibold tracking-wider text-slate-300 uppercase leading-relaxed font-sans"
             >
-              Solve coding challenges, hunt QR chests, assemble the code fragments and compile clean to win.
+              Minecraft isn't just a game. It's a canvas. A toolkit. A universe where the only limit is your ideas.
             </motion.p>
 
             {/* 4 ── CTA buttons */}
             <motion.div
               variants={item}
-              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start"
+              className="flex flex-col sm:flex-row gap-4 pt-2 items-start"
             >
-              {/* Primary game button */}
+              {/* Primary Glowing Pill Button */}
               <Link
                 to={targetUrl}
-                className="group relative overflow-hidden flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-[14px] bg-[#F28C0F] text-slate-950 font-black text-base border-b-[3px] border-[#b86200] active:border-b-0 active:translate-y-[2px] hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-orange-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F28C0F]"
+                className="group relative overflow-hidden flex items-center justify-center gap-3 px-8 py-3.5 rounded-full border border-purple-500/90 bg-gradient-to-r from-purple-950/70 via-purple-900/60 to-indigo-950/70 hover:from-purple-600 hover:to-indigo-600 text-purple-200 hover:text-white font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-[0_0_20px_rgba(168,85,247,0.35)] hover:shadow-[0_0_35px_rgba(168,85,247,0.75)] hover:scale-[1.02] active:scale-[0.98]"
               >
-                {/* shimmer sweep */}
-                <span
-                  className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-[250%] transition-transform duration-700 ease-in-out pointer-events-none"
-                  aria-hidden="true"
-                />
-                <span className="relative z-10">Start Challenge Quest</span>
-                <ArrowRight className="relative z-10 w-4 h-4 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+                <span>ENTER THE WORLD</span>
+                <ArrowRight className="w-4 h-4 text-purple-300 group-hover:translate-x-1 group-hover:text-white transition-all" />
               </Link>
 
-              {/* Secondary outlined button */}
+              {/* Secondary Outlined Button */}
               <Link
                 to="/rules"
-                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-[14px] border-2 border-slate-900 text-slate-900 font-bold text-base hover:bg-slate-900 hover:text-white hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-full border border-slate-700/80 bg-[#0D0F18]/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-widest transition-all duration-200 hover:border-purple-500/50 backdrop-blur-md"
               >
-                Rules &amp; Protocol
+                <span>Explore Rules</span>
               </Link>
             </motion.div>
 
-            {/* Signed-in indicator */}
+            {/* Signed-in badge */}
             {participant?.name && (
-              <motion.p
+              <motion.div
                 variants={item}
-                className="flex items-center justify-center lg:justify-start gap-1.5 text-[12px] text-slate-500 font-medium"
+                className="flex items-center gap-2 text-xs text-slate-400 font-medium pt-1"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" aria-hidden="true" />
-                Signed in as&nbsp;
-                <span className="text-slate-900 font-bold">{participant.name}</span>
-                {(participant.participantId || participant.email) && (
-                  <>&nbsp;({participant.participantId || participant.email})</>
+                <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+                <span>Signed in as <strong className="text-purple-300">{participant.name}</strong></span>
+                {participant.participantId && (
+                  <span className="text-slate-500 font-mono">({participant.participantId})</span>
                 )}
-              </motion.p>
+              </motion.div>
             )}
 
-            {/* 5 ── HUD stat strip */}
-            <motion.div variants={item}>
-              <div className="inline-flex items-stretch divide-x divide-slate-200 rounded-[14px] border border-slate-200 bg-white shadow-sm overflow-hidden">
-                {stats.map(({ icon: Icon, value, label }, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2.5 px-4 py-3 hover:bg-orange-50 transition-colors duration-150 cursor-default"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0" aria-hidden="true">
-                      <Icon className="w-3.5 h-3.5 text-[#F28C0F]" />
-                    </div>
-                    <div className="text-left">
-                      <div className="font-black text-[13px] text-slate-900 leading-none">{value}</div>
-                      <div className="font-mono text-[10px] text-slate-400 mt-0.5 leading-none whitespace-nowrap">{label}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
           </motion.div>
-
-          {/* ═══════════════ RIGHT COLUMN — Quest Console ═════════════════ */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.18 }}
-          >
-            <QuestConsole />
-          </motion.div>
-
         </div>
+
+        {/* ─── Bottom Reference Corner Badges ──────────────────────── */}
+        <div className="pt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-purple-900/20 text-xs font-mono">
+          {/* Bottom Left: Ultimate Sandbox badge */}
+          <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-[#0D0F18]/70 border border-purple-500/30 backdrop-blur-md shadow-lg shadow-purple-950/20">
+            <span className="text-purple-400 text-base">✦</span>
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">The Ultimate Sandbox</div>
+              <div className="text-xs font-black text-white tracking-widest">MINDCRAFT 2026</div>
+            </div>
+          </div>
+
+          {/* Bottom Right: Micro Motto */}
+          <div className="flex items-center gap-2 text-slate-400 text-xs tracking-widest uppercase font-semibold">
+            <span className="text-purple-400">CREATE</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-purple-400">CONNECT</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-purple-400">INSPIRE</span>
+          </div>
+        </div>
+
       </div>
     </section>
   );

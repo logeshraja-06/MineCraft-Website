@@ -162,14 +162,14 @@ export default function FragmentVault({
   const isCurrentChestTarget = pendingKey && pendingKey.taskIndex === activeChestIndex;
 
   return (
-    <div className="p-5 bg-white/95 border border-slate-200/90 rounded-2xl space-y-4 shadow-md font-sans">
+    <div className="p-5 bg-[#0D0F18]/90 border border-purple-500/30 rounded-2xl space-y-4 shadow-xl backdrop-blur-xl font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-mono">
+      <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+        <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
           <span className="text-lg">🪙</span>
           <span>Treasure Vault</span>
         </h3>
-        <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 font-mono flex items-center gap-1">
+        <span className="text-xs font-bold text-purple-200 bg-purple-950/60 px-2.5 py-1 rounded-full border border-purple-500/30 font-mono flex items-center gap-1">
           <span>{collectedCount} / {totalCount}</span>
           <span>🔑</span>
         </span>
@@ -177,9 +177,9 @@ export default function FragmentVault({
 
       {/* ── MULTI-TREASURE BOX SELECTOR (HANDLES 4 TO 7+ CHESTS) ── */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 font-bold px-1">
+        <div className="flex items-center justify-between text-[11px] font-mono text-purple-300/60 font-bold px-1">
           <span>CHOOSE TREASURE CHEST:</span>
-          <span className="text-amber-600 font-bold">Chest #{activeChestIndex + 1} Active</span>
+          <span className="text-purple-300 font-bold">Chest #{activeChestIndex + 1} Active</span>
         </div>
 
         {/* Scrollable / Grid Chest Row */}
@@ -206,13 +206,13 @@ export default function FragmentVault({
                 }}
                 className={`relative p-2 rounded-xl border flex flex-col items-center justify-between text-center transition-all min-h-[74px] ${
                   isTarget
-                    ? 'border-2 border-amber-400 bg-amber-100/80 shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-2 ring-amber-300 animate-pulse cursor-pointer'
+                    ? 'border-2 border-amber-400 bg-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.5)] ring-2 ring-amber-400 animate-pulse cursor-pointer'
                     : isUnlocked
-                    ? `border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-950 cursor-pointer ${
-                        isSelected ? 'ring-2 ring-amber-500 shadow-sm bg-amber-100/90' : ''
+                    ? `border-purple-500/40 bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 cursor-pointer ${
+                        isSelected ? 'ring-2 ring-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)] bg-purple-900/70' : ''
                       }`
-                    : `border-slate-200 bg-slate-50/70 text-slate-400 hover:border-slate-300 cursor-pointer ${
-                        isSelected ? 'ring-2 ring-slate-400' : ''
+                    : `border-purple-500/20 bg-[#07080D]/80 text-slate-500 hover:border-purple-500/40 cursor-pointer ${
+                        isSelected ? 'ring-2 ring-purple-500/50' : ''
                       }`
                 }`}
               >
@@ -222,10 +222,10 @@ export default function FragmentVault({
                 </div>
 
                 <div className="w-full">
-                  <span className="text-[10px] font-black font-mono block leading-tight text-slate-800">
+                  <span className="text-[10px] font-black font-mono block leading-tight text-slate-200">
                     Chest {i + 1}
                   </span>
-                  <span className="text-[8px] font-bold block uppercase tracking-wider text-slate-500">
+                  <span className="text-[8px] font-bold block uppercase tracking-wider text-purple-300/60">
                     {isUnlocked ? 'Unlocked' : isTarget ? 'Drop Key!' : 'Locked'}
                   </span>
                 </div>
@@ -254,12 +254,12 @@ export default function FragmentVault({
         onDrop={handleDrop}
         className={`relative p-5 rounded-2xl border-2 transition-all duration-300 text-center flex flex-col items-center justify-center overflow-hidden min-h-[260px] ${
           isDragOver
-            ? 'bg-amber-100 border-amber-500 scale-[1.02] shadow-[0_0_35px_rgba(245,158,11,0.7)]'
+            ? 'bg-purple-950/80 border-purple-400 scale-[1.02] shadow-[0_0_40px_rgba(168,85,247,0.6)]'
             : isCurrentChestTarget
-            ? 'bg-gradient-to-b from-amber-50 to-yellow-100/60 border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.35)] ring-2 ring-amber-300'
+            ? 'bg-gradient-to-b from-[#0D0F18] to-purple-950/40 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] ring-2 ring-amber-400/50'
             : isCurrentChestUnlocked
-            ? 'bg-emerald-50/40 border-emerald-300'
-            : 'bg-slate-50/70 border-slate-200'
+            ? 'bg-purple-950/20 border-purple-500/30'
+            : 'bg-[#07080D]/90 border-purple-500/20'
         }`}
       >
         {/* ── CHEST OPENING CONFETTI / VOLUMETRIC LIGHT PARTICLES ── */}
@@ -318,12 +318,12 @@ export default function FragmentVault({
               rotate: isOpeningAnimation ? [0, -4, 4, 0] : isDragOver ? [-2, 2, -2] : 0,
             }}
             transition={{ repeat: isCurrentChestTarget && !isOpeningAnimation ? Infinity : 0, duration: 1.6 }}
-            className={`relative w-44 h-44 max-w-full rounded-2xl overflow-hidden shadow-2xl border-2 transition-all bg-[#080d1a] ${
+            className={`relative w-44 h-44 max-w-full rounded-2xl overflow-hidden shadow-2xl border-2 transition-all bg-[#07080D] ${
               isCurrentChestUnlocked
-                ? 'border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
+                ? 'border-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.35)]'
                 : isCurrentChestTarget
                 ? 'border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)] ring-2 ring-amber-300'
-                : 'border-slate-800'
+                : 'border-purple-500/20'
             }`}
           >
             <img
@@ -338,7 +338,7 @@ export default function FragmentVault({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: [0.6, 0.9, 0.6] }}
                 transition={{ repeat: Infinity, duration: 2 }}
-                className="absolute inset-0 bg-radial from-amber-400/40 via-yellow-200/20 to-transparent pointer-events-none"
+                className="absolute inset-0 bg-radial from-purple-400/40 via-indigo-200/20 to-transparent pointer-events-none"
               />
             )}
 
@@ -363,27 +363,27 @@ export default function FragmentVault({
         <div className="mt-3.5 space-y-1">
           {isOpeningAnimation ? (
             <div className="space-y-1 animate-pulse">
-              <h4 className="text-base font-black text-amber-700 flex items-center justify-center gap-1.5">
-                <Sparkles className="w-5 h-5 text-amber-500 animate-spin" />
+              <h4 className="text-base font-black text-purple-300 flex items-center justify-center gap-1.5">
+                <Sparkles className="w-5 h-5 text-purple-400 animate-spin" />
                 <span>Opening Treasure Chest #{activeChestIndex + 1}...</span>
               </h4>
-              <p className="text-[11px] text-slate-600 font-semibold">
+              <p className="text-[11px] text-slate-400 font-semibold">
                 Unlocking code fragment with magical key...
               </p>
             </div>
           ) : isCurrentChestTarget ? (
             <>
-              <h4 className="text-base font-black text-amber-700 flex items-center justify-center gap-1.5 animate-pulse">
-                <Sparkles className="w-4 h-4 text-amber-500" />
+              <h4 className="text-base font-black text-amber-300 flex items-center justify-center gap-1.5 animate-pulse">
+                <Sparkles className="w-4 h-4 text-amber-400" />
                 <span>Drop Key into Chest #{activeChestIndex + 1}!</span>
               </h4>
-              <p className="text-[11px] text-slate-600 max-w-[270px] mx-auto leading-relaxed">
+              <p className="text-[11px] text-slate-300 max-w-[270px] mx-auto leading-relaxed">
                 Release Task {pendingKey.taskIndex + 1} golden key here to pop open the chest and reveal the code!
               </p>
               <button
                 type="button"
                 onClick={() => triggerChestUnlock(pendingKey)}
-                className="mt-2 inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-md transition active:scale-95 cursor-pointer"
+                className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black shadow-[0_0_20px_rgba(168,85,247,0.4)] transition active:scale-95 cursor-pointer"
               >
                 <span>Tap to Open Chest #{activeChestIndex + 1}</span>
                 <Unlock className="w-3.5 h-3.5" />
@@ -391,21 +391,21 @@ export default function FragmentVault({
             </>
           ) : isCurrentChestUnlocked ? (
             <>
-              <h4 className="text-sm font-black text-emerald-800 flex items-center justify-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <h4 className="text-sm font-black text-emerald-400 flex items-center justify-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 <span>Chest #{activeChestIndex + 1} Unlocked!</span>
               </h4>
-              <p className="text-[11px] text-slate-500 max-w-[260px] mx-auto leading-relaxed">
+              <p className="text-[11px] text-purple-300/70 max-w-[260px] mx-auto leading-relaxed">
                 Code fragment for Task {activeChestIndex + 1} revealed below.
               </p>
             </>
           ) : (
             <>
-              <h4 className="text-base font-black text-slate-800 flex items-center justify-center gap-1.5">
-                <Lock className="w-4 h-4 text-slate-500" />
+              <h4 className="text-base font-black text-slate-200 flex items-center justify-center gap-1.5">
+                <Lock className="w-4 h-4 text-slate-400" />
                 <span>Chest #{activeChestIndex + 1} Locked</span>
               </h4>
-              <p className="text-[11px] text-slate-500 max-w-[280px] mx-auto leading-relaxed font-sans">
+              <p className="text-[11px] text-slate-400 max-w-[280px] mx-auto leading-relaxed font-sans">
                 Complete Task {activeChestIndex + 1} to earn its key and open this chest!
               </p>
             </>
@@ -439,26 +439,26 @@ export default function FragmentVault({
               </div>
 
               {displayedFragment.role && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 font-mono">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-500/30 font-mono">
                   {displayedFragment.role}
                 </span>
               )}
             </div>
 
             {/* Dark Code Block */}
-            <div className="rounded-xl overflow-hidden border border-slate-800 bg-[#0d131f] shadow-md font-mono text-xs">
+            <div className="rounded-xl overflow-hidden border border-purple-500/30 bg-[#07080D] shadow-xl font-mono text-xs">
               {/* Code Editor Header */}
-              <div className="px-3.5 py-2 bg-[#161f30] border-b border-slate-800 flex items-center justify-between text-slate-300">
+              <div className="px-3.5 py-2 bg-[#0D0F18] border-b border-purple-500/20 flex items-center justify-between text-slate-300">
                 <div className="flex items-center gap-2">
-                  <Code2 className="w-3.5 h-3.5 text-orange-400" />
-                  <span className="text-[11px] font-bold text-slate-200">
+                  <Code2 className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-[11px] font-bold text-purple-200">
                     Fragment #{activeChestIndex + 1}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleCopyCode(displayedFragment.code)}
-                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 hover:text-white text-[10px] font-bold flex items-center gap-1 transition cursor-pointer border border-purple-500/30"
                   title="Copy code to clipboard"
                 >
                   {copied ? (
@@ -468,7 +468,7 @@ export default function FragmentVault({
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3 h-3 text-slate-400" />
+                      <Copy className="w-3 h-3 text-purple-400" />
                       <span>Copy</span>
                     </>
                   )}
@@ -476,15 +476,15 @@ export default function FragmentVault({
               </div>
 
               {/* Code Lines with Line Numbers */}
-              <div className="p-3.5 overflow-x-auto max-h-56 leading-relaxed text-[11px]">
+              <div className="p-3.5 overflow-x-auto max-h-56 leading-relaxed text-[11px] bg-[#07080D]">
                 <table className="w-full border-collapse">
                   <tbody>
                     {(displayedFragment.code || '').split('\n').map((line, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/40">
-                        <td className="pr-3 text-right text-slate-600 select-none font-mono text-[10px] w-6 align-top">
+                      <tr key={idx} className="hover:bg-purple-950/20">
+                        <td className="pr-3 text-right text-purple-400/50 select-none font-mono text-[10px] w-6 align-top">
                           {idx + 1}
                         </td>
-                        <td className="text-emerald-300 font-mono whitespace-pre font-medium pl-1">
+                        <td className="text-purple-200 font-mono whitespace-pre font-medium pl-1">
                           {line || ' '}
                         </td>
                       </tr>
@@ -494,7 +494,7 @@ export default function FragmentVault({
               </div>
 
               {/* Bottom Notification Banner */}
-              <div className="px-3.5 py-2 bg-emerald-950/40 border-t border-emerald-900/50 flex items-center gap-2 text-emerald-400 text-[10px] font-semibold font-mono">
+              <div className="px-3.5 py-2 bg-emerald-950/40 border-t border-emerald-500/30 flex items-center gap-2 text-emerald-300 text-[10px] font-semibold font-mono">
                 <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>Code revealed! You unlocked this fragment.</span>
               </div>
@@ -505,7 +505,7 @@ export default function FragmentVault({
               <button
                 type="button"
                 onClick={onProceedToAssembly}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer mt-2"
+                className="w-full py-3.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(168,85,247,0.45)] hover:shadow-[0_0_35px_rgba(168,85,247,0.65)] transition active:scale-95 cursor-pointer mt-2"
               >
                 <span>Proceed to Assembly Board</span>
                 <ArrowRight className="w-4 h-4" />

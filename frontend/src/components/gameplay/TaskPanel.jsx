@@ -140,7 +140,7 @@ export default function TaskPanel({
   }[quiz.type] || quiz.type;
 
   return (
-    <div className="relative p-6 bg-white/95 border border-slate-200/90 rounded-2xl space-y-5 shadow-md font-sans overflow-hidden">
+    <div className="relative p-6 bg-[#0D0F18]/90 border border-purple-500/30 rounded-2xl space-y-5 shadow-xl backdrop-blur-xl font-sans overflow-hidden">
       {/* ── FIREWORK EXPLOSION / DECORATION LIGHT BURST ON KEY REVEAL ── */}
       <AnimatePresence>
         {showFireworkBurst && (
@@ -150,7 +150,7 @@ export default function TaskPanel({
               initial={{ scale: 0, opacity: 0.9 }}
               animate={{ scale: [0, 2.8, 3.5], opacity: [0.9, 0.4, 0] }}
               transition={{ duration: 0.85, ease: 'easeOut' }}
-              className="absolute w-44 h-44 rounded-full bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 blur-xl"
+              className="absolute w-44 h-44 rounded-full bg-gradient-to-r from-purple-400 via-indigo-300 to-amber-400 blur-xl"
             />
 
             {/* Light beam spokes rotating */}
@@ -158,7 +158,7 @@ export default function TaskPanel({
               initial={{ rotate: 0, scale: 0, opacity: 0.8 }}
               animate={{ rotate: 180, scale: [0, 1.8, 0], opacity: [0.8, 1, 0] }}
               transition={{ duration: 1.2, ease: 'easeOut' }}
-              className="absolute w-72 h-72 rounded-full border-4 border-dashed border-amber-400/60"
+              className="absolute w-72 h-72 rounded-full border-4 border-dashed border-purple-400/60"
             />
 
             {/* 28 Sparkling Firework Particles shooting radially */}
@@ -169,7 +169,7 @@ export default function TaskPanel({
               const targetX = Math.cos(rad) * radius;
               const targetY = Math.sin(rad) * radius;
               const colors = [
-                '#f59e0b', '#fbbf24', '#38bdf8', '#10b981', '#ec4899', '#a855f7', '#ffffff', '#eab308'
+                '#c084fc', '#a855f7', '#818cf8', '#10b981', '#f59e0b', '#ec4899', '#ffffff', '#e0e7ff'
               ];
               const color = colors[i % colors.length];
 
@@ -195,16 +195,16 @@ export default function TaskPanel({
       </AnimatePresence>
 
       {/* Task Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+      <div className="flex items-center justify-between border-b border-purple-500/20 pb-3.5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 shadow-xs">
-            <Key className="w-5 h-5 text-amber-600" />
+          <div className="w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+            <Key className="w-5 h-5 text-purple-300" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 leading-tight">
+            <h3 className="text-base font-bold text-white leading-tight">
               Task {taskIndex + 1}: {task.title || 'Complete Objective'}
             </h3>
-            <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+            <span className="text-[10px] font-bold text-purple-300/70 font-mono tracking-wider uppercase">
               {typeLabel}
             </span>
           </div>
@@ -214,13 +214,13 @@ export default function TaskPanel({
           <span
             className={`text-[11px] px-2.5 py-1 rounded-lg font-mono font-bold ${
               attemptsCount >= 2
-                ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                : 'bg-amber-100 text-amber-800 border border-amber-200'
+                ? 'bg-rose-950/60 text-rose-300 border border-rose-500/40'
+                : 'bg-purple-950/60 text-purple-300 border border-purple-500/30'
             }`}
           >
             Attempt {Math.min(attemptsCount + 1, maxAttempts)}/{maxAttempts} (-20 pts)
           </span>
-          <span className="text-[11px] px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold font-mono border border-orange-200">
+          <span className="text-[11px] px-2.5 py-1 rounded-lg bg-purple-900/40 text-purple-200 font-bold font-mono border border-purple-500/30">
             {taskIndex + 1} / {totalTasks}
           </span>
         </div>
@@ -228,10 +228,10 @@ export default function TaskPanel({
 
       {/* 3 Wrong Attempts Answer Revealed Banner */}
       {revealedAnswerInfo?.revealed && (
-        <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-400 text-xs font-mono space-y-2 animate-fadeIn shadow-sm">
+        <div className="p-4 rounded-xl bg-amber-950/50 border-2 border-amber-400/50 text-xs font-mono space-y-2 animate-fadeIn shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-amber-900 font-bold">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="flex items-center gap-2 text-amber-200 font-bold">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
                 {revealedAnswerInfo.forTaskTitle
                   ? `${revealedAnswerInfo.forTaskTitle} — Answer Revealed`
@@ -242,31 +242,31 @@ export default function TaskPanel({
               <button
                 type="button"
                 onClick={onDismissReveal}
-                className="px-2 py-0.5 text-[10px] rounded bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold transition"
+                className="px-2 py-0.5 text-[10px] rounded bg-amber-900 hover:bg-amber-800 text-amber-200 font-bold transition"
               >
                 ✕
               </button>
             )}
           </div>
-          <div className="p-2.5 bg-white rounded-lg border border-amber-300 text-amber-950">
-            <span className="text-[10px] text-slate-500 uppercase font-bold block">Correct Answer:</span>
+          <div className="p-2.5 bg-[#07080D]/90 rounded-lg border border-amber-500/40 text-amber-100">
+            <span className="text-[10px] text-purple-300/60 uppercase font-bold block">Correct Answer:</span>
             <span className="text-sm font-bold">{revealedAnswerInfo.answer}</span>
           </div>
           {revealedAnswerInfo.explain && (
-            <p className="text-slate-600 text-[11px] leading-relaxed">{revealedAnswerInfo.explain}</p>
+            <p className="text-slate-300 text-[11px] leading-relaxed">{revealedAnswerInfo.explain}</p>
           )}
         </div>
       )}
 
       {/* Question Prompt */}
-      <div className="text-sm text-slate-800 leading-relaxed whitespace-pre-line bg-slate-50/90 p-4 rounded-2xl border border-slate-200/80 font-mono">
+      <div className="text-sm text-slate-100 leading-relaxed whitespace-pre-line bg-[#07080D]/90 p-4 rounded-2xl border border-purple-500/25 font-mono shadow-inner">
         {quiz.prompt}
       </div>
 
       {/* Concept tag */}
       {quiz.concept && (
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-bold">
+          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-500/30 font-mono font-bold">
             {quiz.concept}
           </span>
         </div>
@@ -295,23 +295,23 @@ export default function TaskPanel({
                   disabled={disabled || cooldown > 0 || isSubmitting || Boolean(pendingKey)}
                   className={`w-full text-left p-3.5 rounded-xl border text-xs font-mono transition-all duration-150 flex items-center gap-3.5 ${
                     wasCorrectOption || (pendingKey && isSelected)
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold shadow-xs'
+                      ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200 font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                       : wasWrongOption
-                      ? 'border-rose-500 bg-rose-50 text-rose-900 font-bold'
+                      ? 'border-rose-500 bg-rose-950/60 text-rose-200 font-bold'
                       : isSelected
-                      ? 'border-orange-500 bg-orange-50/60 text-slate-900 font-bold shadow-xs ring-1 ring-orange-500/20'
-                      : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-400 hover:bg-white'
+                      ? 'border-purple-400 bg-purple-950/80 text-white font-bold shadow-[0_0_15px_rgba(168,85,247,0.35)] ring-1 ring-purple-400/50'
+                      : 'border-purple-500/20 bg-[#07080D]/80 text-slate-200 hover:border-purple-500/50 hover:bg-purple-950/30'
                   } ${disabled || cooldown > 0 || pendingKey ? 'cursor-default' : 'cursor-pointer'}`}
                 >
                   <span
                     className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${
                       wasCorrectOption || (pendingKey && isSelected)
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-emerald-500 text-white'
                         : wasWrongOption
-                        ? 'bg-rose-600 text-white'
+                        ? 'bg-rose-500 text-white'
                         : isSelected
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-white text-slate-600 border border-slate-200'
+                        ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
+                        : 'bg-purple-950/80 text-purple-300 border border-purple-500/30'
                     }`}
                   >
                     {String.fromCharCode(65 + idx)}
@@ -342,7 +342,7 @@ export default function TaskPanel({
                   : 'Type your answer...'
               }
               disabled={disabled || cooldown > 0 || isSubmitting || Boolean(pendingKey)}
-              className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 disabled:opacity-60"
+              className="w-full p-3.5 bg-[#07080D]/90 border border-purple-500/30 rounded-xl text-xs font-mono text-white placeholder:text-purple-300/40 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/40 disabled:opacity-60"
             />
           </div>
         )}
@@ -358,19 +358,19 @@ export default function TaskPanel({
             placeholder="Enter the correct order (comma-separated or one per line)"
             disabled={disabled || cooldown > 0 || isSubmitting || Boolean(pendingKey)}
             rows={3}
-            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 disabled:opacity-60 resize-none"
+            className="w-full p-3.5 bg-[#07080D]/90 border border-purple-500/30 rounded-xl text-xs font-mono text-white placeholder:text-purple-300/40 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/40 disabled:opacity-60 resize-none"
           />
         )}
       </div>
 
       {/* Wrong Answer Feedback */}
       {localFeedback && !localFeedback.correct && !pendingKey && (
-        <div className="p-3.5 rounded-xl text-xs font-mono flex items-start gap-2.5 bg-rose-50 border border-rose-200 text-rose-800 animate-fadeIn">
-          <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+        <div className="p-3.5 rounded-xl text-xs font-mono flex items-start gap-2.5 bg-rose-950/60 border border-rose-500/40 text-rose-200 animate-fadeIn">
+          <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <span className="font-bold">❌ Wrong Answer (-20 pts). Attempt {attemptsCount + 1} of {maxAttempts}.</span>
             {localFeedback.explain && (
-              <p className="text-slate-600 text-[11px] leading-relaxed">{localFeedback.explain}</p>
+              <p className="text-slate-300 text-[11px] leading-relaxed">{localFeedback.explain}</p>
             )}
           </div>
         </div>
@@ -495,11 +495,11 @@ export default function TaskPanel({
               isSubmitting ||
               (quiz.type === 'MCQ' ? selectedOption === null : !answer.trim())
             }
-            className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 bg-[#F28C0F] text-slate-950 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-[0.99] cursor-pointer"
+            className="w-full py-3.5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] active:scale-[0.99] cursor-pointer tracking-wide"
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-purple-300/30 border-t-white rounded-full animate-spin" />
                 <span>Checking Answer...</span>
               </>
             ) : cooldown > 0 ? (

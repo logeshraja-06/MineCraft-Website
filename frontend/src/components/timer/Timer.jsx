@@ -4,10 +4,10 @@ import { Clock } from 'lucide-react';
 
 export default function Timer({ secondsRemaining = 0, timerState = 'normal' }) {
   const styles = {
-    normal: 'bg-white border-slate-300 text-orange-400 shadow-sm shadow-cyan-950/30',
-    warning: 'bg-amber-950/60 border-amber-500 text-amber-300 animate-pulse shadow-lg shadow-amber-950/40',
-    critical: 'bg-rose-950/80 border-rose-500 text-rose-300 animate-bounce shadow-xl shadow-rose-950/60',
-    expired: 'bg-white border-rose-500/60 text-rose-400 opacity-80',
+    normal: 'bg-purple-950/60 border-purple-500/40 text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.25)]',
+    warning: 'bg-amber-950/70 border-amber-500/60 text-amber-300 animate-pulse shadow-[0_0_18px_rgba(245,158,11,0.3)]',
+    critical: 'bg-rose-950/80 border-rose-500 text-rose-300 animate-bounce shadow-[0_0_22px_rgba(244,63,94,0.5)]',
+    expired: 'bg-[#0D0F18]/90 border-rose-500/50 text-rose-400 opacity-90 shadow-[0_0_15px_rgba(244,63,94,0.25)]',
   };
 
   return (
@@ -16,10 +16,10 @@ export default function Timer({ secondsRemaining = 0, timerState = 'normal' }) {
         styles[timerState] || styles.normal
       }`}
     >
-      <Clock className="w-4 h-4 flex-shrink-0" />
+      <Clock className="w-4 h-4 flex-shrink-0 text-purple-400" />
       <div>
-        <span className="text-[9px] uppercase tracking-widest text-slate-600 block -mb-0.5">Time Left</span>
-        <span className="text-base tracking-wider">{formatTime(secondsRemaining)}</span>
+        <span className="text-[9px] uppercase tracking-widest text-purple-300/70 block -mb-0.5">Time Left</span>
+        <span className="text-base tracking-wider text-white font-black">{formatTime(secondsRemaining)}</span>
       </div>
     </div>
   );

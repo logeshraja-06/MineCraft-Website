@@ -372,96 +372,99 @@ export default function Challenge() {
   // ─── SETUP phase UI ─────────────────────────────────────────────────────
   if (phase === 'SETUP') {
     return (
-      <div className="max-w-lg mx-auto px-4 py-8 space-y-6 font-mono text-slate-700">
-        <MissionStepper progress={userProgress} compact />
-        <div className="flex items-center justify-between">
-          <Link
-            to="/challenges"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-orange-400 font-mono transition"
-          >
-            ← Back to Roadmap
-          </Link>
-          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-orange-500/20 text-cyan-300 font-bold uppercase tracking-wider border border-orange-500/30">
-            {challenge.difficulty} // {challenge.points} PTS
-          </span>
-        </div>
+      <div className="min-h-screen bg-[#07080D] flex flex-col justify-center py-10 px-4 relative overflow-hidden text-slate-100 font-mono">
+        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="max-w-lg mx-auto w-full space-y-6 relative z-10">
+          <MissionStepper progress={userProgress} compact />
+          <div className="flex items-center justify-between">
+            <Link
+              to="/challenges"
+              className="inline-flex items-center gap-1.5 text-xs text-purple-300 hover:text-white font-mono transition"
+            >
+              ← Back to Roadmap
+            </Link>
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-950/80 text-purple-200 font-bold uppercase tracking-wider border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+              {challenge.difficulty} // {challenge.points} PTS
+            </span>
+          </div>
 
-        <div className="text-center space-y-2">
-          <span className="text-[10px] px-3 py-1 rounded-full bg-orange-500/20 text-cyan-300 font-bold uppercase tracking-wider border border-orange-500/30">
-            MIND CRAFT ARENA
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 mt-3">{challenge.title}</h1>
-          <p className="text-xs text-slate-600">{challenge.description}</p>
-        </div>
+          <div className="text-center space-y-2">
+            <span className="text-[10px] px-3 py-1 rounded-full bg-emerald-950/60 text-emerald-400 font-bold uppercase tracking-wider border border-emerald-500/30">
+              MIND CRAFT ARENA
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">{challenge.title}</h1>
+            <p className="text-xs text-purple-200/70 font-sans leading-relaxed">{challenge.description}</p>
+          </div>
 
-        <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-5">
-          <LanguagePicker
-            language={language}
-            onSelect={selectLanguage}
-            locked={languageLocked}
-          />
+          <div className="p-6 bg-[#0D0F18]/90 border border-purple-500/30 rounded-3xl shadow-[0_0_50px_rgba(168,85,247,0.18)] backdrop-blur-xl space-y-5">
+            <LanguagePicker
+              language={language}
+              onSelect={selectLanguage}
+              locked={languageLocked}
+            />
 
-          <Button
-            variant="primary"
-            size="lg"
-            className="w-full font-black"
-            onClick={async () => {
-              try {
-                await startChallenge();
-                showToast('⏱ Timer started! Good luck.', 'info');
-              } catch (err) {
-                if (err.response?.status === 403) {
-                  navigate('/challenges', {
-                    replace: true,
-                    state: { lockError: err.response.data?.message || 'This challenge is locked.' },
-                  });
+            <Button
+              variant="portal"
+              size="lg"
+              className="w-full font-black rounded-full"
+              onClick={async () => {
+                try {
+                  await startChallenge();
+                  showToast('⏱ Timer started! Good luck.', 'info');
+                } catch (err) {
+                  if (err.response?.status === 403) {
+                    navigate('/challenges', {
+                      replace: true,
+                      state: { lockError: err.response.data?.message || 'This challenge is locked.' },
+                    });
+                  }
                 }
-              }
-            }}
-          >
-            ▶ START HUNT
-          </Button>
+              }}
+            >
+              ▶ START HUNT
+            </Button>
 
-          <p className="text-[11px] text-slate-500 text-center">
-            You can change language until the first task is answered.
-          </p>
+            <p className="text-[11px] text-purple-300/50 text-center font-sans">
+              You can change language until the first task is answered.
+            </p>
+          </div>
+
+          <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage(null)} />
         </div>
-
-        <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage(null)} />
       </div>
     );
   }
 
   // ─── HUNT + ASSEMBLE + DONE layout ───────────────────────────────────────
   return (
-    <div className="max-w-[1700px] mx-auto px-4 py-5 space-y-4 font-mono text-slate-700">
+    <div className="max-w-[1700px] mx-auto px-4 py-5 space-y-4 font-mono text-slate-200">
 
       {/* ── ARENA HEADER ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50/80 border border-slate-200 rounded-2xl shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-[#0D0F18]/90 border border-purple-500/30 rounded-2xl shadow-[0_0_30px_rgba(168,85,247,0.12)] backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Link
             to="/challenges"
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-orange-500 text-xs font-mono transition flex items-center gap-1.5 shrink-0"
+            className="px-3 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-mono transition flex items-center gap-1.5 shrink-0 shadow-sm"
             title="Back to Mission Roadmap"
           >
             <span>←</span>
             <span className="hidden sm:inline">Roadmap</span>
           </Link>
 
-          <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-orange-500/40 flex items-center justify-center text-orange-400 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.25)] shrink-0">
             <Blocks className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-cyan-300 font-bold uppercase tracking-wider">
+              <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold uppercase tracking-wider">
                 MIND CRAFT ARENA
               </span>
-              <h2 className="text-base font-bold text-slate-800 tracking-wide">{challenge.title}</h2>
+              <h2 className="text-base font-bold text-white tracking-wide">{challenge.title}</h2>
             </div>
-            <p className="text-[11px] text-slate-600 mt-0.5">
-              Category: <span className="text-orange-400">{challenge.category}</span>
-              {' '}// Reward: <span className="text-emerald-400">{challenge.points} PTS</span>
-              {' '}// Engine: <span className="text-emerald-400">Judge0</span>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Category: <span className="text-purple-300 font-semibold">{challenge.category}</span>
+              {' '}// Reward: <span className="text-emerald-400 font-semibold">{challenge.points} PTS</span>
+              {' '}// Engine: <span className="text-purple-300 font-semibold">Judge0</span>
             </p>
           </div>
         </div>
@@ -477,10 +480,10 @@ export default function Challenge() {
             locked={languageLocked || phase !== 'SETUP' || Boolean(startTime)}
           />
 
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
-            <User className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-slate-600">Contestant:</span>
-            <span className="text-slate-800 font-bold">{participant?.name || 'Registered Participant'} {participant?.participantId ? `(${participant.participantId})` : ''}</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/20 text-xs">
+            <User className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-slate-400">Contestant:</span>
+            <span className="text-purple-200 font-bold">{participant?.name || 'Registered Participant'} {participant?.participantId ? `(${participant.participantId})` : ''}</span>
           </div>
 
           {participant && (
@@ -494,9 +497,9 @@ export default function Challenge() {
                 }
               }}
               title="Delete participant details and reset for testing"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all shadow-sm active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all shadow-sm active:scale-95"
             >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
               <span className="hidden sm:inline">Delete Details & Exit</span>
               <span className="sm:hidden">Reset</span>
             </button>
@@ -519,41 +522,41 @@ export default function Challenge() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* COLUMN 1: Challenge Brief + Live Score (col-span-3) */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="p-5 bg-white/95 border border-slate-200/90 rounded-2xl space-y-4 shadow-md font-sans">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+            <div className="p-5 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl space-y-4 shadow-xl backdrop-blur-xl font-sans">
+              <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+                <h3 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
                   <span className="text-base">💡</span>
                   <span>Challenge Brief</span>
                 </h3>
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-emerald-500 text-white font-mono shadow-xs">
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-purple-900/80 text-purple-200 border border-purple-500/40 font-mono shadow-xs">
                   {challenge.difficulty || 'EASY'}
                 </span>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-mono">
+                <label className="text-[10px] text-purple-300/70 font-bold uppercase tracking-wider block font-mono">
                   Problem
                 </label>
-                <p className="text-slate-800 whitespace-pre-line bg-slate-50/90 p-3.5 rounded-xl border border-slate-200/80 text-xs font-mono leading-relaxed">
+                <p className="text-slate-200 whitespace-pre-line bg-[#07080D]/90 p-3.5 rounded-xl border border-purple-500/20 text-xs font-mono leading-relaxed">
                   {challenge.description}
                 </p>
               </div>
 
               {/* Sample I/O */}
-              <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-mono">
+              <div className="space-y-1.5 pt-1 border-t border-purple-500/20">
+                <span className="text-[10px] text-purple-300/70 font-bold uppercase tracking-wider block font-mono">
                   Sample Test
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                   <div>
-                    <span className="text-[10px] text-slate-500 block mb-1">Input:</span>
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-[11px] font-mono min-h-[38px] flex items-center">
+                    <span className="text-[10px] text-slate-400 block mb-1">Input:</span>
+                    <div className="p-2.5 bg-[#07080D]/90 border border-purple-500/20 rounded-xl text-slate-200 text-[11px] font-mono min-h-[38px] flex items-center">
                       {challenge.sampleInput || 'N/A'}
                     </div>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block mb-1">Output:</span>
-                    <div className="p-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl text-emerald-700 font-bold text-[11px] font-mono min-h-[38px] flex items-center">
+                    <span className="text-[10px] text-slate-400 block mb-1">Output:</span>
+                    <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-emerald-300 font-bold text-[11px] font-mono min-h-[38px] flex items-center">
                       {challenge.sampleOutput || 'N/A'}
                     </div>
                   </div>
@@ -575,13 +578,13 @@ export default function Challenge() {
           {/* COLUMN 2: Task Progression & Task Panel (col-span-5) */}
           <div className="lg:col-span-5 space-y-4">
             {/* Task progress bar & circular step badges */}
-            <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl space-y-3 shadow-md font-sans">
+            <div className="p-4 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl space-y-3 shadow-xl backdrop-blur-xl font-sans">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <h3 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
                   <span className="text-base">🎯</span>
                   <span>Task Progress</span>
                 </h3>
-                <span className="text-xs font-bold text-cyan-600 font-mono">
+                <span className="text-xs font-bold text-purple-300 font-mono">
                   {completedTaskIds.length} / {totalTasks} tasks
                 </span>
               </div>
@@ -596,10 +599,10 @@ export default function Challenge() {
                       key={i}
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 ${
                         isDone
-                          ? 'bg-emerald-500 text-white shadow-xs'
+                          ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]'
                           : isCurrent
-                          ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
-                          : 'bg-slate-100 text-slate-400 border border-slate-200'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] ring-2 ring-purple-400'
+                          : 'bg-purple-950/40 text-purple-400/50 border border-purple-500/20'
                       }`}
                     >
                       {isDone ? '✓' : i + 1}
@@ -632,20 +635,20 @@ export default function Challenge() {
 
             {/* Waiting state: no current task but not all done */}
             {!currentTask && !allTasksCompleted && (
-              <div className="p-6 bg-white/90 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500 font-mono shadow-sm">
+              <div className="p-6 bg-[#0D0F18]/80 border border-dashed border-purple-500/30 rounded-2xl text-center text-xs text-purple-300/70 font-mono shadow-sm">
                 Loading next task...
               </div>
             )}
 
             {/* All tasks completed — transition message */}
             {allTasksCompleted && (
-              <div className="p-5 bg-emerald-50 border border-emerald-300 rounded-2xl text-center space-y-2 animate-fadeIn shadow-sm">
+              <div className="p-6 bg-gradient-to-r from-purple-950/80 to-indigo-950/80 border border-purple-400/50 rounded-2xl text-center space-y-3 animate-fadeIn shadow-[0_0_30px_rgba(168,85,247,0.25)]">
                 <span className="text-3xl">🎉</span>
-                <p className="text-sm font-bold text-emerald-800">All Tasks Completed!</p>
-                <p className="text-xs text-slate-600">All code fragments unlocked in the Treasure Box.</p>
+                <p className="text-sm font-bold text-purple-100">All Tasks Completed!</p>
+                <p className="text-xs text-purple-300/80">All code fragments unlocked in the Treasure Box.</p>
                 <button
                   onClick={startAssemblyPhase}
-                  className="mt-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                  className="mt-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-[0_0_20px_rgba(168,85,247,0.4)] transition cursor-pointer"
                 >
                   Proceed to Assembly Board →
                 </button>
@@ -675,81 +678,81 @@ export default function Challenge() {
         </div>
       )}
 
-      {/* ── PHASE 2: ASSEMBLE / DONE PHASE (TREASURE VAULT HIDDEN! 2 VISIBLE SIDES: ASSEMBLY ON LEFT, COMPILER & OUTPUT ON RIGHT) ── */}
+      {/* ── PHASE 2: ASSEMBLE / DONE PHASE ── */}
       {(phase === 'ASSEMBLE' || phase === 'DONE') && (
         <div className="space-y-4 animate-fadeIn">
           {/* Phase Banner */}
-          <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs font-mono text-emerald-900 flex items-center justify-between gap-3 shadow-xs">
+          <div className="p-3.5 bg-purple-950/60 border border-purple-500/30 rounded-2xl text-xs font-mono text-purple-200 flex items-center justify-between gap-3 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
             <div className="flex items-center gap-2">
               <span className="text-xl">🎉</span>
               <span>All fragments collected! Arrange them in the correct sequence on the left, then run and submit on the right.</span>
             </div>
             <button
               onClick={handleClearAssembly}
-              className="px-3 py-1.5 text-[11px] font-mono text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
+              className="px-3 py-1.5 text-[11px] font-mono text-purple-200 bg-purple-900/60 hover:bg-purple-800/80 border border-purple-500/40 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
             >
-              <Shuffle className="w-3.5 h-3.5 text-orange-500" /> Reset Order
+              <Shuffle className="w-3.5 h-3.5 text-purple-400" /> Reset Order
             </button>
           </div>
 
-          {/* 1. Problem Objective Summary Card (Full-width Top Overview) */}
-          <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3 font-sans">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <BookOpen className="w-3.5 h-3.5 text-orange-500" />
+          {/* 1. Problem Objective Summary Card */}
+          <div className="p-4 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl shadow-xl backdrop-blur-xl space-y-3 font-sans">
+            <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+              <h3 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <BookOpen className="w-3.5 h-3.5 text-purple-400" />
                 <span>Problem Objective</span>
               </h3>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-emerald-500 text-white font-mono shadow-xs">
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-purple-900/80 text-purple-200 border border-purple-500/40 font-mono shadow-xs">
                 {challenge.difficulty || 'EASY'}
               </span>
             </div>
-            <p className="text-slate-700 text-xs font-mono leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+            <p className="text-slate-200 text-xs font-mono leading-relaxed bg-[#07080D]/90 p-3 rounded-xl border border-purple-500/20">
               {challenge.description}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
               <div>
-                <span className="text-[10px] text-slate-400 block mb-1 font-bold">Input:</span>
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] font-mono">
+                <span className="text-[10px] text-purple-300/70 block mb-1 font-bold">Input:</span>
+                <div className="p-2.5 bg-[#07080D]/90 border border-purple-500/20 rounded-lg text-slate-200 text-[11px] font-mono">
                   {challenge.sampleInput || 'N/A'}
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 block mb-1 font-bold">Expected Output:</span>
-                <div className="p-2.5 bg-emerald-50/70 border border-emerald-300 rounded-lg text-emerald-700 font-bold text-[11px] font-mono">
+                <span className="text-[10px] text-purple-300/70 block mb-1 font-bold">Expected Output:</span>
+                <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-lg text-emerald-300 font-bold text-[11px] font-mono">
                   {challenge.sampleOutput || 'N/A'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 2. UNIFIED CODE ASSEMBLY & LIVE PREVIEW WORKSPACE (IN THE SAME SECTION, PERFECTLY FITTED SIDE-BY-SIDE) */}
-          <div className="p-4 sm:p-5 bg-white/95 border-2 border-slate-200/90 rounded-2xl shadow-md space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          {/* 2. UNIFIED CODE ASSEMBLY & LIVE PREVIEW WORKSPACE */}
+          <div className="p-4 sm:p-5 bg-[#0D0F18]/90 border border-purple-500/30 rounded-2xl shadow-[0_0_30px_rgba(168,85,247,0.1)] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/20 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-mono">
-                  <Blocks className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <Blocks className="w-4 h-4 text-purple-400" />
                   <span>Assemble Code Sequence &amp; Live Preview</span>
                 </h3>
-                <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                   Arrange fragments on the left • Live assembled program synthesizes in real-time on the right
                 </p>
               </div>
               <div className="flex items-center gap-2.5 self-start sm:self-auto">
-                <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                <span className="text-xs font-mono font-bold text-purple-200 bg-purple-950/60 px-3 py-1 rounded-full border border-purple-500/30">
                   {assemblyFragments.length} / {totalFragments} fragments
                 </span>
                 <button
                   onClick={handleClearAssembly}
-                  className="px-3 py-1 text-xs font-mono font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
+                  className="px-3 py-1 text-xs font-mono font-bold text-purple-200 bg-purple-900/50 hover:bg-purple-800/70 border border-purple-500/30 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
                   title="Reset to default shuffled order"
                 >
-                  <Shuffle className="w-3.5 h-3.5 text-orange-500" />
+                  <Shuffle className="w-3.5 h-3.5 text-purple-400" />
                   <span>Reset Order</span>
                 </button>
               </div>
             </div>
 
-            {/* SIDE-BY-SIDE IN THE SAME SECTION (EQUAL ALIGNMENT, ZERO AWKWARD SCROLLBAR TRAPPING) */}
+            {/* SIDE-BY-SIDE IN THE SAME SECTION */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               {/* Left Column (col-span-6): Assemble Code Sequence */}
               <div className="lg:col-span-6 flex flex-col">
@@ -776,15 +779,15 @@ export default function Challenge() {
             {/* Left Column (col-span-5): Controls + Progress */}
             <div className="lg:col-span-5 space-y-4">
               {/* Execution Controls: Run Code & Submit Buttons */}
-              <div className="p-4 bg-white/95 border border-slate-200/90 rounded-2xl shadow-sm space-y-3">
+              <div className="p-4 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl shadow-xl backdrop-blur-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                    <Terminal className="w-4 h-4 text-orange-500" />
+                  <h4 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <Terminal className="w-4 h-4 text-purple-400" />
                     <span>Compiler Controls</span>
                   </h4>
                   <button
                     onClick={resetAll}
-                    className="text-rose-500 hover:text-rose-700 flex items-center gap-1 text-[11px] font-mono transition cursor-pointer"
+                    className="text-rose-400 hover:text-rose-300 flex items-center gap-1 text-[11px] font-mono transition cursor-pointer"
                   >
                     <RotateCcw className="w-3 h-3" /> Reset Session
                   </button>
@@ -804,19 +807,19 @@ export default function Challenge() {
                 </div>
 
                 {/* Free Runs & Penalties indicator */}
-                <div className="flex items-center justify-between text-[11px] font-mono px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between text-[11px] font-mono px-3 py-1.5 rounded-xl bg-[#07080D]/90 border border-purple-500/20">
                   <span>
                     {(points?.runsRemainingFree ?? 3) > 0 ? (
-                      <span className="text-emerald-700 font-bold">
+                      <span className="text-emerald-400 font-bold">
                         ✓ {(points?.runsRemainingFree ?? 3)}/3 Free Runs Left
                       </span>
                     ) : (
-                      <span className="text-amber-700 font-bold">
+                      <span className="text-amber-400 font-bold">
                         ⚠️ Extra run: -10 pts each
                       </span>
                     )}
                   </span>
-                  <span className="text-slate-600 font-bold">
+                  <span className="text-purple-300/80 font-bold">
                     Runs Used: {points?.runCount ?? 0}
                   </span>
                 </div>

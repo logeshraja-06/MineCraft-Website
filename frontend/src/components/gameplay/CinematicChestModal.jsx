@@ -344,26 +344,26 @@ export default function CinematicChestModal({
                     </span>
                   </div>
                   {fragment?.role && (
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-500/60 font-mono uppercase tracking-wider shadow-sm">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/50 font-mono uppercase tracking-wider shadow-sm">
                       {fragment.role}
                     </span>
                   )}
                 </div>
 
                 {/* Dark Holographic Code Inspector Box */}
-                <div className="rounded-2xl overflow-hidden border-2 border-slate-700/80 bg-[#070b14] shadow-2xl font-mono text-xs">
+                <div className="rounded-2xl overflow-hidden border-2 border-purple-500/30 bg-[#07080D] shadow-2xl font-mono text-xs">
                   {/* Top Bar with Copy Button */}
-                  <div className="px-4 py-2.5 bg-[#0f172a] border-b border-slate-800 flex items-center justify-between text-slate-300">
+                  <div className="px-4 py-2.5 bg-[#0D0F18] border-b border-purple-500/20 flex items-center justify-between text-slate-300">
                     <div className="flex items-center gap-2">
-                      <Code2 className="w-4 h-4 text-amber-400" />
-                      <span className="text-[11px] font-bold text-slate-200">
+                      <Code2 className="w-4 h-4 text-purple-400" />
+                      <span className="text-[11px] font-bold text-purple-200">
                         Fragment #{chestIndex + 1} • Logic Unit
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleCopy(fragment?.code)}
-                      className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer border border-slate-700"
+                      className="px-3 py-1 rounded-lg bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 hover:text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer border border-purple-500/30"
                     >
                       {copied ? (
                         <>
@@ -372,7 +372,7 @@ export default function CinematicChestModal({
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <Copy className="w-3.5 h-3.5 text-purple-400" />
                           <span>Copy</span>
                         </>
                       )}
@@ -380,15 +380,15 @@ export default function CinematicChestModal({
                   </div>
 
                   {/* Syntax-Highlighted Code Lines */}
-                  <div className="p-4 overflow-x-auto max-h-56 leading-relaxed text-[11.5px] bg-[#070b14]">
+                  <div className="p-4 overflow-x-auto max-h-56 leading-relaxed text-[11.5px] bg-[#07080D]">
                     <table className="w-full border-collapse">
                       <tbody>
                         {(fragment?.code || '// Code fragment ready').split('\n').map((line, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/30">
-                            <td className="pr-3 text-right text-slate-600 select-none text-[10px] w-7 align-top">
+                          <tr key={idx} className="hover:bg-purple-950/20">
+                            <td className="pr-3 text-right text-purple-400/50 select-none text-[10px] w-7 align-top">
                               {idx + 1}
                             </td>
-                            <td className="text-emerald-300 font-mono whitespace-pre font-medium pl-2">
+                            <td className="text-purple-200 font-mono whitespace-pre font-medium pl-2">
                               {line || ' '}
                             </td>
                           </tr>
@@ -398,7 +398,7 @@ export default function CinematicChestModal({
                   </div>
 
                   {/* Bottom Success Banner */}
-                  <div className="px-4 py-2 bg-emerald-950/40 border-t border-emerald-900/60 flex items-center gap-2 text-emerald-400 text-[11px] font-semibold">
+                  <div className="px-4 py-2 bg-emerald-950/40 border-t border-emerald-500/30 flex items-center gap-2 text-emerald-300 text-[11px] font-semibold">
                     <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span>Fragment saved to Vault! You can re-read it anytime on the right.</span>
                   </div>
@@ -411,7 +411,7 @@ export default function CinematicChestModal({
                     if (onCollect) onCollect(keyData);
                     if (onClose) onClose();
                   }}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(245,158,11,0.6)] transition active:scale-95 cursor-pointer font-mono"
+                  className="w-full py-4 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:shadow-[0_0_40px_rgba(168,85,247,0.7)] transition active:scale-95 cursor-pointer font-mono"
                 >
                   <span>{isAllCompleted ? 'Proceed to Assembly Board' : 'Collect Fragment & Continue'}</span>
                   <ArrowRight className="w-4 h-4" />

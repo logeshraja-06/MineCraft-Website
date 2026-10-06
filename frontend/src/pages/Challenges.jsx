@@ -207,17 +207,21 @@ export default function Challenges() {
   const getDifficultyBadge = (diff) => {
     switch (diff?.toLowerCase()) {
       case 'easy':
-        return 'bg-emerald-50 text-emerald-600 border-emerald-300';
+        return 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]';
       case 'hard':
-        return 'bg-rose-50 text-rose-600 border-rose-300';
+        return 'bg-rose-950/60 text-rose-400 border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.2)]';
       case 'medium':
       default:
-        return 'bg-amber-50 text-amber-600 border-amber-300';
+        return 'bg-purple-950/60 text-purple-300 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.2)]';
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-mono py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#07080D] text-slate-100 font-mono py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Decorative ambient glowing orbs */}
+      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-1/4 left-10 w-[450px] h-[450px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
+
       {toastMessage && (
         <Toast
           message={toastMessage}
@@ -226,22 +230,25 @@ export default function Challenges() {
         />
       )}
 
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-8 relative z-10">
         {/* ── HEADER BANNER ── */}
-        <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-white border border-slate-200 shadow-xl">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-[#0D0F18]/85 border border-purple-500/25 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.12)]">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-3 max-w-xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 text-[11px] font-bold uppercase tracking-widest">
-                <Layers className="w-3.5 h-3.5" /> LINEAR ARENA SEQUENCE
+              {/* Creeper badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-[0_0_6px_#10b981]" />
+                BUILT FOR CREATORS // LINEAR ARENA SEQUENCE
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                MISSION ROADMAP
+
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md">
+                MISSION <span className="bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">ROADMAP</span>
               </h1>
-              <p className="text-xs text-slate-600 leading-relaxed font-sans">
-                Progress through a strict linear sequence: Easy first, unlock Medium upon acceptance, then Hard.
+              <p className="text-xs text-purple-200/70 leading-relaxed font-sans">
+                Progress through a strict linear Nether portal sequence: solve Easy first, unlock Medium upon acceptance, then Hard.
                 Challenges cannot be skipped or chosen freely.
               </p>
 
@@ -250,19 +257,19 @@ export default function Challenges() {
                   {participant ? (
                     <button
                       onClick={() => handleStartChallenge(currentStep)}
-                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25 cursor-pointer"
+                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.4)] border border-purple-400/40 cursor-pointer"
                     >
-                      <Play className="w-4 h-4 fill-slate-950" />
-                      <span>{currentStep.hasActiveSession ? 'RESUME ARENA' : 'START CHALLENGE'} (Step {currentStep.sequenceOrder}: {currentStep.difficulty})</span>
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>{currentStep.hasActiveSession ? 'RESUME ARENA' : 'ENTER THE PORTAL'} (Step {currentStep.sequenceOrder}: {currentStep.difficulty})</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   ) : (
                     <Link
                       to="/register"
-                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25"
+                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.4)] border border-purple-400/40"
                     >
                       <UserPlus className="w-4 h-4" />
-                      <span>REGISTER TO START CHALLENGE</span>
+                      <span>REGISTER TO ENTER THE PORTAL</span>
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                   )}
@@ -272,20 +279,20 @@ export default function Challenges() {
 
             {/* Header Stats */}
             <div className="flex flex-row md:flex-col gap-3 min-w-[200px] w-full md:w-auto">
-              <div className="flex-1 md:flex-initial p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                <span className="text-[11px] text-slate-600 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Completed
+              <div className="flex-1 md:flex-initial p-3.5 rounded-2xl bg-[#141724]/80 border border-purple-500/20 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] text-purple-200/70 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Completed
                 </span>
-                <span className="text-sm font-black text-emerald-600">
+                <span className="text-sm font-black text-emerald-400">
                   {completedCount} / 3
                 </span>
               </div>
-              <div className="flex-1 md:flex-initial p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
-                <span className="text-[11px] text-slate-600 flex items-center gap-1.5">
-                  <Trophy className="w-3.5 h-3.5 text-amber-500" /> Points Earned
+              <div className="flex-1 md:flex-initial p-3.5 rounded-2xl bg-[#141724]/80 border border-purple-500/20 flex items-center justify-between gap-3 shadow-inner">
+                <span className="text-[11px] text-purple-200/70 flex items-center gap-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-amber-400" /> Points Earned
                 </span>
-                <span className="text-sm font-black text-amber-600">
-                  {earnedPoints} <span className="text-[10px] text-slate-400">/ {totalPoints || 600}</span>
+                <span className="text-sm font-black text-amber-300">
+                  {earnedPoints} <span className="text-[10px] text-slate-500">/ {totalPoints || 600}</span>
                 </span>
               </div>
             </div>
@@ -293,7 +300,7 @@ export default function Challenges() {
         </div>
 
         {/* ── TOP-LEVEL STEPPER ── */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-md">
+        <div className="p-4 rounded-2xl bg-[#0D0F18]/85 border border-purple-500/20 shadow-md backdrop-blur-xl">
           <MissionStepper
             progress={roadmapSteps.map((s) => ({
               sequenceOrder: s.sequenceOrder,
@@ -306,21 +313,21 @@ export default function Challenges() {
 
         {/* ── GUEST / UNREGISTERED NOTICE ── */}
         {!participant && (
-          <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="p-4 rounded-2xl bg-[#0D0F18]/90 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-600 flex items-center justify-center shrink-0">
-                <UserPlus className="w-4 h-4" />
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center shrink-0">
+                <UserPlus className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-800">Contestant Registration Required</h4>
-                <p className="text-[11px] text-slate-600 font-sans">
+                <h4 className="text-xs font-bold text-white">Contestant Registration Required</h4>
+                <p className="text-[11px] text-purple-200/60 font-sans">
                   Register your ID to begin the Easy challenge and record your official tournament leaderboard time.
                 </p>
               </div>
             </div>
             <Link
               to="/register"
-              className="px-5 py-2.5 rounded-xl bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-bold text-xs tracking-wider transition shrink-0 flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wider transition shrink-0 flex items-center gap-1.5 shadow-[0_0_20px_rgba(168,85,247,0.3)] border border-purple-400/40"
             >
               REGISTER TO BEGIN <ArrowRight className="w-4 h-4" />
             </Link>
@@ -329,27 +336,27 @@ export default function Challenges() {
 
         {/* ── ALL CHALLENGES COMPLETED BANNER ── */}
         {allCompleted && (
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-50 via-emerald-50 to-orange-50 border border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md text-center sm:text-left">
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-950/80 via-[#0D0F18] to-indigo-950/80 border border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_35px_rgba(168,85,247,0.25)] text-center sm:text-left">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-600 flex items-center justify-center text-xl shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center text-xl shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
                 🏆
               </div>
               <div>
-                <h3 className="text-sm font-black text-slate-900">ALL CHALLENGES COMPLETED</h3>
-                <p className="text-xs text-amber-800 font-sans">
-                  You have successfully solved the entire Mind Craft mission track with {earnedPoints} points!
+                <h3 className="text-sm font-black text-white">ALL CHALLENGES COMPLETED</h3>
+                <p className="text-xs text-purple-200/70 font-sans">
+                  You have successfully conquered the entire Mind Craft Nether track with {earnedPoints} points!
                 </p>
               </div>
             </div>
             {isAdmin ? (
               <Link
                 to="/admin/leaderboard"
-                className="px-5 py-2.5 rounded-xl bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black text-xs tracking-wider transition shrink-0"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs tracking-wider transition shrink-0 border border-purple-400/40 shadow-lg"
               >
                 VIEW FINAL STANDINGS
               </Link>
             ) : (
-              <div className="px-4 py-2.5 rounded-xl bg-amber-200/80 border border-amber-300 text-amber-950 font-bold text-xs tracking-wider shrink-0 text-center">
+              <div className="px-4 py-2.5 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-300 font-bold text-xs tracking-wider shrink-0 text-center">
                 RESULTS MANAGED BY ADMIN
               </div>
             )}
@@ -362,7 +369,7 @@ export default function Challenges() {
             [1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="p-6 bg-white border border-slate-200 rounded-2xl animate-pulse h-36"
+                className="p-6 bg-[#0D0F18]/80 border border-purple-500/15 rounded-2xl animate-pulse h-36"
               />
             ))
           ) : (
@@ -374,31 +381,31 @@ export default function Challenges() {
               return (
                 <div
                   key={step.slug || step._id}
-                  className={`p-6 rounded-2xl border transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${
+                  className={`p-6 rounded-2xl border transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 backdrop-blur-xl ${
                     isCompleted
-                      ? 'bg-white border-emerald-300 shadow-sm'
+                      ? 'bg-[#0D0F18]/85 border-emerald-500/35 shadow-[0_0_25px_rgba(16,185,129,0.12)]'
                       : isCurrent
-                      ? 'bg-white border-orange-400 shadow-lg ring-1 ring-orange-300'
-                      : 'bg-slate-100/60 border-slate-200 opacity-60'
+                      ? 'bg-[#0D0F18]/90 border-purple-500/50 shadow-[0_0_35px_rgba(168,85,247,0.25)] ring-1 ring-purple-400/30'
+                      : 'bg-[#090A10]/70 border-slate-800/80 opacity-60'
                   }`}
                 >
                   {/* Left: Step Info */}
                   <div className="flex items-start gap-4">
                     <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border ${
                         isCompleted
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                          ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
                           : isCurrent
-                          ? 'bg-orange-50 text-orange-600 border-orange-400 shadow-sm shadow-orange-500/20'
-                          : 'bg-slate-200 text-slate-400 border-slate-300'
+                          ? 'bg-purple-950/70 text-purple-200 border-purple-500/60 shadow-[0_0_20px_rgba(168,85,247,0.35)] animate-pulse'
+                          : 'bg-slate-900 text-slate-600 border-slate-800'
                       }`}
                     >
-                      {isCompleted ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : isLocked ? <Lock className="w-4 h-4 text-slate-400" /> : step.sequenceOrder}
+                      {isCompleted ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : isLocked ? <Lock className="w-4 h-4 text-slate-500" /> : step.sequenceOrder}
                     </div>
 
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-bold uppercase">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 font-bold uppercase">
                           Step {step.sequenceOrder}
                         </span>
                         <span
@@ -408,25 +415,25 @@ export default function Challenges() {
                         >
                           {step.difficulty}
                         </span>
-                        <span className="text-[10px] text-amber-600 font-black flex items-center gap-1">
-                          <Flame className="w-3 h-3 text-amber-500" />
+                        <span className="text-[10px] text-amber-400 font-black flex items-center gap-1">
+                          <Flame className="w-3 h-3 text-amber-400" />
                           {step.points} PTS
                         </span>
-                        <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
+                        <span className="text-[10px] text-purple-200/60 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-purple-400" />
                           {step.durationMin}m
                         </span>
                       </div>
 
-                      <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                      <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                         {step.title}
                       </h2>
 
-                      <p className="text-xs text-slate-600 max-w-xl font-sans leading-relaxed">
+                      <p className="text-xs text-purple-200/70 max-w-xl font-sans leading-relaxed">
                         {step.description}
                       </p>
 
-                      <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
+                      <div className="flex items-center gap-4 text-[11px] text-purple-300/50 pt-1">
                         <span>{step.tasksCount} Progressive Tasks</span>
                         <span>•</span>
                         <span>{step.blocksCount} Code Fragments</span>
@@ -435,10 +442,10 @@ export default function Challenges() {
                   </div>
 
                   {/* Right: Action Area */}
-                  <div className="shrink-0 w-full md:w-auto flex md:flex-col items-center md:items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-200">
+                  <div className="shrink-0 w-full md:w-auto flex md:flex-col items-center md:items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800">
                     {isCompleted && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-600 text-xs font-bold">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                         <span>Completed ✓</span>
                       </div>
                     )}
@@ -446,10 +453,10 @@ export default function Challenges() {
                     {isCurrent && participant && (
                       <button
                         onClick={() => handleStartChallenge(step)}
-                        className="w-full md:w-auto px-7 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full md:w-auto px-7 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.45)] border border-purple-400/40 flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Play className="w-4 h-4 fill-slate-950" />
-                        <span>{step.hasActiveSession ? 'RESUME ARENA' : 'START CHALLENGE'}</span>
+                        <Play className="w-4 h-4 fill-white" />
+                        <span>{step.hasActiveSession ? 'RESUME ARENA' : 'ENTER THE PORTAL'}</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     )}
@@ -457,7 +464,7 @@ export default function Challenges() {
                     {isCurrent && !participant && (
                       <Link
                         to="/register"
-                        className="w-full md:w-auto px-7 py-3 rounded-2xl bg-[#F28C0F] hover:bg-orange-500 active:scale-95 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
+                        className="w-full md:w-auto px-7 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.45)] border border-purple-400/40 flex items-center justify-center gap-2"
                       >
                         <UserPlus className="w-4 h-4" />
                         <span>REGISTER TO START</span>
@@ -467,7 +474,7 @@ export default function Challenges() {
 
                     {isLocked && (
                       <div className="inline-flex items-center gap-2 text-xs text-slate-500 italic">
-                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        <Lock className="w-3.5 h-3.5 text-slate-600" />
                         <span>Complete {step.previousTitle || 'previous challenge'} to unlock</span>
                       </div>
                     )}

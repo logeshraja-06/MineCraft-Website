@@ -16,16 +16,27 @@ export default {
           900: '#14532d',
         },
         orange: {
-          400: '#faba7b', // Lighter shade
-          500: '#F28C0F', // Main color requested
-          600: '#d97c0d', // Darker shade
+          400: '#faba7b',
+          500: '#F28C0F',
+          600: '#d97c0d',
+        },
+        portal: {
+          dark: '#07080D',
+          obsidian: '#0B0C14',
+          card: '#0D0F18',
+          border: 'rgba(168, 85, 247, 0.25)',
+          purple: '#A855F7',
+          violet: '#C084FC',
+          neon: '#9333EA',
+          deep: '#3B0764',
+          creeper: '#22C55E',
         },
         cyber: {
-          dark: '#ffffff',
-          card: '#f8fafc',
-          border: '#e2e8f0',
-          neon: '#F28C0F',
-          accent: '#F28C0F',
+          dark: '#07080D',
+          card: '#0D0F18',
+          border: 'rgba(168, 85, 247, 0.2)',
+          neon: '#A855F7',
+          accent: '#C084FC',
         }
       },
       fontFamily: {

@@ -64,7 +64,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="bg-white min-h-screen font-sans text-slate-800 overflow-hidden relative selection:bg-orange-100 selection:text-orange-900">
+    <div className="bg-[#07080D] min-h-screen font-sans text-slate-100 overflow-hidden relative selection:bg-purple-600 selection:text-white">
 
       {/* ── HERO SECTION ─────────────────────────────────────────── */}
       <Hero participant={participant} targetUrl={targetUrl} />
@@ -73,81 +73,84 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* ── 3-TIER LINEAR MISSION PATH ── */}
-        <section className="py-10">
-          <div className="p-8 sm:p-10 bg-gradient-to-r from-orange-50/90 via-amber-50/70 to-orange-50/90 border-2 border-orange-200/90 rounded-3xl text-center space-y-6 shadow-sm relative overflow-hidden bg-arcade-grid">
+        <section className="py-12">
+          <div className="p-8 sm:p-10 bg-[#0D0F18]/80 border border-purple-500/30 rounded-3xl text-center space-y-6 shadow-2xl shadow-purple-950/40 relative overflow-hidden backdrop-blur-xl">
 
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-orange-200 text-[#F28C0F] text-xs font-mono font-black tracking-wider uppercase shadow-xs">
-              <Layers className="w-3.5 h-3.5" />
+            {/* Ambient glow flare inside card */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[200px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-300 text-xs font-mono font-bold tracking-widest uppercase shadow-md relative z-10">
+              <Layers className="w-3.5 h-3.5 text-purple-400" />
               <span>Strict Sequential Track · 0 Points Initial Baseline</span>
             </div>
 
-            <div className="space-y-2 max-w-xl mx-auto">
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <div className="space-y-2 max-w-xl mx-auto relative z-10">
+              <h3 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight uppercase">
                 3-Tier Linear Mission Track
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
                 All contestants start with 0 points. Complete Easy to unlock Medium, then solve Medium to unlock Hard. Minimum negative points win!
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 max-w-4xl mx-auto relative">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 max-w-4xl mx-auto relative z-10">
 
               {/* Tier 1: Easy */}
-              <div className="p-6 bg-white rounded-2xl border-2 border-emerald-300/90 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
+              <div className="p-6 bg-[#111422]/90 rounded-2xl border border-emerald-500/40 shadow-xl hover:shadow-[0_0_25px_rgba(34,197,94,0.3)] hover:border-emerald-400 hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
                 <div className="absolute top-2 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
                   <IsometricVoxelCube size={32} variant="emerald" label="T1" />
                 </div>
-                <div className="inline-flex px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-mono font-black uppercase tracking-wider">
+                <div className="inline-flex px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 text-[11px] font-mono font-black uppercase tracking-wider">
                   Tier 1 // Easy
                 </div>
-                <h4 className="text-2xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
+                <h4 className="text-2xl font-black text-white group-hover:text-emerald-400 transition-colors">
                   Warm-Up Logic
                 </h4>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-400 font-medium leading-relaxed">
                   Entry-level problem solving, warm-up logic tasks &amp; QR checkpoints.
                 </p>
-                <div className="pt-2 text-xs font-mono font-bold text-emerald-700 bg-emerald-50 py-1.5 rounded-lg border border-emerald-100 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
+                <div className="pt-2 text-xs font-mono font-bold text-emerald-300 bg-emerald-950/40 py-1.5 rounded-lg border border-emerald-500/30 flex items-center justify-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
                   <span>15 Mins · 1 Problem Track</span>
                 </div>
               </div>
 
               {/* Tier 2: Medium */}
-              <div className="p-6 bg-white rounded-2xl border-2 border-amber-300/90 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
+              <div className="p-6 bg-[#111422]/90 rounded-2xl border border-purple-500/40 shadow-xl hover:shadow-[0_0_25px_rgba(168,85,247,0.35)] hover:border-purple-400 hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
                 <div className="absolute top-2 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
                   <IsometricVoxelCube size={32} variant="gold" label="T2" />
                 </div>
-                <div className="inline-flex px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-mono font-black uppercase tracking-wider">
+                <div className="inline-flex px-3 py-1 rounded-full bg-purple-950/70 border border-purple-500/40 text-purple-300 text-[11px] font-mono font-black uppercase tracking-wider">
                   Tier 2 // Medium
                 </div>
-                <h4 className="text-2xl font-black text-slate-900 group-hover:text-amber-600 transition-colors">
+                <h4 className="text-2xl font-black text-white group-hover:text-purple-300 transition-colors">
                   Algorithms &amp; Structures
                 </h4>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-400 font-medium leading-relaxed">
                   Intermediate data structures &amp; algorithms requiring structured assembly.
                 </p>
-                <div className="pt-2 text-xs font-mono font-bold text-amber-700 bg-amber-50 py-1.5 rounded-lg border border-amber-100 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
+                <div className="pt-2 text-xs font-mono font-bold text-purple-300 bg-purple-950/40 py-1.5 rounded-lg border border-purple-500/30 flex items-center justify-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-purple-400" />
                   <span>15 Mins · 1 Problem Track</span>
                 </div>
               </div>
 
               {/* Tier 3: Hard */}
-              <div className="p-6 bg-white rounded-2xl border-2 border-rose-300/90 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
+              <div className="p-6 bg-[#111422]/90 rounded-2xl border border-rose-500/40 shadow-xl hover:shadow-[0_0_25px_rgba(244,63,94,0.35)] hover:border-rose-400 hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
                 <div className="absolute top-2 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
                   <IsometricVoxelCube size={32} variant="redstone" label="T3" />
                 </div>
-                <div className="inline-flex px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-[11px] font-mono font-black uppercase tracking-wider">
+                <div className="inline-flex px-3 py-1 rounded-full bg-rose-950/70 border border-rose-500/40 text-rose-300 text-[11px] font-mono font-black uppercase tracking-wider">
                   Tier 3 // Hard
                 </div>
-                <h4 className="text-2xl font-black text-slate-900 group-hover:text-rose-600 transition-colors">
+                <h4 className="text-2xl font-black text-white group-hover:text-rose-400 transition-colors">
                   Master Arena
                 </h4>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-400 font-medium leading-relaxed">
                   Championship-tier computational challenges &amp; advanced edge-case testing.
                 </p>
-                <div className="pt-2 text-xs font-mono font-bold text-rose-700 bg-rose-50 py-1.5 rounded-lg border border-rose-100 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
+                <div className="pt-2 text-xs font-mono font-bold text-rose-300 bg-rose-950/40 py-1.5 rounded-lg border border-rose-500/30 flex items-center justify-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-rose-400" />
                   <span>15 Mins · 1 Problem Track</span>
                 </div>
               </div>
@@ -157,17 +160,17 @@ export default function Home() {
         </section>
 
         {/* ── HOW IT WORKS: 6 STEP CARDS ── */}
-        <section className="py-12 md:py-16 border-t border-slate-100 relative">
-          <div className="flex items-center gap-4 mb-12">
-            <div className="w-12 h-2 bg-[#F28C0F] rounded-full"></div>
+        <section className="py-12 md:py-16 border-t border-purple-900/30 relative">
+          <div className="flex items-center gap-4 mb-10">
+            <div className="w-10 h-2 bg-gradient-to-r from-purple-500 to-violet-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
             <div>
-              <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-wider uppercase flex items-center gap-2">
+              <h3 className="text-2xl md:text-3xl font-black text-white tracking-wider uppercase flex items-center gap-2">
                 <span>HOW IT WORKS</span>
-                <span className="text-xs font-mono font-bold text-[#F28C0F] bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200">
+                <span className="text-xs font-mono font-bold text-purple-300 bg-purple-950/70 px-3 py-0.5 rounded-full border border-purple-500/40">
                   6 GAMEPLAY STAGES
                 </span>
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">
                 The core quest mechanics from unlocking the key to compiler execution
               </p>
             </div>
@@ -179,24 +182,24 @@ export default function Home() {
               return (
                 <div
                   key={index}
-                  className="relative min-h-[300px] p-6 bg-white rounded-3xl border-2 border-orange-100 hover:border-[#F28C0F] shadow-sm hover:shadow-[0_15px_35px_rgba(242,140,15,0.22)] hover:-translate-y-2 transition-all duration-300 group flex flex-col items-center text-center overflow-hidden"
+                  className="relative min-h-[300px] p-6 bg-[#0D0F18]/80 rounded-3xl border border-purple-500/25 hover:border-purple-400 shadow-xl hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] hover:-translate-y-2 transition-all duration-300 group flex flex-col items-center text-center overflow-hidden backdrop-blur-md"
                 >
-                  <div className="absolute top-2 left-3 text-5xl font-black text-slate-100 group-hover:text-orange-100/60 select-none transition-colors duration-300">
+                  <div className="absolute top-2 left-3 text-5xl font-black text-purple-950/40 group-hover:text-purple-900/50 select-none transition-colors duration-300">
                     0{index + 1}
                   </div>
 
-                  <div className="w-16 h-16 rounded-2xl bg-orange-50 group-hover:bg-[#F28C0F] flex items-center justify-center relative mb-4 transition-all duration-300 z-10 mt-3 group-hover:scale-110 shadow-xs">
-                    <Icon className="w-8 h-8 text-[#F28C0F] group-hover:text-white transition-colors duration-300" strokeWidth={2.2} />
+                  <div className="w-16 h-16 rounded-2xl bg-purple-950/60 border border-purple-500/30 group-hover:bg-purple-600 flex items-center justify-center relative mb-4 transition-all duration-300 z-10 mt-3 group-hover:scale-110 shadow-lg shadow-purple-950/40">
+                    <Icon className="w-8 h-8 text-purple-400 group-hover:text-white transition-colors duration-300" strokeWidth={2.2} />
                   </div>
 
-                  <span className="text-[10px] font-mono font-black text-[#F28C0F] uppercase tracking-wider mb-1 z-10">
+                  <span className="text-[10px] font-mono font-black text-purple-400 uppercase tracking-widest mb-1 z-10">
                     {step.stage}
                   </span>
 
-                  <h4 className="font-black text-slate-900 text-base mb-2 z-10 group-hover:text-[#F28C0F] transition-colors leading-tight">
+                  <h4 className="font-black text-white text-base mb-2 z-10 group-hover:text-purple-300 transition-colors leading-tight">
                     {step.title}
                   </h4>
-                  <p className="text-xs text-slate-500 leading-relaxed font-medium z-10">
+                  <p className="text-xs text-slate-400 leading-relaxed font-medium z-10">
                     {step.desc}
                   </p>
                 </div>
@@ -206,17 +209,17 @@ export default function Home() {
         </section>
 
         {/* ── CHALLENGE HIGHLIGHTS GRID ── */}
-        <section className="py-12 md:py-16 border-t border-slate-100 relative">
-          <div className="flex items-center gap-4 mb-12">
-            <div className="w-12 h-2 bg-[#F28C0F] rounded-full"></div>
+        <section className="py-12 md:py-16 border-t border-purple-900/30 relative">
+          <div className="flex items-center gap-4 mb-10">
+            <div className="w-10 h-2 bg-gradient-to-r from-purple-500 to-violet-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
             <div>
-              <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-wider uppercase flex items-center gap-2">
+              <h3 className="text-2xl md:text-3xl font-black text-white tracking-wider uppercase flex items-center gap-2">
                 <span>COMPETITION HIGHLIGHTS</span>
-                <span className="text-xs font-mono font-bold text-[#F28C0F] bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200">
+                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/70 px-3 py-0.5 rounded-full border border-emerald-500/40">
                   CRITICAL RULES
                 </span>
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">
                 Key tournament constraints, execution rules, and scoring policies
               </p>
             </div>
@@ -228,21 +231,21 @@ export default function Home() {
               return (
                 <div
                   key={index}
-                  className="p-8 bg-white rounded-3xl border-2 border-orange-100 hover:border-[#F28C0F] shadow-sm hover:shadow-[0_20px_40px_rgba(242,140,15,0.18)] hover:-translate-y-2 transition-all duration-300 flex flex-col sm:flex-row gap-5 group relative overflow-hidden"
+                  className="p-8 bg-[#0D0F18]/80 rounded-3xl border border-purple-500/25 hover:border-purple-400 shadow-xl hover:shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:-translate-y-2 transition-all duration-300 flex flex-col sm:flex-row gap-5 group relative overflow-hidden backdrop-blur-md"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
-                  <div className="w-14 h-14 rounded-2xl bg-orange-50 flex-shrink-0 flex items-center justify-center text-[#F28C0F] group-hover:bg-[#F28C0F] group-hover:text-white transition-all duration-300 z-10 shadow-xs group-hover:scale-105">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-950/60 border border-purple-500/40 flex-shrink-0 flex items-center justify-center text-purple-300 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 z-10 shadow-md group-hover:scale-105">
                     <Icon className="w-7 h-7" strokeWidth={2} />
                   </div>
                   <div className="z-10 space-y-1.5">
-                    <span className="text-[10px] font-mono font-black text-[#F28C0F] uppercase tracking-wider block">
+                    <span className="text-[10px] font-mono font-black text-purple-400 uppercase tracking-wider block">
                       {highlight.tag}
                     </span>
-                    <h4 className="font-black text-slate-900 text-lg group-hover:text-[#F28C0F] transition-colors leading-tight">
+                    <h4 className="font-black text-white text-lg group-hover:text-purple-300 transition-colors leading-tight">
                       {highlight.title}
                     </h4>
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+                    <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">
                       {highlight.desc}
                     </p>
                   </div>
@@ -254,82 +257,46 @@ export default function Home() {
 
       </div>
 
-      {/* ── ARENA PORTAL CTA (Full-width, no broken SVG) ── */}
-      <section className="relative py-24 md:py-32 overflow-hidden bg-[#FFFCF8] border-t-2 border-orange-100/90">
+      {/* ── ARENA PORTAL CTA (Full-width Nether Portal Arena) ── */}
+      <section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#07080D] via-[#0B0C16] to-[#07080D] border-t border-purple-900/30">
 
-        {/* Concentric rings — centred, no cuts */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] rounded-full border border-orange-200/50 pointer-events-none"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full border border-dashed border-orange-300/40 pointer-events-none animate-radar"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full bg-gradient-to-tr from-orange-200/30 via-amber-100/40 to-transparent blur-3xl pointer-events-none"></div>
-
-        {/* Left edge wave — stays anchored to the left wall, no overlap */}
-        <div className="absolute top-0 left-0 w-[22vw] md:w-[18vw] h-full pointer-events-none opacity-70">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-            <path d="M0,0 Q60,50 0,100 Z" fill="#FFEDC2" opacity="0.65"/>
-            <path d="M0,18 Q42,50 0,82 Z" fill="#FFD37A" opacity="0.48"/>
-            <path d="M0,33 Q28,50 0,67 Z" fill="#FFB733" opacity="0.38"/>
-          </svg>
-        </div>
-
-        {/* Right edge wave — CSS mirror (scaleX -1), NO rotate-180 trick */}
-        <div
-          className="absolute top-0 right-0 w-[22vw] md:w-[18vw] h-full pointer-events-none opacity-70"
-          style={{ transform: 'scaleX(-1)' }}
-        >
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-            <path d="M0,0 Q60,50 0,100 Z" fill="#FFEDC2" opacity="0.65"/>
-            <path d="M0,18 Q42,50 0,82 Z" fill="#FFD37A" opacity="0.48"/>
-            <path d="M0,33 Q28,50 0,67 Z" fill="#FFB733" opacity="0.38"/>
-          </svg>
-        </div>
-
-        {/* Flanking decorative voxels */}
-        <div className="absolute top-16 left-[7%] hidden md:block z-10">
-          <IsometricVoxelCube size={52} variant="gold" label="{ }" floatDuration={5.5} delay={0.3} />
-        </div>
-        <div className="absolute bottom-14 left-[10%] hidden lg:block z-10">
-          <XpOrbToken size={24} value="+500 XP" delay={1.1} />
-        </div>
-        <div className="absolute top-20 right-[8%] hidden md:block z-10">
-          <IsometricVoxelCube size={48} variant="emerald" label="✓" floatDuration={6.2} delay={0.9} />
-        </div>
-        <div className="absolute bottom-16 right-[7%] hidden lg:block z-10">
-          <PixelKeyToken size={40} delay={1.5} />
-        </div>
+        {/* Concentric rings with purple energy glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] rounded-full border border-purple-500/20 pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full border border-dashed border-purple-400/30 pointer-events-none animate-radar"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full bg-gradient-to-tr from-purple-600/30 via-indigo-600/20 to-transparent blur-3xl pointer-events-none"></div>
 
         {/* CTA content */}
         <div className="relative z-20 max-w-3xl mx-auto text-center px-6 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-100 text-orange-900 border border-orange-300 text-xs font-mono font-black uppercase tracking-wider shadow-xs">
-            <Trophy className="w-4 h-4 text-[#F28C0F]" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/70 text-purple-300 border border-purple-500/50 text-xs font-mono font-black uppercase tracking-wider shadow-lg shadow-purple-950/50">
+            <Trophy className="w-4 h-4 text-purple-400" />
             <span>ARENA PORTAL // READY FOR COMBAT</span>
           </div>
 
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-[#0B1A28] tracking-tight leading-tight">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight uppercase font-sans">
             Ready to Enter<br />
-            <span className="bg-gradient-to-r from-[#F28C0F] to-amber-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-purple-400 via-violet-300 to-fuchsia-400 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(168,85,247,0.7)]">
               the Arena?
             </span>
           </h2>
 
-          <p className="text-slate-600 text-base sm:text-lg font-medium max-w-xl mx-auto leading-relaxed">
+          <p className="text-slate-300 text-base sm:text-lg font-medium max-w-xl mx-auto leading-relaxed">
             Test your logic, precision, and problem-solving speed under tournament pressure. Register your credentials now or jump directly into the live challenge track!
           </p>
 
           <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
             <Link
               to="/register"
-              className="group relative overflow-hidden px-10 py-4 rounded-[14px] bg-[#FFBE4D] hover:bg-[#F28C0F] text-[#0B1A28] font-black text-lg transition-all duration-300 flex items-center gap-3 shadow-xl shadow-orange-500/20 hover:shadow-orange-500/35 hover:-translate-y-1 active:translate-y-0 border-b-4 border-amber-600 active:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F28C0F]"
+              className="group relative overflow-hidden px-10 py-4 rounded-full border border-purple-500 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-[0_0_25px_rgba(168,85,247,0.5)] hover:shadow-[0_0_40px_rgba(168,85,247,0.8)] hover:scale-105 active:scale-95"
             >
-              <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 animate-shimmer pointer-events-none"></div>
-              <span className="relative z-10">Register Now</span>
+              <span className="relative z-10">ENTER THE WORLD</span>
               <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
             </Link>
 
             <Link
               to="/rules"
-              className="px-8 py-4 rounded-[14px] border-2 border-slate-900 text-slate-900 font-bold text-base hover:bg-slate-900 hover:text-white transition-all duration-300 hover:-translate-y-1 active:translate-y-0 flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+              className="px-8 py-4 rounded-full border border-slate-700 bg-[#0D0F18]/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:border-purple-500/50 flex items-center gap-2 backdrop-blur-md"
             >
-              <ClipboardList className="w-4 h-4" />
+              <ClipboardList className="w-4 h-4 text-purple-400" />
               <span>View Rules &amp; Protocol</span>
             </Link>
           </div>

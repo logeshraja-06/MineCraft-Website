@@ -24,19 +24,20 @@ export default function Leaderboard() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50/50 text-center font-sans">
-        <div className="max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200 space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
-            <Trophy className="w-8 h-8 text-[#F28C0F]" />
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#07080D] text-center font-sans relative overflow-hidden">
+        <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-purple-600/15 rounded-full blur-[120px] pointer-events-none" />
+        <div className="max-w-md bg-[#0D0F18]/90 p-8 rounded-3xl shadow-[0_0_50px_rgba(168,85,247,0.2)] border border-purple-500/30 space-y-4 backdrop-blur-xl relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-purple-950/60 text-purple-300 border border-purple-500/40 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+            <Trophy className="w-8 h-8 text-amber-400" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Admin Only Access</h2>
-          <p className="text-slate-600 text-sm leading-relaxed">
+          <h2 className="text-2xl font-black text-white tracking-tight">Admin Only Access</h2>
+          <p className="text-purple-200/70 text-sm leading-relaxed">
             The competition leaderboard is restricted to event administrators. Official final standings and tournament winners will be announced by the coordinators.
           </p>
           <div className="pt-2">
             <Link
               to="/challenges"
-              className="inline-flex items-center justify-center px-6 py-3 bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black rounded-xl text-xs tracking-wider transition shadow-sm hover:shadow"
+              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-full text-xs tracking-wider transition shadow-[0_0_20px_rgba(168,85,247,0.4)] border border-purple-400/40"
             >
               RETURN TO CHALLENGES
             </Link>
@@ -102,33 +103,33 @@ export default function Leaderboard() {
   }, [rankings]);
 
   return (
-    <div className="relative min-h-screen font-sans overflow-hidden bg-slate-50/30">
+    <div className="relative min-h-screen font-sans overflow-hidden bg-[#07080D] text-slate-100">
       {/* Dynamic Ambient Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#F28C0F] rounded-full mix-blend-multiply blur-[120px] opacity-20 pointer-events-none"></div>
-      <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] bg-amber-400 rounded-full mix-blend-multiply blur-[100px] opacity-20 pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] left-[20%] w-[50%] h-[50%] bg-orange-300 rounded-full mix-blend-multiply blur-[150px] opacity-20 pointer-events-none"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] bg-fuchsia-600/10 rounded-full blur-[160px] pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12 z-10">
         {/* Header Section */}
         <div className="text-center space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 backdrop-blur-md border border-orange-200/60 text-orange-700 text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-default">
-            <Activity className="w-4 h-4 text-[#F28C0F] animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm cursor-default">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-[0_0_6px_#10b981]" />
             <span className="tracking-widest uppercase">Live Tournament Standings</span>
           </div>
           
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 drop-shadow-sm">
-            Global <span className="bg-gradient-to-r from-[#F28C0F] to-amber-500 bg-clip-text text-transparent">Leaderboard</span>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white drop-shadow-md">
+            Global <span className="bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">Leaderboard</span>
           </h1>
           
-          <div className="text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed bg-white/50 p-4 rounded-2xl backdrop-blur-sm border border-white/60 shadow-sm">
+          <div className="text-sm text-purple-200/70 max-w-2xl mx-auto leading-relaxed bg-[#0D0F18]/80 p-4 rounded-2xl backdrop-blur-xl border border-purple-500/20 shadow-md">
             <p>Centrally managed across 3 Challenges (Easy, Medium, Hard • 15 mins each).</p>
-            <div className="mt-2 inline-flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span className="text-orange-800"><strong className="font-bold">Winner criteria:</strong> Completed all 3 challenges with minimum negative points!</span>
+            <div className="mt-2 inline-flex items-center gap-1.5 bg-purple-950/50 px-3 py-1.5 rounded-lg border border-purple-500/30">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span className="text-purple-200"><strong className="font-bold text-white">Winner criteria:</strong> Completed all 3 challenges with minimum negative points!</span>
             </div>
           </div>
           
-          <div className="text-[11px] font-medium text-slate-500 flex items-center justify-center gap-2 pt-2 bg-white/50 w-fit mx-auto px-4 py-2 rounded-full border border-slate-200/60 backdrop-blur-sm shadow-sm">
+          <div className="text-[11px] font-medium text-purple-300/70 flex items-center justify-center gap-2 pt-2 bg-[#0D0F18]/80 w-fit mx-auto px-4 py-2 rounded-full border border-purple-500/25 backdrop-blur-xl shadow-md">
             <span className="flex items-center gap-2">
               <div className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -136,13 +137,13 @@ export default function Leaderboard() {
               </div>
               Auto-sync: {lastRefreshed.toLocaleTimeString()}
             </span>
-            <div className="w-px h-3 bg-slate-300"></div>
+            <div className="w-px h-3 bg-purple-500/30"></div>
             <button
               onClick={fetchLeaderboard}
-              className="text-[#F28C0F] hover:text-orange-600 hover:bg-orange-50 p-1.5 rounded-full transition-all group"
+              className="text-purple-300 hover:text-white hover:bg-purple-900/40 p-1.5 rounded-full transition-all group"
               title="Refresh leaderboard"
             >
-              <RefreshCw className={`w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin text-orange-500' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin text-purple-400' : ''}`} />
             </button>
           </div>
         </div>
@@ -156,55 +157,55 @@ export default function Leaderboard() {
 
         {/* STATS OVERVIEW CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto relative z-10 pt-4">
-          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
+          <div className="bg-[#0D0F18]/85 backdrop-blur-xl border border-purple-500/25 rounded-2xl p-4 flex items-center gap-4 shadow-[0_0_25px_rgba(168,85,247,0.1)] hover:border-purple-500/50 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-purple-950/70 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Ranked</p>
-              <h4 className="text-2xl font-black text-slate-800">{stats.totalRanked}</h4>
+              <p className="text-[10px] text-purple-300/60 font-bold uppercase tracking-widest">Total Ranked</p>
+              <h4 className="text-2xl font-black text-white">{stats.totalRanked}</h4>
             </div>
           </div>
-          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+          <div className="bg-[#0D0F18]/85 backdrop-blur-xl border border-emerald-500/25 rounded-2xl p-4 flex items-center gap-4 shadow-[0_0_25px_rgba(16,185,129,0.1)] hover:border-emerald-500/50 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-emerald-950/70 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
               <Target className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Solves</p>
-              <h4 className="text-2xl font-black text-slate-800">{stats.totalSolves}</h4>
+              <p className="text-[10px] text-emerald-300/60 font-bold uppercase tracking-widest">Total Solves</p>
+              <h4 className="text-2xl font-black text-white">{stats.totalSolves}</h4>
             </div>
           </div>
-          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+          <div className="bg-[#0D0F18]/85 backdrop-blur-xl border border-amber-500/25 rounded-2xl p-4 flex items-center gap-4 shadow-[0_0_25px_rgba(245,158,11,0.1)] hover:border-amber-500/50 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-amber-950/70 border border-amber-500/40 flex items-center justify-center text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
               <BarChart2 className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Highest Score</p>
-              <h4 className="text-2xl font-black text-slate-800">{stats.topScore} <span className="text-xs font-medium text-slate-400">pts</span></h4>
+              <p className="text-[10px] text-amber-300/60 font-bold uppercase tracking-widest">Highest Score</p>
+              <h4 className="text-2xl font-black text-white">{stats.topScore} <span className="text-xs font-medium text-slate-400">pts</span></h4>
             </div>
           </div>
         </div>
 
         {/* FULL LEADERBOARD TABLE */}
         <div className="space-y-4 relative z-10 pt-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-600 px-2 gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-purple-200/70 px-2 gap-4">
             
             {/* SEARCH BAR */}
             <div className="relative w-full sm:w-80 group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#F28C0F] transition-colors" />
+                <Search className="h-4 w-4 text-purple-400 group-focus-within:text-purple-300 transition-colors" />
               </div>
               <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200/60 rounded-xl leading-5 bg-white/70 backdrop-blur-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#F28C0F]/50 focus:border-[#F28C0F] sm:text-sm transition-all shadow-sm"
+                className="block w-full pl-10 pr-3 py-2.5 border border-purple-500/30 rounded-xl leading-5 bg-[#0D0F18]/90 backdrop-blur-xl placeholder-purple-300/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400 sm:text-sm transition-all shadow-inner"
                 placeholder="Search by name, ID or college..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <div className="text-[11px] font-medium text-slate-500 bg-white/60 px-4 py-2.5 rounded-xl backdrop-blur-sm border border-slate-200/60 shadow-sm flex items-center gap-2">
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-slate-200/80 text-[9px] font-black text-slate-600">i</span>
+            <div className="text-[11px] font-medium text-purple-200/60 bg-[#0D0F18]/80 px-4 py-2.5 rounded-xl backdrop-blur-xl border border-purple-500/20 shadow-md flex items-center gap-2">
+              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-purple-950 border border-purple-500/40 text-[9px] font-black text-purple-300">i</span>
               Rank Rule: Solved (3/3 first) → Min Negative Pts → Total Time
             </div>
           </div>

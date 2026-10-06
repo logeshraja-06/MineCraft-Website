@@ -13,12 +13,15 @@ export default function Button({
   const base = "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 select-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]";
 
   const variants = {
-    primary: "bg-gradient-to-r from-orange-600 via-orange-500 to-teal-400 hover:from-orange-500 hover:via-orange-400 hover:to-teal-300 text-slate-950 font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 focus:ring-orange-400",
-    secondary: "bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 hover:border-slate-400 shadow-sm focus:ring-slate-500",
-    emerald: "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold shadow-lg shadow-emerald-500/20 focus:ring-emerald-400",
-    danger: "bg-rose-600 hover:bg-rose-500 text-slate-900 font-semibold shadow-md shadow-rose-600/20 focus:ring-rose-500",
-    ghost: "bg-transparent hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 focus:ring-slate-600",
-    cyber: "bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-300 border border-orange-500/40 hover:border-orange-400 font-mono shadow-md shadow-orange-500/10 focus:ring-orange-400",
+    primary: "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:via-fuchsia-500 hover:to-indigo-500 text-white font-black shadow-[0_0_25px_rgba(168,85,247,0.4)] hover:shadow-[0_0_35px_rgba(168,85,247,0.65)] border border-purple-400/40 focus:ring-purple-400",
+    secondary: "bg-[#0D0F18]/80 hover:bg-[#161926] text-purple-200 border border-purple-500/30 hover:border-purple-400/60 shadow-[0_0_15px_rgba(168,85,247,0.15)] focus:ring-purple-500",
+    portal: "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:via-fuchsia-500 hover:to-indigo-500 text-white font-black shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:shadow-[0_0_45px_rgba(168,85,247,0.8)] border border-purple-400/50 focus:ring-purple-400",
+    portalOutline: "bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 border border-purple-500/50 hover:border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.25)] focus:ring-purple-400",
+    emerald: "bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-black shadow-[0_0_25px_rgba(16,185,129,0.35)] focus:ring-emerald-400 border border-emerald-400/40",
+    danger: "bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-[0_0_20px_rgba(244,63,94,0.35)] focus:ring-rose-500 border border-rose-400/30",
+    ghost: "bg-transparent hover:bg-purple-950/30 text-purple-200 hover:text-white focus:ring-purple-500",
+    cyber: "bg-[#0D0F18]/90 hover:bg-[#161A29] text-purple-200 border border-purple-500/40 hover:border-purple-400 font-mono shadow-[0_0_20px_rgba(168,85,247,0.2)] focus:ring-purple-400",
+    outline: "bg-transparent hover:bg-purple-950/30 text-purple-300 border border-purple-500/40 hover:border-purple-400 font-mono focus:ring-purple-400",
   };
 
   const sizes = {

@@ -9,17 +9,17 @@ export default function LanguagePicker({ language, onSelect, locked = false }) {
   if (locked) {
     const lang = SUPPORTED_LANGUAGES.find((l) => l.id === language);
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-950/40 border border-orange-500/40 text-xs font-mono">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/40 text-xs font-mono shadow-[0_0_12px_rgba(168,85,247,0.2)]">
         <span>{lang?.icon || '💻'}</span>
-        <span className="font-bold text-cyan-300">{lang?.name || language.toUpperCase()}</span>
-        <span className="text-slate-500 text-[10px] ml-1">(locked)</span>
+        <span className="font-bold text-purple-200">{lang?.name || language.toUpperCase()}</span>
+        <span className="text-purple-300/50 text-[10px] ml-1">(locked)</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+      <label className="text-[10px] text-purple-300/70 font-bold uppercase tracking-wider block">
         Choose Language
       </label>
       <div className="grid grid-cols-2 gap-2">
@@ -29,8 +29,8 @@ export default function LanguagePicker({ language, onSelect, locked = false }) {
             onClick={() => onSelect(lang.id)}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-mono font-bold transition-all ${
               language === lang.id
-                ? 'bg-orange-500/20 border-orange-500/60 text-cyan-300 shadow-inner shadow-cyan-950/30'
-                : 'bg-slate-50 border-slate-300 text-slate-600 hover:border-slate-500 hover:text-slate-800'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                : 'bg-[#07080D]/90 border-purple-500/20 text-slate-300 hover:border-purple-500/50 hover:bg-purple-950/30'
             }`}
             aria-pressed={language === lang.id}
           >

@@ -29,7 +29,7 @@ export default function MissionStepper({ progress = [], compact = false }) {
   return (
     <div
       className={`w-full flex items-center justify-between font-mono ${
-        compact ? 'py-1 px-3 bg-slate-950/70 border border-slate-800/80 rounded-xl' : 'py-3 px-4'
+        compact ? 'py-1 px-3 bg-[#0D0F18]/80 border border-purple-500/30 rounded-xl' : 'py-3 px-4'
       }`}
     >
       {steps.map((step, idx) => {
@@ -50,9 +50,9 @@ export default function MissionStepper({ progress = [], compact = false }) {
                   compact ? 'w-6 h-6 rounded-md text-[10px]' : 'w-8 h-8 rounded-lg text-xs'
                 } font-black ${
                   isCompleted
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-sm shadow-emerald-500/20'
+                    ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-400/60 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                     : isCurrent
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400 shadow-md shadow-cyan-500/30 animate-pulse'
+                    ? 'bg-purple-950/80 text-purple-200 border border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)] animate-pulse'
                     : 'bg-slate-900 border border-slate-800 text-slate-600'
                 }`}
               >
@@ -69,17 +69,17 @@ export default function MissionStepper({ progress = [], compact = false }) {
                 <span
                   className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
                     isCompleted
-                      ? 'text-emerald-400'
+                      ? 'text-emerald-300'
                       : isCurrent
-                      ? 'text-cyan-300'
+                      ? 'text-purple-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
                       : 'text-slate-500'
                   }`}
                 >
                   {step.name}
                 </span>
                 {!compact && (
-                  <span className="text-[9px] text-slate-500 hidden sm:inline">
-                    {isCompleted ? '✓ Accepted' : isCurrent ? '● Active' : '○ Locked'}
+                  <span className="text-[9px] text-slate-400 hidden sm:inline">
+                    {isCompleted ? '✓ Accepted' : isCurrent ? '● Portal Open' : '○ Locked'}
                   </span>
                 )}
               </div>
@@ -90,9 +90,9 @@ export default function MissionStepper({ progress = [], compact = false }) {
                 <div
                   className={`h-0.5 w-full transition-colors ${
                     lineCompleted
-                      ? 'bg-emerald-500/60'
+                      ? 'bg-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
                       : isCompleted
-                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-500'
+                      ? 'bg-gradient-to-r from-emerald-500 to-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                       : 'bg-slate-800'
                   }`}
                 />
