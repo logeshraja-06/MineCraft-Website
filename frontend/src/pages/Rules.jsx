@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Trophy,
   Clock,
   CheckCircle2,
   AlertTriangle,
@@ -12,8 +11,6 @@ import {
   Layers,
   Sparkles,
   HelpCircle,
-  Play,
-  RotateCcw,
 } from 'lucide-react';
 import { useParticipant } from '../context/ParticipantContext';
 
@@ -25,357 +22,383 @@ export default function Rules() {
     window.scrollTo(0, 0);
   }, []);
 
-  const steps = [
-    {
-      num: '01',
-      title: 'Competition Overview & Tiers',
-      icon: <Layers className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <ul className="list-disc list-outside ml-5 text-purple-200/80 space-y-1.5 text-xs sm:text-sm marker:text-purple-400">
-            <li>Welcome to <strong className="text-white">Mind Craft Arena</strong>! After registration, all participants enter the Challenges portal.</li>
-            <li>The tournament consists of <strong className="text-white">3 distinct challenge tiers</strong>, solved in sequential progression:</li>
-          </ul>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-[#141724]/90 border border-emerald-500/40 py-5 px-4 rounded-2xl text-center shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-              <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Tier 1</div>
-              <div className="font-black text-white text-xl mb-0.5">Easy</div>
-              <div className="text-purple-200/60 font-medium text-xs">1 Programming Problem • 15 Mins</div>
-            </div>
-            <div className="bg-[#141724]/90 border border-purple-500/50 py-5 px-4 rounded-2xl text-center shadow-[0_0_25px_rgba(168,85,247,0.2)]">
-              <div className="text-[10px] font-black text-purple-300 uppercase tracking-widest mb-1">Tier 2</div>
-              <div className="font-black text-white text-xl mb-0.5">Medium</div>
-              <div className="text-purple-200/60 font-medium text-xs">1 Programming Problem • 15 Mins</div>
-            </div>
-            <div className="bg-[#141724]/90 border border-rose-500/40 py-5 px-4 rounded-2xl text-center shadow-[0_0_20px_rgba(244,63,94,0.1)]">
-              <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Tier 3</div>
-              <div className="font-black text-white text-xl mb-0.5">Hard</div>
-              <div className="text-purple-200/60 font-medium text-xs">1 Programming Problem • 15 Mins</div>
-            </div>
-          </div>
-          <p className="text-purple-200/70 text-xs bg-[#141724]/60 p-3.5 rounded-xl border border-purple-500/20 font-sans">
-            💡 Difficulty and problem complexity ramp up smoothly from <span className="font-bold text-emerald-300">Easy</span> to <span className="font-bold text-purple-300">Medium</span> to <span className="font-bold text-rose-300">Hard</span>. Solving Tier 1 unlocks Tier 2, and Tier 2 unlocks Tier 3.
-          </p>
-        </div>
-      ),
-    },
-    {
-      num: '02',
-      title: 'Programming Language Selection',
-      icon: <Terminal className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <p className="text-purple-200/80 text-xs sm:text-sm">
-            You can solve challenges in any of the four standard languages of your choice:
-          </p>
-          <div className="bg-[#141724]/90 border border-purple-500/30 rounded-2xl py-4 px-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div className="p-3 bg-[#0D0F18] rounded-xl border border-purple-500/30 font-bold text-lg text-white shadow-sm">C</div>
-            <div className="p-3 bg-[#0D0F18] rounded-xl border border-purple-500/30 font-bold text-lg text-white shadow-sm">C++</div>
-            <div className="p-3 bg-[#0D0F18] rounded-xl border border-purple-500/30 font-bold text-lg text-white shadow-sm">Java</div>
-            <div className="p-3 bg-[#0D0F18] rounded-xl border border-purple-500/30 font-bold text-lg text-white shadow-sm">Python</div>
-          </div>
-          <div className="p-3.5 bg-purple-950/40 rounded-xl border border-purple-500/30 text-xs text-purple-200 flex items-start gap-2.5">
-            <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-            <span>
-              <strong className="text-white">Language Lock:</strong> You must select your programming language during the setup phase before clicking <strong className="text-purple-300">"START HUNT"</strong>. Once the hunt begins, the language is locked for that challenge.
-            </span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      num: '03',
-      title: 'QR Tasks & Answer Reveal Penalties',
-      icon: <HelpCircle className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <ul className="list-disc list-outside ml-5 text-purple-200/80 space-y-1.5 text-xs sm:text-sm marker:text-purple-400">
-            <li>Each challenge is decomposed into multiple scrambled code blocks hidden inside QR checkpoints.</li>
-            <li>To unlock and reveal each code fragment, you must solve a targeted mini task (Multiple Choice Questions or Fill in the Blanks).</li>
-          </ul>
+  return (
+    <div className="min-h-screen bg-[#07080D] font-sans text-slate-100 selection:bg-purple-600 selection:text-white">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 bg-[#141724]/90 rounded-2xl border border-purple-500/30 space-y-2">
-              <span className="text-xs font-bold uppercase text-purple-300 tracking-wider block">Task Formats</span>
-              <ul className="text-xs text-purple-200/70 space-y-1 list-disc ml-4">
-                <li>Multiple Choice Questions (MCQ)</li>
-                <li>Fill in the Blanks</li>
-                <li>Predict the Output / Logic Evaluation</li>
-              </ul>
+      {/* ── SECTION 1: HEADER & OVERVIEW (DARK SECTION) ── */}
+      <section className="w-full bg-[#07080D] py-16 sm:py-20 px-6 sm:px-8 lg:px-12 border-b border-purple-900/20">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          <div className="lg:col-span-7 space-y-6 text-left">
+            <h1 className="text-4xl sm:text-5xl font-normal text-white tracking-tight leading-tight">
+              Competition Rules &amp; Protocol
+            </h1>
+            <p className="text-base text-slate-400 font-normal leading-relaxed max-w-2xl">
+              Mind Craft 2026 is an algorithmic treasure hunt. Review the scoring formulas, checkpoint penalty mechanics, compiler allowances, and sequential progression protocol before beginning your hunt.
+            </p>
+
+            {participant?.name && (
+              <div className="text-xs font-mono text-purple-300 py-1">
+                Participant Registered: <span className="text-white font-medium">{participant.name}</span> ({participant.participantId || participant.email})
+              </div>
+            )}
+
+            <div className="pt-2 flex flex-wrap items-center gap-4">
+              <Link
+                to="/challenges"
+                className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2"
+              >
+                <span>Continue To Challenges</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 overflow-hidden rounded-none border border-purple-900/40 bg-black aspect-[16/10] shadow-sm">
+            <img
+              src="/portal-hero.jpg"
+              alt="Arena Portal"
+              className="w-full h-full object-cover rounded-none"
+            />
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 2: 3-TIER PROGRESSION & LANGUAGE SELECTION (PURE WHITE SECTION) ── */}
+      <section className="w-full bg-white text-slate-900 py-20 px-6 sm:px-8 lg:px-12 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-16">
+
+          {/* Section Header */}
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
+              01 // 3-Tier Linear Progression
+            </h2>
+            <p className="text-sm text-slate-500 font-normal leading-relaxed">
+              Contestants cannot jump between levels. Complete Easy to unlock Medium, and solve Medium to unlock Hard.
+            </p>
+          </div>
+
+          {/* 3 Tier Image Cards (Unrounded, Sharp) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Tier 1 */}
+            <div className="border border-slate-200 bg-slate-50/60 p-6 rounded-none flex flex-col justify-between">
+              <div>
+                <div className="overflow-hidden rounded-none aspect-[16/10] bg-slate-900 mb-5 border border-slate-200">
+                  <img
+                    src="/tier-easy.jpg"
+                    alt="Tier 1 Easy"
+                    className="w-full h-full object-cover rounded-none"
+                  />
+                </div>
+                <div className="text-xs font-mono text-emerald-700 font-medium uppercase tracking-wider mb-1">
+                  Tier 1 · 15 Mins
+                </div>
+                <h3 className="text-xl font-medium text-slate-900 mb-2">Warm-Up Logic</h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
+                  Entry-level problem solving, warm-up logic tasks &amp; QR checkpoints. Solve fundamental MCQs to unlock your initial code fragments.
+                </p>
+              </div>
+              <div className="pt-4 mt-4 border-t border-slate-200 text-xs text-slate-500 font-mono">
+                1 Problem · 15:00 Mins
+              </div>
             </div>
 
-            <div className="p-4 bg-rose-950/40 rounded-2xl border border-rose-500/40 space-y-2">
-              <span className="text-xs font-bold uppercase text-rose-400 tracking-wider block">Wrong Answer Penalty</span>
-              <p className="text-xs text-rose-200 leading-relaxed">
-                Every incorrect attempt incurs an immediate penalty of <strong className="font-extrabold text-rose-400">-20 points</strong>!
+            {/* Tier 2 */}
+            <div className="border border-slate-200 bg-slate-50/60 p-6 rounded-none flex flex-col justify-between">
+              <div>
+                <div className="overflow-hidden rounded-none aspect-[16/10] bg-slate-900 mb-5 border border-slate-200">
+                  <img
+                    src="/tier-medium.jpg"
+                    alt="Tier 2 Medium"
+                    className="w-full h-full object-cover rounded-none"
+                  />
+                </div>
+                <div className="text-xs font-mono text-purple-700 font-medium uppercase tracking-wider mb-1">
+                  Tier 2 · 15 Mins
+                </div>
+                <h3 className="text-xl font-medium text-slate-900 mb-2">Algorithms &amp; Structures</h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
+                  Intermediate data structures &amp; algorithmic logic requiring structured assembly. Unlock encrypted vault chests to collect scrambled pieces.
+                </p>
+              </div>
+              <div className="pt-4 mt-4 border-t border-slate-200 text-xs text-slate-500 font-mono">
+                1 Problem · 15:00 Mins
+              </div>
+            </div>
+
+            {/* Tier 3 */}
+            <div className="border border-slate-200 bg-slate-50/60 p-6 rounded-none flex flex-col justify-between">
+              <div>
+                <div className="overflow-hidden rounded-none aspect-[16/10] bg-slate-900 mb-5 border border-slate-200">
+                  <img
+                    src="/tier-hard.jpg"
+                    alt="Tier 3 Hard"
+                    className="w-full h-full object-cover rounded-none"
+                  />
+                </div>
+                <div className="text-xs font-mono text-rose-700 font-medium uppercase tracking-wider mb-1">
+                  Tier 3 · 15 Mins
+                </div>
+                <h3 className="text-xl font-medium text-slate-900 mb-2">Master Arena</h3>
+                <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
+                  Championship-tier computational challenges &amp; edge-case validation. Arrange complex algorithmic pipelines and test against judge test cases.
+                </p>
+              </div>
+              <div className="pt-4 mt-4 border-t border-slate-200 text-xs text-slate-500 font-mono">
+                1 Problem · 15:00 Mins
+              </div>
+            </div>
+
+          </div>
+
+          {/* Language Selection & Lock */}
+          <div className="border border-slate-200 bg-slate-50/80 p-8 rounded-none">
+            <div className="max-w-2xl space-y-3">
+              <span className="text-xs font-mono text-purple-700 font-semibold uppercase tracking-wider block">
+                02 // Language Selection &amp; Setup Lock
+              </span>
+              <h3 className="text-2xl font-medium text-slate-900">
+                Choose Your Language: C, C++, Java, or Python
+              </h3>
+              <p className="text-sm text-slate-600 font-normal leading-relaxed">
+                You select your programming language during the pre-hunt phase. Once you click "START HUNT", your chosen language is permanently locked for the duration of that challenge level.
               </p>
             </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+              {['C (GCC 9.2)', 'C++ (G++ 17)', 'Java (OpenJDK 13)', 'Python 3.8+'].map((lang) => (
+                <div key={lang} className="p-4 bg-white border border-slate-200 rounded-none text-center font-mono font-medium text-sm text-slate-800">
+                  {lang}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-[#141724]/90 rounded-2xl p-4 border border-amber-500/30 text-xs text-amber-200 space-y-1.5 font-sans">
-            <div className="font-bold flex items-center gap-1.5 text-amber-300">
-              <AlertTriangle className="w-4 h-4 text-amber-400" /> 3 Attempts & Answer Reveal Rule:
-            </div>
-            <p className="leading-relaxed">
-              You are allowed up to <strong className="text-white">3 attempts</strong> per task. If all 3 attempts are answered incorrectly (accumulating -60 pts penalty), the correct answer is automatically revealed with an explanation so you are never stuck and can proceed to collect your fragment.
-            </p>
-          </div>
         </div>
-      ),
-    },
-    {
-      num: '04',
-      title: 'Code Assembly & 3 Free Runs',
-      icon: <Zap className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <ul className="list-disc list-outside ml-5 text-purple-200/80 space-y-1.5 text-xs sm:text-sm marker:text-purple-400">
-            <li>Once all fragments are unlocked, you enter the <strong className="text-white">Code Assembly Phase</strong>.</li>
-            <li>All fragments appear intentionally jumbled. Drag and reorder them on the Assembly Board into the correct logical program sequence.</li>
-          </ul>
+      </section>
 
-          <div className="p-4 bg-emerald-950/40 rounded-2xl border border-emerald-500/35 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase text-emerald-400 tracking-wider">Compiler Run Allowance</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-xs">3 FREE RUNS</span>
-            </div>
-            <p className="text-xs text-emerald-200/80 leading-relaxed">
-              Your first <strong className="text-emerald-300">3 "Run Code" tests</strong> against sample test cases are <strong className="text-emerald-300">100% FREE</strong> and do not deduct any points! Use them to test your syntax and logic.
+      {/* ── SECTION 3: CHECKPOINTS & COMPILER ALLOWANCES (DARK SECTION) ── */}
+      <section className="w-full bg-[#07080D] text-slate-100 py-20 px-6 sm:px-8 lg:px-12 border-b border-purple-900/20">
+        <div className="max-w-7xl mx-auto space-y-16">
+
+          {/* Section Header */}
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-white tracking-tight">
+              03 // Checkpoint Tasks &amp; Compiler Allowances
+            </h2>
+            <p className="text-sm text-slate-400 font-normal leading-relaxed">
+              Every stage balances problem solving accuracy with sandbox execution constraints.
             </p>
           </div>
 
-          <div className="p-4 bg-rose-950/40 rounded-2xl border border-rose-500/40 text-xs text-rose-200 space-y-1">
-            <span className="font-bold text-rose-400 block">Extra Run Penalty:</span>
-            <p className="leading-relaxed">
-              Starting from the <strong className="text-white">4th run onward</strong>, every additional run will deduct <strong className="font-extrabold text-rose-400">-10 points</strong> from your score (e.g. Run 4: -10 pts, Run 5: -20 pts cumulative, etc.).
+          {/* Two Editorial Feature Splits with Images */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+            {/* Split 1: Checkpoints & Golden Key */}
+            <div className="border border-purple-950/70 bg-[#0B0D15] p-8 rounded-none space-y-6 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-none aspect-[16/10] bg-[#06070B] border border-purple-900/30 flex items-center justify-center p-6">
+                  <img
+                    src="/mythic-golden-key.png"
+                    alt="Golden Key Tasks"
+                    className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(245,158,11,0.25)] rounded-none"
+                  />
+                </div>
+
+                <div className="text-xs font-mono text-purple-400 uppercase tracking-wider font-medium">
+                  Checkpoint Rules
+                </div>
+                <h3 className="text-2xl font-normal text-white">
+                  Mini Tasks &amp; -20 Pts Incorrect Penalty
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed font-normal">
+                  To reveal each QR code block, you must solve a mini task (MCQ, predict code output, or fill-in-the-blank). Every incorrect attempt immediately incurs a -20 pts penalty.
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-purple-950/80 space-y-2 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span>Wrong answer penalty</span>
+                  <span className="font-mono text-rose-400 font-medium">-20 pts</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Max attempts allowed</span>
+                  <span className="font-mono text-white font-medium">3 attempts</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Auto-reveal after 3 fails</span>
+                  <span className="font-mono text-purple-300 font-medium">-60 pts max penalty</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Split 2: Assembly & Free Runs */}
+            <div className="border border-purple-950/70 bg-[#0B0D15] p-8 rounded-none space-y-6 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-none aspect-[16/10] bg-[#06070B] border border-purple-900/30 flex items-center justify-center p-6">
+                  <img
+                    src="/treasure-chest-open.png"
+                    alt="Vault Chest and Fragments"
+                    className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(245,158,11,0.25)] rounded-none"
+                  />
+                </div>
+
+                <div className="text-xs font-mono text-purple-400 uppercase tracking-wider font-medium">
+                  Compiler Sandbox
+                </div>
+                <h3 className="text-2xl font-normal text-white">
+                  3 Free Test Runs &amp; Extra Run Penalties
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed font-normal">
+                  After arranging your jumbled code fragments on the Assembly Board, you receive exactly 3 free test runs against sample cases. Starting from the 4th run onward, each extra test deducts -10 points.
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-purple-950/80 space-y-2 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span>Sample runs 1, 2, and 3</span>
+                  <span className="font-mono text-emerald-400 font-medium">100% Free (0 pts)</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Run 4 onward</span>
+                  <span className="font-mono text-rose-400 font-medium">-10 pts per run</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Test engine</span>
+                  <span className="font-mono text-purple-300 font-medium">Judge0 Sandbox</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 4: TIME LIMITS & WINNER FORMULA (PURE WHITE SECTION) ── */}
+      <section className="w-full bg-white text-slate-900 py-20 px-6 sm:px-8 lg:px-12 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-16">
+
+          {/* Section Header */}
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
+              04 // Time Limits &amp; Championship Formula
+            </h2>
+            <p className="text-sm text-slate-500 font-normal leading-relaxed">
+              Understand how real-time minutes elapse and how final tournament rankings are determined.
             </p>
           </div>
-        </div>
-      ),
-    },
-    {
-      num: '05',
-      title: 'Time Limit (15 Mins Per Challenge)',
-      icon: <Clock className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <p className="text-purple-200/80 text-xs sm:text-sm">
-            Each challenge level operates on an independent, non-extendable timer of <strong className="text-white">15 minutes (900 seconds)</strong>:
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-[#141724]/90 border border-emerald-500/30 py-4 px-4 rounded-2xl text-center">
-              <div className="font-bold text-emerald-400 text-sm">Tier 1: Easy</div>
-              <div className="text-white font-black text-xl mt-1">15:00 Mins</div>
-            </div>
-            <div className="bg-[#141724]/90 border border-purple-500/40 py-4 px-4 rounded-2xl text-center">
-              <div className="font-bold text-purple-300 text-sm">Tier 2: Medium</div>
-              <div className="text-white font-black text-xl mt-1">15:00 Mins</div>
-            </div>
-            <div className="bg-[#141724]/90 border border-rose-500/30 py-4 px-4 rounded-2xl text-center">
-              <div className="font-bold text-rose-400 text-sm">Tier 3: Hard</div>
-              <div className="text-white font-black text-xl mt-1">15:00 Mins</div>
-            </div>
-          </div>
-          <p className="text-purple-200/60 text-xs font-sans">
-            ⏱️ The countdown timer begins the instant you click <strong className="text-white">"START HUNT"</strong>. If the 15 minutes expire before completion, your session is automatically evaluated and locked.
-          </p>
-        </div>
-      ),
-    },
-    {
-      num: '06',
-      title: 'Time Elapsed Penalty (-10 pts / min)',
-      icon: <Clock className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <p className="text-purple-200/80 text-xs sm:text-sm">
-            Time efficiency is critical! For every minute that passes during your attempt, a penalty of <strong className="text-rose-400 font-extrabold">-10 points</strong> is deducted in real time:
-          </p>
-          <div className="bg-[#141724]/90 border border-purple-500/30 rounded-2xl p-5">
-            <div className="text-xs font-bold text-purple-300 uppercase tracking-wider mb-3">Time Deduction Schedule:</div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-xs">
-              <div className="p-2.5 bg-[#0D0F18] rounded-xl border border-purple-500/20">
-                <span className="block text-slate-400 text-[11px]">1 min</span>
-                <span className="text-rose-400 font-extrabold text-base">-10 pts</span>
-              </div>
-              <div className="p-2.5 bg-[#0D0F18] rounded-xl border border-purple-500/20">
-                <span className="block text-slate-400 text-[11px]">2 mins</span>
-                <span className="text-rose-400 font-extrabold text-base">-20 pts</span>
-              </div>
-              <div className="p-2.5 bg-[#0D0F18] rounded-xl border border-purple-500/20">
-                <span className="block text-slate-400 text-[11px]">5 mins</span>
-                <span className="text-rose-400 font-extrabold text-base">-50 pts</span>
-              </div>
-              <div className="p-2.5 bg-[#0D0F18] rounded-xl border border-purple-500/20">
-                <span className="block text-slate-400 text-[11px]">10 mins</span>
-                <span className="text-rose-400 font-extrabold text-base">-100 pts</span>
-              </div>
-              <div className="p-2.5 bg-[#0D0F18] rounded-xl border border-purple-500/20 col-span-2 sm:col-span-1">
-                <span className="block text-slate-400 text-[11px]">15 mins</span>
-                <span className="text-rose-400 font-extrabold text-base">-150 pts</span>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left Column: Time Schedule */}
+            <div className="lg:col-span-6 border border-slate-200 bg-slate-50/70 p-8 rounded-none space-y-6">
+              <span className="text-xs font-mono text-purple-700 font-semibold uppercase tracking-wider block">
+                Time Deduction Schedule
+              </span>
+              <h3 className="text-2xl font-medium text-slate-900">
+                15 Minutes Per Challenge (-10 pts / min)
+              </h3>
+              <p className="text-sm text-slate-600 font-normal leading-relaxed">
+                The clock starts ticking the moment you begin the hunt. For every minute that passes, 10 penalty points are deducted from your score.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div className="p-3 bg-white border border-slate-200 rounded-none text-center">
+                  <span className="block text-slate-500 text-xs">1 Min</span>
+                  <span className="font-mono text-rose-600 font-medium text-sm">-10 pts</span>
+                </div>
+                <div className="p-3 bg-white border border-slate-200 rounded-none text-center">
+                  <span className="block text-slate-500 text-xs">5 Mins</span>
+                  <span className="font-mono text-rose-600 font-medium text-sm">-50 pts</span>
+                </div>
+                <div className="p-3 bg-white border border-slate-200 rounded-none text-center">
+                  <span className="block text-slate-500 text-xs">10 Mins</span>
+                  <span className="font-mono text-rose-600 font-medium text-sm">-100 pts</span>
+                </div>
+                <div className="p-3 bg-white border border-slate-200 rounded-none text-center">
+                  <span className="block text-slate-500 text-xs">15 Mins</span>
+                  <span className="font-mono text-rose-600 font-medium text-sm">-150 pts</span>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      num: '07',
-      title: 'Centrally Managed Scoring & Winner Criteria',
-      icon: <Trophy className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="space-y-4 font-mono">
-          <ul className="list-disc list-outside ml-5 text-purple-200/80 space-y-2 text-xs sm:text-sm marker:text-purple-400">
-            <li><strong className="text-white">Initial Score:</strong> All participants begin the competition with exactly <span className="font-bold text-white">0 points</span>.</li>
-            <li><strong className="text-white">Cumulative Tracking:</strong> Points and penalties are centrally aggregated across all 3 challenges (Easy + Medium + Hard). Penalties carry forward continuously.</li>
-            <li>
-              <span>Your total tournament score is calculated as:</span>
-              <div className="my-2 p-3 bg-[#0D0F18] text-purple-200 font-mono text-xs rounded-xl border border-purple-500/30 text-center shadow-inner">
+
+            {/* Right Column: Winner Placement Criteria */}
+            <div className="lg:col-span-6 border border-slate-200 bg-slate-50/70 p-8 rounded-none space-y-6">
+              <span className="text-xs font-mono text-purple-700 font-semibold uppercase tracking-wider block">
+                Official Scoring Formula
+              </span>
+              <h3 className="text-2xl font-medium text-slate-900">
+                Minimum Negative Points Wins
+              </h3>
+              
+              <div className="p-4 bg-white border border-slate-200 rounded-none font-mono text-xs text-slate-800 text-center">
                 Total Score = - ( Task Penalties + Extra Run Penalties + Time Penalties )
               </div>
-            </li>
-          </ul>
 
-          <div className="bg-[#141724]/90 border border-purple-500/30 rounded-2xl p-5 text-purple-200 space-y-2 shadow-sm font-sans">
-            <div className="flex items-center gap-2 font-bold text-purple-300 text-base">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <span>How Winners Are Determined:</span>
-            </div>
-            <p className="text-xs text-purple-200/80 leading-relaxed">
-              The winner of Mind Craft 2026 is the participant who completes all 3 challenges with the <strong className="text-purple-300 font-black">MINIMUM NEGATIVE POINTS</strong> (closest to 0 points). Accuracy in mini tasks, minimizing code runs, and fast assembly lead to victory!
-            </p>
-            <p className="text-[11px] text-purple-300/60 italic pt-1 border-t border-purple-500/20">
-              Note: The live competition leaderboard is centrally managed and visible exclusively to event administrators to ensure fairness and prevent tactical stalling.
-            </p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      num: '08',
-      title: 'Complete Participant Mission Flow',
-      icon: <CheckCircle2 className="w-5 h-5 text-purple-400" />,
-      content: (
-        <div className="bg-[#141724]/90 border border-purple-500/30 rounded-2xl p-6 font-mono">
-          <div className="flex flex-wrap items-center gap-y-4 gap-x-2.5 text-xs font-bold text-purple-200 leading-none">
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">1. Register</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">2. Enter Portal</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">3. Select Language</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">4. Start Hunt (15m)</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">5. Solve Tasks (-20 if wrong)</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">6. Unlock QR & Collect Blocks</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">7. Assemble Logic</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">8. Run Code (3 Free)</span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
-            <span className="px-2.5 py-1.5 bg-[#0D0F18] rounded-lg border border-purple-500/30">9. Submit Solution</span>
-          </div>
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#07080D] font-sans py-12 px-4 sm:px-6 lg:px-8 text-slate-100 relative overflow-hidden">
-      {/* Decorative ambient glowing orbs */}
-      <div className="absolute top-10 right-10 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
-
-      <div className="max-w-5xl mx-auto space-y-10 relative z-10">
-        
-        {/* HERO / WELCOME HEADER */}
-        <div className="bg-[#0D0F18]/85 border border-purple-500/25 rounded-3xl p-8 sm:p-10 shadow-[0_0_50px_rgba(168,85,247,0.12)] backdrop-blur-xl text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 text-emerald-400 text-[10px] font-bold uppercase tracking-widest border border-emerald-500/30">
-              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-[0_0_6px_#10b981]" />
-              <span>Official Event Guidelines</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Mind Craft <span className="bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">Rules & Scoring</span>
-            </h1>
-            <p className="text-sm text-purple-200/70 max-w-xl">
-              Please review the 8 key rules, scoring mechanics, and penalty calculations before entering the challenges.
-            </p>
-            {participant?.name && (
-              <p className="text-xs font-bold text-purple-300/80 pt-1 font-mono">
-                Participant: <span className="text-purple-300 font-bold">{participant.name}</span> ({participant.participantId || participant.email})
+              <p className="text-sm text-slate-600 font-normal leading-relaxed">
+                All contestants start with 0 points. The contestant who completes all 3 challenges with the lowest negative penalty score (closest to 0 points) takes 1st place!
               </p>
-            )}
-          </div>
 
-          <Link
-            to="/challenges"
-            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm tracking-wider rounded-full shadow-[0_0_30px_rgba(168,85,247,0.4)] border border-purple-400/40 hover:scale-[1.02] active:scale-[0.98] transition flex items-center justify-center gap-3 shrink-0"
-          >
-            <span>CONTINUE TO CHALLENGES</span>
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-        </div>
-
-        {/* TIMELINE / STEPS */}
-        <div className="bg-[#0D0F18]/80 border border-purple-500/20 rounded-3xl p-6 sm:p-10 shadow-xl backdrop-blur-xl relative">
-          {/* Vertical Line */}
-          <div className="absolute left-[39px] sm:left-[55px] top-[40px] bottom-[40px] w-0.5 bg-purple-500/30 hidden md:block"></div>
-          
-          <div className="space-y-12 md:space-y-16">
-            {steps.map((step, index) => (
-              <div key={index} className="relative flex flex-col md:flex-row gap-6 md:gap-10">
-                {/* Number Circle */}
-                <div className="flex items-start md:shrink-0 z-10">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#141724] shadow-md flex flex-col items-center justify-center border-2 border-purple-500/40">
-                    <span className="text-xl sm:text-2xl font-black text-purple-300 leading-none">{step.num}</span>
-                    <span className="text-[10px] text-purple-400/80 font-bold uppercase mt-1">Rule</span>
-                  </div>
-                </div>
-
-                {/* Content block */}
-                <div className="flex-1 md:pt-1 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-500/30 hidden sm:flex">
-                      {step.icon}
-                    </div>
-                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">{step.title}</h2>
-                  </div>
-                  {step.content}
-                </div>
+              <div className="pt-2 text-xs text-slate-500">
+                Tiebreaker: In the event of equal scores, the contestant with the fastest cumulative completion time will be ranked higher.
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* PROMINENT BOTTOM CTA BANNER */}
-        <div className="bg-gradient-to-r from-purple-950/80 via-[#0D0F18] to-indigo-950/80 border border-purple-500/35 rounded-3xl p-8 sm:p-10 text-white shadow-[0_0_50px_rgba(168,85,247,0.2)] backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Ready for the Challenge?</span>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Ready to Craft Your Solution?
-            </h3>
-            <p className="text-xs text-purple-200/70 max-w-lg leading-relaxed font-sans">
-              You are ready to enter Tier 1 (Easy). Remember: accuracy in tasks and minimizing runs will give you the winning edge!
-            </p>
+
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          {/* 9-Step Participant Roadmap */}
+          <div className="border border-slate-200 bg-slate-50/70 p-8 rounded-none space-y-4">
+            <h4 className="text-lg font-medium text-slate-900">
+              End-to-End Hunt Sequence
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2 text-center text-xs font-mono">
+              {[
+                '1. Register',
+                '2. Enter Portal',
+                '3. Choose Lang',
+                '4. Start 15m Timer',
+                '5. Solve Tasks',
+                '6. Scan QR Chest',
+                '7. Assemble Code',
+                '8. 3 Free Runs',
+                '9. Final Submit',
+              ].map((step, idx) => (
+                <div key={idx} className="p-3 bg-white border border-slate-200 rounded-none text-slate-800">
+                  {step}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 5: FINAL READY CTA (DARK SECTION) ── */}
+      <section className="w-full bg-[#07080D] py-24 px-6 sm:px-8 lg:px-12 text-center text-white relative">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <h2 className="text-4xl sm:text-5xl font-normal text-white tracking-tight leading-tight">
+            Ready to Begin Tier 1?
+          </h2>
+
+          <p className="text-slate-400 text-base sm:text-lg font-normal max-w-2xl mx-auto leading-relaxed">
+            Enter the challenges portal to select your language and begin your 15-minute countdown on the Easy challenge.
+          </p>
+
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
             <Link
               to="/challenges"
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm tracking-wider rounded-full shadow-[0_0_30px_rgba(168,85,247,0.4)] border border-purple-400/40 hover:scale-[1.02] active:scale-[0.98] transition flex items-center justify-center gap-3 shrink-0"
+              className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2"
             >
-              <span>ENTER THE PORTAL</span>
-              <ArrowRight className="w-5 h-5" />
+              <span>Enter The Portal</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
+      </section>
 
-      </div>
     </div>
   );
 }

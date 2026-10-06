@@ -6,17 +6,17 @@ import { useAuth } from '../hooks/useAuth';
 import { challengeApi } from '../services/challengeApi';
 import { sessionApi } from '../services/sessionApi';
 import Toast from '../components/common/Toast';
-import MissionStepper from '../components/challenge/MissionStepper';
 import {
   Trophy,
   CheckCircle2,
   Lock,
   ArrowRight,
   Play,
-  Layers,
   Clock,
   UserPlus,
   Flame,
+  Shield,
+  Zap,
 } from 'lucide-react';
 
 export default function Challenges() {
@@ -94,6 +94,7 @@ export default function Challenges() {
       sequenceOrder: 1,
       timeLimitSeconds: 1200,
       description: 'Find the greatest among three integers with optimal comparison logic and edge-case validation.',
+      image: '/tier-easy.jpg',
     },
     {
       _id: 'ch-06',
@@ -104,6 +105,7 @@ export default function Challenges() {
       sequenceOrder: 2,
       timeLimitSeconds: 1200,
       description: 'Implement an efficient primality count algorithm (Sieve of Eratosthenes) up to integer N.',
+      image: '/tier-medium.jpg',
     },
     {
       _id: 'ch-07',
@@ -114,6 +116,7 @@ export default function Challenges() {
       sequenceOrder: 3,
       timeLimitSeconds: 1200,
       description: 'Determine the length of the longest strictly increasing subsequence in an array using dynamic programming.',
+      image: '/tier-hard.jpg',
     },
   ];
 
@@ -121,6 +124,8 @@ export default function Challenges() {
   const roadmapSteps = useMemo(() => {
     const sourceList = challenges.length > 0 ? challenges : CANONICAL_FALLBACKS;
     const list = [...sourceList].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+
+    const tierImages = ['/tier-easy.jpg', '/tier-medium.jpg', '/tier-hard.jpg'];
 
     return list.map((c, idx) => {
       const seq = c.sequenceOrder || idx + 1;
@@ -159,6 +164,7 @@ export default function Challenges() {
       const tasksCount = Array.isArray(c.tasks) ? c.tasks.length : 3;
       const blocksCount = c.languageConfigs?.[0]?.blockCount || tasksCount;
       const durationMin = Math.round((c.timeLimitSeconds || 1200) / 60);
+      const image = tierImages[idx % 3];
 
       return {
         ...c,
@@ -169,6 +175,7 @@ export default function Challenges() {
         tasksCount,
         blocksCount,
         durationMin,
+        image,
       };
     });
   }, [challenges, progressData, activeSessions, participant]);
@@ -176,7 +183,6 @@ export default function Challenges() {
   const currentStep = useMemo(() => {
     return roadmapSteps.find((s) => s.status === 'CURRENT') || roadmapSteps[0] || null;
   }, [roadmapSteps]);
-
 
   const completedCount = useMemo(() => {
     return roadmapSteps.filter((s) => s.status === 'COMPLETED').length;
@@ -204,23 +210,8 @@ export default function Challenges() {
     navigate(`/challenge?id=${targetSlug}`);
   };
 
-  const getDifficultyBadge = (diff) => {
-    switch (diff?.toLowerCase()) {
-      case 'easy':
-        return 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]';
-      case 'hard':
-        return 'bg-rose-950/60 text-rose-400 border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.2)]';
-      case 'medium':
-      default:
-        return 'bg-purple-950/60 text-purple-300 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.2)]';
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#07080D] text-slate-100 font-mono py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Decorative ambient glowing orbs */}
-      <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-10 w-[450px] h-[450px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
+    <div className="min-h-screen bg-[#07080D] font-sans text-slate-100 selection:bg-purple-600 selection:text-white">
 
       {toastMessage && (
         <Toast
@@ -230,261 +221,254 @@ export default function Challenges() {
         />
       )}
 
-      <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-        {/* ── HEADER BANNER ── */}
-        <div className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-[#0D0F18]/85 border border-purple-500/25 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.12)]">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* ── SECTION 1: HEADER & STATUS (DARK SECTION) ── */}
+      <section className="w-full bg-[#07080D] py-16 sm:py-20 px-6 sm:px-8 lg:px-12 border-b border-purple-900/20">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-xl">
-              {/* Creeper badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-widest shadow-sm">
-                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-[0_0_6px_#10b981]" />
-                BUILT FOR CREATORS // LINEAR ARENA SEQUENCE
-              </div>
+          <div className="lg:col-span-8 space-y-6 text-left">
+            <h1 className="text-4xl sm:text-5xl font-normal text-white tracking-tight leading-tight">
+              Mission Roadmap
+            </h1>
+            <p className="text-base text-slate-400 font-normal leading-relaxed max-w-2xl">
+              Progress through a strict sequential arena track: complete Easy first, unlock Medium upon acceptance, then tackle Hard. Levels cannot be skipped.
+            </p>
 
-              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md">
-                MISSION <span className="bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">ROADMAP</span>
-              </h1>
-              <p className="text-xs text-purple-200/70 leading-relaxed font-sans">
-                Progress through a strict linear Nether portal sequence: solve Easy first, unlock Medium upon acceptance, then Hard.
-                Challenges cannot be skipped or chosen freely.
-              </p>
-
+            <div className="pt-2 flex flex-wrap items-center gap-4">
               {currentStep && (
-                <div className="pt-2">
-                  {participant ? (
-                    <button
-                      onClick={() => handleStartChallenge(currentStep)}
-                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.4)] border border-purple-400/40 cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-white" />
-                      <span>{currentStep.hasActiveSession ? 'RESUME ARENA' : 'ENTER THE PORTAL'} (Step {currentStep.sequenceOrder}: {currentStep.difficulty})</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <Link
-                      to="/register"
-                      className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.4)] border border-purple-400/40"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      <span>REGISTER TO ENTER THE PORTAL</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  )}
-                </div>
+                participant ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStartChallenge(currentStep)}
+                    className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-purple-800 text-purple-800" />
+                    <span>{currentStep.hasActiveSession ? 'Resume Arena' : 'Enter The Portal'} ({currentStep.difficulty} · Tier {currentStep.sequenceOrder})</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <Link
+                    to="/register"
+                    className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Register To Enter The Portal</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )
               )}
             </div>
+          </div>
 
-            {/* Header Stats */}
-            <div className="flex flex-row md:flex-col gap-3 min-w-[200px] w-full md:w-auto">
-              <div className="flex-1 md:flex-initial p-3.5 rounded-2xl bg-[#141724]/80 border border-purple-500/20 flex items-center justify-between gap-3 shadow-inner">
-                <span className="text-[11px] text-purple-200/70 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Completed
-                </span>
-                <span className="text-sm font-black text-emerald-400">
-                  {completedCount} / 3
-                </span>
-              </div>
-              <div className="flex-1 md:flex-initial p-3.5 rounded-2xl bg-[#141724]/80 border border-purple-500/20 flex items-center justify-between gap-3 shadow-inner">
-                <span className="text-[11px] text-purple-200/70 flex items-center gap-1.5">
-                  <Trophy className="w-3.5 h-3.5 text-amber-400" /> Points Earned
-                </span>
-                <span className="text-sm font-black text-amber-300">
-                  {earnedPoints} <span className="text-[10px] text-slate-500">/ {totalPoints || 600}</span>
-                </span>
-              </div>
+          {/* Quick Stats Block */}
+          <div className="lg:col-span-4 border border-purple-900/40 bg-[#0B0D15] p-6 rounded-none space-y-4">
+            <div className="text-xs font-mono text-purple-400 uppercase tracking-wider">
+              Contestant Progress
+            </div>
+            <div className="flex justify-between items-center text-sm border-b border-purple-950/80 pb-3">
+              <span className="text-slate-400">Completed Tiers</span>
+              <span className="font-mono text-white font-medium">{completedCount} / 3</span>
+            </div>
+            <div className="flex justify-between items-center text-sm border-b border-purple-950/80 pb-3">
+              <span className="text-slate-400">Points Earned</span>
+              <span className="font-mono text-emerald-400 font-medium">{earnedPoints} / {totalPoints || 600}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-400">Active Challenge</span>
+              <span className="font-mono text-purple-300 font-medium">Tier {currentStep?.sequenceOrder || 1} ({currentStep?.difficulty || 'Easy'})</span>
             </div>
           </div>
-        </div>
 
-        {/* ── TOP-LEVEL STEPPER ── */}
-        <div className="p-4 rounded-2xl bg-[#0D0F18]/85 border border-purple-500/20 shadow-md backdrop-blur-xl">
-          <MissionStepper
-            progress={roadmapSteps.map((s) => ({
-              sequenceOrder: s.sequenceOrder,
-              difficulty: s.difficulty,
-              status: s.status,
-              title: s.title,
-            }))}
-          />
         </div>
+      </section>
 
-        {/* ── GUEST / UNREGISTERED NOTICE ── */}
-        {!participant && (
-          <div className="p-4 rounded-2xl bg-[#0D0F18]/90 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center shrink-0">
-                <UserPlus className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">Contestant Registration Required</h4>
-                <p className="text-[11px] text-purple-200/60 font-sans">
-                  Register your ID to begin the Easy challenge and record your official tournament leaderboard time.
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/register"
-              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wider transition shrink-0 flex items-center gap-1.5 shadow-[0_0_20px_rgba(168,85,247,0.3)] border border-purple-400/40"
-            >
-              REGISTER TO BEGIN <ArrowRight className="w-4 h-4" />
-            </Link>
+      {/* ── SECTION 2: 3-TIER ROADMAP WITH IMAGES (PURE WHITE SECTION) ── */}
+      <section className="w-full bg-white text-slate-900 py-20 px-6 sm:px-8 lg:px-12 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-12">
+
+          {/* Section Header */}
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
+              Linear Arena Sequence
+            </h2>
+            <p className="text-sm text-slate-500 font-normal leading-relaxed">
+              Each tier provides 15 minutes of countdown time. Clear all checkpoints and assemble the solution to unlock the next level.
+            </p>
           </div>
-        )}
 
-        {/* ── ALL CHALLENGES COMPLETED BANNER ── */}
-        {allCompleted && (
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-950/80 via-[#0D0F18] to-indigo-950/80 border border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_35px_rgba(168,85,247,0.25)] text-center sm:text-left">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center text-xl shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-                🏆
-              </div>
+          {/* Guest notice if unregistered */}
+          {!participant && (
+            <div className="p-6 border border-slate-200 bg-slate-50 rounded-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-black text-white">ALL CHALLENGES COMPLETED</h3>
-                <p className="text-xs text-purple-200/70 font-sans">
-                  You have successfully conquered the entire Mind Craft Nether track with {earnedPoints} points!
+                <h4 className="text-base font-medium text-slate-900">Registration Required</h4>
+                <p className="text-xs text-slate-600 font-normal mt-1">
+                  Register your participant credentials to record official tournament scores and begin Tier 1.
                 </p>
               </div>
-            </div>
-            {isAdmin ? (
               <Link
-                to="/admin/leaderboard"
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs tracking-wider transition shrink-0 border border-purple-400/40 shadow-lg"
+                to="/register"
+                className="px-6 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wide rounded-none transition-colors duration-200 shrink-0"
               >
-                VIEW FINAL STANDINGS
+                Register Now
               </Link>
+            </div>
+          )}
+
+          {/* 3 Challenge Steps with Editorial Image Pairing (No Repetitive Template Cards) */}
+          <div className="space-y-8">
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <div key={i} className="p-12 border border-slate-200 bg-slate-50 rounded-none animate-pulse h-48" />
+              ))
             ) : (
-              <div className="px-4 py-2.5 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-300 font-bold text-xs tracking-wider shrink-0 text-center">
-                RESULTS MANAGED BY ADMIN
-              </div>
-            )}
-          </div>
-        )}
+              roadmapSteps.map((step) => {
+                const isCompleted = step.status === 'COMPLETED';
+                const isCurrent = step.status === 'CURRENT';
+                const isLocked = step.status === 'LOCKED';
 
-        {/* ── ROADMAP 3 STEPS ── */}
-        <div className="space-y-4">
-          {loading ? (
-            [1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="p-6 bg-[#0D0F18]/80 border border-purple-500/15 rounded-2xl animate-pulse h-36"
-              />
-            ))
-          ) : (
-            roadmapSteps.map((step) => {
-              const isCompleted = step.status === 'COMPLETED';
-              const isCurrent = step.status === 'CURRENT';
-              const isLocked = step.status === 'LOCKED';
-
-              return (
-                <div
-                  key={step.slug || step._id}
-                  className={`p-6 rounded-2xl border transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 backdrop-blur-xl ${
-                    isCompleted
-                      ? 'bg-[#0D0F18]/85 border-emerald-500/35 shadow-[0_0_25px_rgba(16,185,129,0.12)]'
-                      : isCurrent
-                      ? 'bg-[#0D0F18]/90 border-purple-500/50 shadow-[0_0_35px_rgba(168,85,247,0.25)] ring-1 ring-purple-400/30'
-                      : 'bg-[#090A10]/70 border-slate-800/80 opacity-60'
-                  }`}
-                >
-                  {/* Left: Step Info */}
-                  <div className="flex items-start gap-4">
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border ${
-                        isCompleted
-                          ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
-                          : isCurrent
-                          ? 'bg-purple-950/70 text-purple-200 border-purple-500/60 shadow-[0_0_20px_rgba(168,85,247,0.35)] animate-pulse'
-                          : 'bg-slate-900 text-slate-600 border-slate-800'
-                      }`}
-                    >
-                      {isCompleted ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : isLocked ? <Lock className="w-4 h-4 text-slate-500" /> : step.sequenceOrder}
+                return (
+                  <div
+                    key={step.slug || step._id}
+                    className={`grid grid-cols-1 lg:grid-cols-12 gap-8 items-center p-6 sm:p-8 rounded-none border transition-colors duration-300 ${
+                      isCurrent
+                        ? 'border-purple-600 bg-purple-50/30'
+                        : isCompleted
+                        ? 'border-emerald-300 bg-emerald-50/20'
+                        : 'border-slate-200 bg-slate-50/40 opacity-75'
+                    }`}
+                  >
+                    {/* Thumbnail Image (Unrounded) */}
+                    <div className="lg:col-span-4 overflow-hidden rounded-none border border-slate-200 aspect-[16/10] bg-slate-900">
+                      <img
+                        src={step.image}
+                        alt={step.title}
+                        className="w-full h-full object-cover rounded-none"
+                      />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 font-bold uppercase">
-                          Step {step.sequenceOrder}
-                        </span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${getDifficultyBadge(
-                            step.difficulty
-                          )}`}
-                        >
+                    {/* Information */}
+                    <div className="lg:col-span-5 space-y-3">
+                      <div className="flex items-center gap-3 text-xs font-mono">
+                        <span className="text-slate-500 font-medium">Stage 0{step.sequenceOrder}</span>
+                        <span>•</span>
+                        <span className={`font-medium ${
+                          step.difficulty === 'Easy' ? 'text-emerald-700' :
+                          step.difficulty === 'Hard' ? 'text-rose-700' : 'text-purple-700'
+                        }`}>
                           {step.difficulty}
                         </span>
-                        <span className="text-[10px] text-amber-400 font-black flex items-center gap-1">
-                          <Flame className="w-3 h-3 text-amber-400" />
-                          {step.points} PTS
-                        </span>
-                        <span className="text-[10px] text-purple-200/60 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-purple-400" />
-                          {step.durationMin}m
-                        </span>
+                        <span>•</span>
+                        <span className="text-slate-500">{step.durationMin} Mins</span>
+                        <span>•</span>
+                        <span className="text-slate-500">{step.points} Pts</span>
                       </div>
 
-                      <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                      <h3 className="text-xl sm:text-2xl font-medium text-slate-900">
                         {step.title}
-                      </h2>
+                      </h3>
 
-                      <p className="text-xs text-purple-200/70 max-w-xl font-sans leading-relaxed">
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                         {step.description}
                       </p>
 
-                      <div className="flex items-center gap-4 text-[11px] text-purple-300/50 pt-1">
-                        <span>{step.tasksCount} Progressive Tasks</span>
-                        <span>•</span>
-                        <span>{step.blocksCount} Code Fragments</span>
+                      <div className="text-xs text-slate-500 font-mono pt-1">
+                        {step.tasksCount} Checkpoint Tasks · {step.blocksCount} Code Fragments · 3 Free Runs
                       </div>
                     </div>
+
+                    {/* Action Area */}
+                    <div className="lg:col-span-3 flex flex-col items-start lg:items-end justify-center gap-3">
+                      {isCompleted && (
+                        <div className="text-xs font-mono text-emerald-700 font-medium flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>Tier Completed</span>
+                        </div>
+                      )}
+
+                      {isCurrent && participant && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartChallenge(step)}
+                          className="w-full lg:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wider uppercase rounded-none transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-white text-white" />
+                          <span>{step.hasActiveSession ? 'Resume Arena' : 'Enter Portal'}</span>
+                        </button>
+                      )}
+
+                      {isCurrent && !participant && (
+                        <Link
+                          to="/register"
+                          className="w-full lg:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs tracking-wider uppercase rounded-none transition-colors duration-200 flex items-center justify-center gap-2"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>Register To Start</span>
+                        </Link>
+                      )}
+
+                      {isLocked && (
+                        <div className="text-xs font-mono text-slate-400 italic flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Complete Stage 0{step.sequenceOrder - 1} first</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                );
+              })
+            )}
+          </div>
 
-                  {/* Right: Action Area */}
-                  <div className="shrink-0 w-full md:w-auto flex md:flex-col items-center md:items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800">
-                    {isCompleted && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-xs font-bold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>Completed ✓</span>
-                      </div>
-                    )}
-
-                    {isCurrent && participant && (
-                      <button
-                        onClick={() => handleStartChallenge(step)}
-                        className="w-full md:w-auto px-7 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.45)] border border-purple-400/40 flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Play className="w-4 h-4 fill-white" />
-                        <span>{step.hasActiveSession ? 'RESUME ARENA' : 'ENTER THE PORTAL'}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    )}
-
-                    {isCurrent && !participant && (
-                      <Link
-                        to="/register"
-                        className="w-full md:w-auto px-7 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black text-xs sm:text-sm tracking-wider uppercase transition shadow-[0_0_30px_rgba(168,85,247,0.45)] border border-purple-400/40 flex items-center justify-center gap-2"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>REGISTER TO START</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    )}
-
-                    {isLocked && (
-                      <div className="inline-flex items-center gap-2 text-xs text-slate-500 italic">
-                        <Lock className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Complete {step.previousTitle || 'previous challenge'} to unlock</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
         </div>
-      </div>
+      </section>
+
+      {/* ── SECTION 3: ARENA PROTOCOL REFERENCE (DARK SECTION) ── */}
+      <section className="w-full bg-[#07080D] text-slate-100 py-20 px-6 sm:px-8 lg:px-12 border-t border-purple-900/20">
+        <div className="max-w-7xl mx-auto space-y-12">
+          
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-white tracking-tight">
+              Arena Protocol &amp; Penalties
+            </h2>
+            <p className="text-sm text-slate-400 font-normal leading-relaxed">
+              Important tournament constraints to keep in mind while solving.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3">
+              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                Rule 01 // Elapsed Time
+              </span>
+              <h3 className="text-xl font-normal text-white">15-Min Timer (-10 pts / min)</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                Every minute that elapses during your hunt deducts -10 points. Minimize stalls and assemble fragments briskly.
+              </p>
+            </div>
+
+            <div className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3">
+              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                Rule 02 // Accuracy
+              </span>
+              <h3 className="text-xl font-normal text-white">-20 Pts Per Wrong Answer</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                Answering mini tasks incorrectly incurs an immediate -20 pts deduction. Max 3 attempts per task before explanation reveal.
+              </p>
+            </div>
+
+            <div className="border border-purple-950/70 bg-[#0B0D15] p-6 rounded-none space-y-3">
+              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                Rule 03 // Compiler
+              </span>
+              <h3 className="text-xl font-normal text-white">3 Free Runs Allowance</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                First 3 code test runs are 100% free. Any extra test run beyond 3 incurs a -10 pts penalty. Test thoughtfully!
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </div>
   );
 }

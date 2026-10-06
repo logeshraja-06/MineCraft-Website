@@ -16,9 +16,9 @@ const item = {
 
 /* ─── HUD stat strip data ─────────────────────────────────── */
 const stats = [
-  { icon: Layers, value: '3 Tiers',     label: 'Easy → Medium → Hard' },
-  { icon: Clock,  value: '15 Min',      label: 'Per Tier · Speed Scoring' },
-  { icon: Cpu,    value: '3 Free Runs', label: 'Zero Penalty · Judge0' },
+  { icon: Layers, value: '3 Tiers', label: 'Easy → Medium → Hard' },
+  { icon: Clock, value: '15 Min', label: 'Per Tier · Speed Scoring' },
+  { icon: Cpu, value: '3 Free Runs', label: 'Zero Penalty · Judge0' },
 ];
 
 /* ─── Main Hero component ────────────────────────────────── */
@@ -26,7 +26,7 @@ export default function Hero({ participant, targetUrl }) {
   return (
     <section
       aria-label="Hero"
-      className="relative min-h-[92vh] flex items-center overflow-hidden bg-[#07080D]"
+      className="relative h-screen min-h-screen flex flex-col justify-between overflow-hidden bg-[#07080D]"
     >
       {/* Background Nether Portal Image from Reference */}
       <div className="absolute inset-0 z-0">
@@ -43,45 +43,27 @@ export default function Hero({ participant, targetUrl }) {
       </div>
 
       {/* ─── Foreground Content ─────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16 lg:py-20 flex flex-col justify-between min-h-[85vh]">
-        
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-20 sm:pt-24 pb-6 sm:pb-8 flex flex-col justify-between h-full">
+
         {/* Main Hero Column */}
-        <div className="max-w-2xl my-auto pt-6 lg:pt-0">
+        <div className="max-w-2xl my-auto pt-2 lg:pt-0">
           <motion.div
-            className="flex flex-col gap-6 text-left"
+            className="flex flex-col gap-5 sm:gap-6 text-left"
             variants={container}
             initial="hidden"
             animate="show"
           >
-            {/* 1 ── Creeper Badge Pill */}
-            <motion.div
-              variants={item}
-              className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#0D0F18]/90 border border-emerald-500/40 shadow-lg shadow-emerald-950/40 w-fit backdrop-blur-md"
-            >
-              {/* Pixel Creeper Icon */}
-              <div className="w-4 h-4 rounded-xs bg-emerald-500 flex items-center justify-center p-0.5 shadow-[0_0_8px_rgba(34,197,94,0.6)]">
-                <div className="w-full h-full flex flex-col justify-between items-center">
-                  <div className="w-full flex justify-between">
-                    <span className="w-1 h-1 bg-[#07080D] rounded-xxs" />
-                    <span className="w-1 h-1 bg-[#07080D] rounded-xxs" />
-                  </div>
-                  <span className="w-1.5 h-1 bg-[#07080D]" />
-                </div>
-              </div>
-              <span className="font-mono text-[11px] font-black tracking-widest text-emerald-400 uppercase">
-                Built for Creators // Loved by Generations
-              </span>
-            </motion.div>
 
-            {/* 2 ── Monumental Display Headline */}
+            {/* Monumental Display Headline */}
             <motion.div variants={item} className="space-y-0 tracking-tight font-black">
-              <h1 className="text-[3.6rem] sm:text-[4.8rem] lg:text-[5.8rem] leading-[0.92] text-white font-extrabold font-sans uppercase">
+
+              <h1 className="text-[3.2rem] sm:text-[4.4rem] lg:text-[5.4rem] leading-[0.92] text-white font-bold font-sans uppercase">
                 IMAGINE
               </h1>
-              <h1 className="text-[3.6rem] sm:text-[4.8rem] lg:text-[5.8rem] leading-[0.92] text-slate-200 font-extrabold font-sans uppercase">
+              <h1 className="text-[3.2rem] sm:text-[4.4rem] lg:text-[5.4rem] leading-[0.92] text-slate-200 font-bold font-sans uppercase">
                 BUILD
               </h1>
-              <h1 className="text-[3.6rem] sm:text-[4.8rem] lg:text-[5.8rem] leading-[0.92] font-extrabold font-sans uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-violet-300 to-fuchsia-400 drop-shadow-[0_0_30px_rgba(168,85,247,0.7)]">
+              <h1 className="text-[3.2rem] sm:text-[4.4rem] lg:text-[5.4rem] leading-[0.92] font-bold font-sans uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-violet-300 to-fuchsia-400 drop-shadow-[0_0_30px_rgba(168,85,247,0.7)]">
                 BEYOND
               </h1>
             </motion.div>
@@ -99,19 +81,19 @@ export default function Hero({ participant, targetUrl }) {
               variants={item}
               className="flex flex-col sm:flex-row gap-4 pt-2 items-start"
             >
-              {/* Primary Glowing Pill Button */}
+              {/* Primary Pill Button */}
               <Link
                 to={targetUrl}
-                className="group relative overflow-hidden flex items-center justify-center gap-3 px-8 py-3.5 rounded-full border border-purple-500/90 bg-gradient-to-r from-purple-950/70 via-purple-900/60 to-indigo-950/70 hover:from-purple-600 hover:to-indigo-600 text-purple-200 hover:text-white font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-[0_0_20px_rgba(168,85,247,0.35)] hover:shadow-[0_0_35px_rgba(168,85,247,0.75)] hover:scale-[1.02] active:scale-[0.98]"
+                className="group relative overflow-hidden flex items-center justify-center gap-3 px-8 py-3.5  bg-white hover:bg-purple-50 text-purple-900 hover:text-purple-950 font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-[0_0_25px_rgba(255,255,255,0.4)] hover:shadow-[0_0_35px_rgba(168,85,247,0.6)] hover:scale-[1.02] active:scale-[0.98] border border-white"
               >
                 <span>ENTER THE WORLD</span>
-                <ArrowRight className="w-4 h-4 text-purple-300 group-hover:translate-x-1 group-hover:text-white transition-all" />
+                <ArrowRight className="w-4 h-4 text-purple-700 group-hover:translate-x-1 group-hover:text-purple-900 transition-all" />
               </Link>
 
-              {/* Secondary Outlined Button */}
+              {/* Secondary Button */}
               <Link
                 to="/rules"
-                className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-full border border-slate-700/80 bg-[#0D0F18]/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-widest transition-all duration-200 hover:border-purple-500/50 backdrop-blur-md"
+                className="flex items-center justify-center gap-2 px-7 py-3.5  bg-transparent hover:bg-white text-white hover:text-purple-950 font-black text-sm uppercase tracking-widest transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-[0_0_20px_rgba(255,255,255,0.35)] border border-purple-200/60"
               >
                 <span>Explore Rules</span>
               </Link>
@@ -135,7 +117,7 @@ export default function Hero({ participant, targetUrl }) {
         </div>
 
         {/* ─── Bottom Reference Corner Badges ──────────────────────── */}
-        <div className="pt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-purple-900/20 text-xs font-mono">
+        <div className="pt-4 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-purple-900/20 text-xs font-mono">
           {/* Bottom Left: Ultimate Sandbox badge */}
           <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-[#0D0F18]/70 border border-purple-500/30 backdrop-blur-md shadow-lg shadow-purple-950/20">
             <span className="text-purple-400 text-base">✦</span>

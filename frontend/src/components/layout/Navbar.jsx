@@ -14,7 +14,22 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const menuRef = useRef(null);
+
+  // Monitor scroll position to transition navbar from transparent to dark
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setIsScrolled(window.scrollY > 20);
+  }, [location.pathname]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -73,21 +88,28 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-[#07080D]/85 backdrop-blur-xl sticky top-0 z-40 px-6 py-3.5 shadow-xl shadow-purple-950/20 font-sans border-b border-purple-500/20">
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 px-6 py-3 font-sans transition-all duration-300 ease-in-out ${isScrolled
+          ? 'bg-[#07080D]/90 backdrop-blur-xl border-b border-purple-500/20 shadow-xl shadow-purple-950/25'
+          : 'bg-transparent border-b border-transparent shadow-none'
+          }`}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          
+
           {/* LOGO */}
-          <Link to="/" className="flex items-center gap-3.5 group">
+          <Link to="/" className="flex items-center gap-3 group">
             <div className="relative flex items-center">
-               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 via-indigo-900 to-slate-950 border border-purple-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.4)] group-hover:shadow-[0_0_22px_rgba(168,85,247,0.7)] transition-all">
-                 <div className="w-5 h-5 rounded-md bg-purple-400/20 border border-purple-400 flex items-center justify-center">
-                   <div className="w-2.5 h-2.5 bg-purple-300 rounded-xs animate-pulse"></div>
-                 </div>
-               </div>
-               <div className="ml-3 flex items-center gap-1.5 tracking-wider font-sans">
-                  <span className="font-black text-2xl md:text-3xl text-white leading-tight">MIND</span>
-                  <span className="font-black text-2xl md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-300 leading-tight drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]">CRAFT</span>
-               </div>
+              <img
+                src="/logo.png"
+                alt="Mind Craft"
+                className="w-15 h-11 sm:w-15 sm:h-15 object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-[0_0_12px_rgba(242,140,15,0.45)]"
+              />
+              <div className="ml-2.5 flex items-center gap-1 tracking-wider font-sans">
+                <span className="font-black text-2xl md:text-2xl text-white leading-tight">MIND</span>
+                <span className="font-black text-2xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-300 leading-tight drop-shadow-[0_0_10px_rgba(242,140,15,0.55)]">
+                  CRAFT
+                </span>
+              </div>
             </div>
           </Link>
 
@@ -99,9 +121,8 @@ export default function Navbar() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`relative py-1.5 transition-all duration-200 ${
-                    isActive ? 'text-purple-300 font-extrabold drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'text-slate-300 hover:text-white'
-                  }`}
+                  className={`relative py-1.5 transition-all duration-200 ${isActive ? 'text-purple-300 font-extrabold drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'text-slate-300 hover:text-white'
+                    }`}
                 >
                   {item.label}
                   {isActive && (
@@ -182,10 +203,10 @@ export default function Navbar() {
             ) : (
               <Link
                 to="/register"
-                className="px-6 py-2.5 rounded-full border border-purple-500/80 bg-purple-950/40 hover:bg-purple-600 text-purple-200 hover:text-white font-bold text-xs tracking-widest uppercase transition-all duration-300 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] flex items-center gap-2"
+                className="group px-6 py-2.5  bg-white hover:bg-purple-50 text-purple-900 hover:text-purple-950 font-black text-xs tracking-widest uppercase transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.35)] hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 border border-white"
               >
                 <span>ENTER THE WORLD</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 text-purple-700 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             )}
           </div>

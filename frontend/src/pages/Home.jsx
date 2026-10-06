@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useParticipant } from '../context/ParticipantContext';
@@ -18,6 +18,10 @@ import {
   Layers,
   Trophy,
   Cpu,
+  Lock,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Hero from '../components/home/Hero';
 import { IsometricVoxelCube, XpOrbToken, PixelKeyToken } from '../components/home/FloatingGraphicTokens';
@@ -25,6 +29,17 @@ import { IsometricVoxelCube, XpOrbToken, PixelKeyToken } from '../components/hom
 export default function Home() {
   const { participant } = useParticipant();
   const [currentChallengeSlug, setCurrentChallengeSlug] = useState(null);
+  const trackRef = useRef(null);
+
+  const scrollTrack = (direction) => {
+    if (trackRef.current) {
+      const scrollAmount = trackRef.current.clientWidth * 0.8;
+      trackRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -45,264 +60,415 @@ export default function Home() {
     ? `/challenge?id=${currentChallengeSlug}`
     : '/challenges';
 
-  const steps = [
-    { stage: 'STAGE 01', title: 'Solve Task',       desc: 'Solve MCQ, predict output, fill-in-the-blank to unlock checkpoints.',          icon: ClipboardList },
-    { stage: 'STAGE 02', title: 'Earn Key',          desc: 'Answer correctly to reveal the QR code and unlock your block.',                  icon: KeyRound     },
-    { stage: 'STAGE 03', title: 'Open Chest',        desc: 'Scan and collect scrambled code fragments from the vault.',                      icon: Box          },
-    { stage: 'STAGE 04', title: 'Collect Fragment',  desc: 'Gather all required code pieces to assemble the complete program.',              icon: Code         },
-    { stage: 'STAGE 05', title: 'Assemble Code',     desc: 'Arrange fragments on the board into the correct logic order.',                   icon: Puzzle       },
-    { stage: 'STAGE 06', title: 'Run & Submit',      desc: 'Test with 3 free runs, verify against test cases, and submit.',                  icon: PlayCircle   },
-  ];
-
-  const highlights = [
-    { title: '3-Tier Linear Progression',  desc: 'Complete Easy (15m) to unlock Medium (15m), and Medium to unlock Hard (15m). Strict sequential track.',        icon: Layers,  tag: 'LEVEL PROGRESSION' },
-    { title: 'Task Checkpoints',            desc: 'Answer MCQs and Fill in the Blanks. -20 pts penalty per wrong answer; answer revealed after 3 attempts.',      icon: Zap,     tag: 'PENALTY MECHANIC'  },
-    { title: 'Fragment Assembly Vault',     desc: 'Collect all jumbled blocks and drag them into the correct program structure before compilation.',                icon: Package, tag: 'LOGIC PUZZLE'      },
-    { title: 'Real-Time Judge0 Sandbox',   desc: 'Execute your assembled C, C++, Java, or Python code against official test inputs with instant feedback.',        icon: Play,    tag: 'CODE EXECUTION'    },
-    { title: '15-Min Timer & Speed Scoring', desc: 'Every minute that elapses deducts -10 pts. Move fast and avoid extra runs to keep negative score minimal!',   icon: Clock,   tag: 'SPEED BONUS'       },
-    { title: '3 Free Runs Allowance',       desc: 'First 3 sample runs are 100% free! Extra runs beyond 3 incur -10 pts each. Strategize your testing.',          icon: Cpu,     tag: 'TEST STRATEGY'     },
-  ];
-
   return (
     <div className="bg-[#07080D] min-h-screen font-sans text-slate-100 overflow-hidden relative selection:bg-purple-600 selection:text-white">
 
       {/* ── HERO SECTION ─────────────────────────────────────────── */}
       <Hero participant={participant} targetUrl={targetUrl} />
 
-      {/* ── ALL OTHER SECTIONS inside max-w container ─────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* ── 3-TIER LINEAR MISSION PATH (PREMIUM FULL-SCREEN SHOWCASE) ── */}
+      <section className="w-full min-h-screen h-screen bg-white text-slate-900 flex flex-col justify-center border-y border-slate-200/90 relative overflow-hidden py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 w-full flex flex-col justify-center my-auto">
 
-        {/* ── 3-TIER LINEAR MISSION PATH ── */}
-        <section className="py-12">
-          <div className="p-8 sm:p-10 bg-[#0D0F18]/80 border border-purple-500/30 rounded-3xl text-center space-y-6 shadow-2xl shadow-purple-950/40 relative overflow-hidden backdrop-blur-xl">
-
-            {/* Ambient glow flare inside card */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[200px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/60 border border-purple-500/40 text-purple-300 text-xs font-mono font-bold tracking-widest uppercase shadow-md relative z-10">
-              <Layers className="w-3.5 h-3.5 text-purple-400" />
-              <span>Strict Sequential Track · 0 Points Initial Baseline</span>
-            </div>
-
-            <div className="space-y-2 max-w-xl mx-auto relative z-10">
-              <h3 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight uppercase">
+          {/* Top Header Row: Clean Elegant Title & Subtitle + Carousel Arrows */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 sm:pb-6">
+            <div className="space-y-2 max-w-3xl text-left">
+              <h2 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
                 3-Tier Linear Mission Track
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+              </h2>
+              <p className="text-sm text-slate-500 leading-relaxed font-normal">
                 All contestants start with 0 points. Complete Easy to unlock Medium, then solve Medium to unlock Hard. Minimum negative points win!
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 max-w-4xl mx-auto relative z-10">
+            {/* Circular Carousel Controls (Exactly like reference UI) */}
+            <div className="flex items-center gap-3 shrink-0 self-start md:self-end">
+              <button
+                type="button"
+                onClick={() => scrollTrack('left')}
+                aria-label="Previous card"
+                className="w-10 h-10 rounded-full border border-slate-300 hover:border-slate-800 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 hover:text-slate-900 transition-colors shadow-xs active:scale-95 cursor-pointer"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[1.5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollTrack('right')}
+                aria-label="Next card"
+                className="w-10 h-10 rounded-full border border-slate-300 hover:border-slate-800 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 hover:text-slate-900 transition-colors shadow-xs active:scale-95 cursor-pointer"
+              >
+                <ChevronRight className="w-5 h-5 stroke-[1.5]" />
+              </button>
+            </div>
+          </div>
 
-              {/* Tier 1: Easy */}
-              <div className="p-6 bg-[#111422]/90 rounded-2xl border border-emerald-500/40 shadow-xl hover:shadow-[0_0_25px_rgba(34,197,94,0.3)] hover:border-emerald-400 hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
-                <div className="absolute top-2 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
-                  <IsometricVoxelCube size={32} variant="emerald" label="T1" />
+          {/* 3 Editorial Cards Grid */}
+          <div
+            ref={trackRef}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6 overflow-x-auto no-scrollbar scroll-smooth"
+          >
+
+            {/* Card 1: Easy */}
+            <div className="group flex flex-col justify-between text-left rounded-none">
+              <div>
+                {/* Image Banner: Non-rounded (sharp corners) */}
+                <div className="relative overflow-hidden rounded-none aspect-[16/10] bg-slate-900 shadow-xs border border-slate-200">
+                  <img
+                    src="/tier-easy.jpg"
+                    alt="Warm-Up Logic"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-none"
+                  />
                 </div>
-                <div className="inline-flex px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 text-[11px] font-mono font-black uppercase tracking-wider">
-                  Tier 1 // Easy
-                </div>
-                <h4 className="text-2xl font-black text-white group-hover:text-emerald-400 transition-colors">
+
+                {/* Title */}
+                <h3 className="text-xl sm:text-2xl font-medium text-slate-900 mt-4 mb-2 leading-snug group-hover:text-purple-700 transition-colors">
                   Warm-Up Logic
-                </h4>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                  Entry-level problem solving, warm-up logic tasks &amp; QR checkpoints.
+                </h3>
+
+                {/* Description */}
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                  Entry-level problem solving, warm-up logic tasks &amp; QR checkpoints. Solve fundamental MCQs and code outputs to unlock your first fragments and gain initial momentum.
                 </p>
-                <div className="pt-2 text-xs font-mono font-bold text-emerald-300 bg-emerald-950/40 py-1.5 rounded-lg border border-emerald-500/30 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>15 Mins · 1 Problem Track</span>
-                </div>
               </div>
 
-              {/* Tier 2: Medium */}
-              <div className="p-6 bg-[#111422]/90 rounded-2xl border border-purple-500/40 shadow-xl hover:shadow-[0_0_25px_rgba(168,85,247,0.35)] hover:border-purple-400 hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
-                <div className="absolute top-2 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
-                  <IsometricVoxelCube size={32} variant="gold" label="T2" />
+              {/* Clean minimal footer */}
+              <div className="pt-3 mt-4 flex items-center justify-between border-t border-slate-100 text-xs font-normal text-slate-500">
+                <span className="text-emerald-700 font-medium">Tier 1 // Easy · 15 Mins</span>
+                <span className="font-mono text-slate-400">Stage 01</span>
+              </div>
+            </div>
+
+            {/* Card 2: Medium */}
+            <div className="group flex flex-col justify-between text-left rounded-none">
+              <div>
+                {/* Image Banner: Non-rounded */}
+                <div className="relative overflow-hidden rounded-none aspect-[16/10] bg-slate-900 shadow-xs border border-slate-200">
+                  <img
+                    src="/tier-medium.jpg"
+                    alt="Algorithms & Structures"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-none"
+                  />
                 </div>
-                <div className="inline-flex px-3 py-1 rounded-full bg-purple-950/70 border border-purple-500/40 text-purple-300 text-[11px] font-mono font-black uppercase tracking-wider">
-                  Tier 2 // Medium
-                </div>
-                <h4 className="text-2xl font-black text-white group-hover:text-purple-300 transition-colors">
+
+                {/* Title */}
+                <h3 className="text-xl sm:text-2xl font-medium text-slate-900 mt-4 mb-2 leading-snug group-hover:text-purple-700 transition-colors">
                   Algorithms &amp; Structures
-                </h4>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                  Intermediate data structures &amp; algorithms requiring structured assembly.
+                </h3>
+
+                {/* Description */}
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                  Intermediate data structures &amp; algorithms requiring structured assembly. Collect scrambled code pieces from vault chests and arrange them into accurate computational pipelines.
                 </p>
-                <div className="pt-2 text-xs font-mono font-bold text-purple-300 bg-purple-950/40 py-1.5 rounded-lg border border-purple-500/30 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-purple-400" />
-                  <span>15 Mins · 1 Problem Track</span>
-                </div>
               </div>
 
-              {/* Tier 3: Hard */}
-              <div className="p-6 bg-[#111422]/90 rounded-2xl border border-rose-500/40 shadow-xl hover:shadow-[0_0_25px_rgba(244,63,94,0.35)] hover:border-rose-400 hover:-translate-y-1.5 transition-all duration-300 space-y-3 group text-center relative overflow-hidden">
-                <div className="absolute top-2 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
-                  <IsometricVoxelCube size={32} variant="redstone" label="T3" />
+              {/* Clean minimal footer */}
+              <div className="pt-3 mt-4 flex items-center justify-between border-t border-slate-100 text-xs font-normal text-slate-500">
+                <span className="text-purple-700 font-medium">Tier 2 // Medium · 15 Mins</span>
+                <span className="font-mono text-slate-400">Stage 02</span>
+              </div>
+            </div>
+
+            {/* Card 3: Hard */}
+            <div className="group flex flex-col justify-between text-left rounded-none">
+              <div>
+                {/* Image Banner: Non-rounded */}
+                <div className="relative overflow-hidden rounded-none aspect-[16/10] bg-slate-900 shadow-xs border border-slate-200">
+                  <img
+                    src="/tier-hard.jpg"
+                    alt="Master Arena"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-none"
+                  />
                 </div>
-                <div className="inline-flex px-3 py-1 rounded-full bg-rose-950/70 border border-rose-500/40 text-rose-300 text-[11px] font-mono font-black uppercase tracking-wider">
-                  Tier 3 // Hard
-                </div>
-                <h4 className="text-2xl font-black text-white group-hover:text-rose-400 transition-colors">
+
+                {/* Title */}
+                <h3 className="text-xl sm:text-2xl font-medium text-slate-900 mt-4 mb-2 leading-snug group-hover:text-purple-700 transition-colors">
                   Master Arena
-                </h4>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                  Championship-tier computational challenges &amp; advanced edge-case testing.
+                </h3>
+
+                {/* Description */}
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                  Championship-tier computational challenges &amp; advanced edge-case testing. Assemble complex algorithms, optimize logic execution, and pass judge test cases for peak speed bonus points.
                 </p>
-                <div className="pt-2 text-xs font-mono font-bold text-rose-300 bg-rose-950/40 py-1.5 rounded-lg border border-rose-500/30 flex items-center justify-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-rose-400" />
-                  <span>15 Mins · 1 Problem Track</span>
-                </div>
               </div>
 
+              {/* Clean minimal footer */}
+              <div className="pt-3 mt-4 flex items-center justify-between border-t border-slate-100 text-xs font-normal text-slate-500">
+                <span className="text-rose-700 font-medium">Tier 3 // Hard · 15 Mins</span>
+                <span className="font-mono text-slate-400">Stage 03</span>
+              </div>
             </div>
-          </div>
-        </section>
 
-        {/* ── HOW IT WORKS: 6 STEP CARDS ── */}
-        <section className="py-12 md:py-16 border-t border-purple-900/30 relative">
-          <div className="flex items-center gap-4 mb-10">
-            <div className="w-10 h-2 bg-gradient-to-r from-purple-500 to-violet-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
-            <div>
-              <h3 className="text-2xl md:text-3xl font-black text-white tracking-wider uppercase flex items-center gap-2">
-                <span>HOW IT WORKS</span>
-                <span className="text-xs font-mono font-bold text-purple-300 bg-purple-950/70 px-3 py-0.5 rounded-full border border-purple-500/40">
-                  6 GAMEPLAY STAGES
-                </span>
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">
-                The core quest mechanics from unlocking the key to compiler execution
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 relative">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <div
-                  key={index}
-                  className="relative min-h-[300px] p-6 bg-[#0D0F18]/80 rounded-3xl border border-purple-500/25 hover:border-purple-400 shadow-xl hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] hover:-translate-y-2 transition-all duration-300 group flex flex-col items-center text-center overflow-hidden backdrop-blur-md"
-                >
-                  <div className="absolute top-2 left-3 text-5xl font-black text-purple-950/40 group-hover:text-purple-900/50 select-none transition-colors duration-300">
-                    0{index + 1}
-                  </div>
-
-                  <div className="w-16 h-16 rounded-2xl bg-purple-950/60 border border-purple-500/30 group-hover:bg-purple-600 flex items-center justify-center relative mb-4 transition-all duration-300 z-10 mt-3 group-hover:scale-110 shadow-lg shadow-purple-950/40">
-                    <Icon className="w-8 h-8 text-purple-400 group-hover:text-white transition-colors duration-300" strokeWidth={2.2} />
-                  </div>
-
-                  <span className="text-[10px] font-mono font-black text-purple-400 uppercase tracking-widest mb-1 z-10">
-                    {step.stage}
-                  </span>
-
-                  <h4 className="font-black text-white text-base mb-2 z-10 group-hover:text-purple-300 transition-colors leading-tight">
-                    {step.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed font-medium z-10">
-                    {step.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ── CHALLENGE HIGHLIGHTS GRID ── */}
-        <section className="py-12 md:py-16 border-t border-purple-900/30 relative">
-          <div className="flex items-center gap-4 mb-10">
-            <div className="w-10 h-2 bg-gradient-to-r from-purple-500 to-violet-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
-            <div>
-              <h3 className="text-2xl md:text-3xl font-black text-white tracking-wider uppercase flex items-center gap-2">
-                <span>COMPETITION HIGHLIGHTS</span>
-                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/70 px-3 py-0.5 rounded-full border border-emerald-500/40">
-                  CRITICAL RULES
-                </span>
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">
-                Key tournament constraints, execution rules, and scoring policies
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {highlights.map((highlight, index) => {
-              const Icon = highlight.icon;
-              return (
-                <div
-                  key={index}
-                  className="p-8 bg-[#0D0F18]/80 rounded-3xl border border-purple-500/25 hover:border-purple-400 shadow-xl hover:shadow-[0_0_30px_rgba(168,85,247,0.2)] hover:-translate-y-2 transition-all duration-300 flex flex-col sm:flex-row gap-5 group relative overflow-hidden backdrop-blur-md"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-
-                  <div className="w-14 h-14 rounded-2xl bg-purple-950/60 border border-purple-500/40 flex-shrink-0 flex items-center justify-center text-purple-300 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 z-10 shadow-md group-hover:scale-105">
-                    <Icon className="w-7 h-7" strokeWidth={2} />
-                  </div>
-                  <div className="z-10 space-y-1.5">
-                    <span className="text-[10px] font-mono font-black text-purple-400 uppercase tracking-wider block">
-                      {highlight.tag}
-                    </span>
-                    <h4 className="font-black text-white text-lg group-hover:text-purple-300 transition-colors leading-tight">
-                      {highlight.title}
-                    </h4>
-                    <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-medium">
-                      {highlight.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-      </div>
-
-      {/* ── ARENA PORTAL CTA (Full-width Nether Portal Arena) ── */}
-      <section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#07080D] via-[#0B0C16] to-[#07080D] border-t border-purple-900/30">
-
-        {/* Concentric rings with purple energy glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] rounded-full border border-purple-500/20 pointer-events-none"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] rounded-full border border-dashed border-purple-400/30 pointer-events-none animate-radar"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full bg-gradient-to-tr from-purple-600/30 via-indigo-600/20 to-transparent blur-3xl pointer-events-none"></div>
-
-        {/* CTA content */}
-        <div className="relative z-20 max-w-3xl mx-auto text-center px-6 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/70 text-purple-300 border border-purple-500/50 text-xs font-mono font-black uppercase tracking-wider shadow-lg shadow-purple-950/50">
-            <Trophy className="w-4 h-4 text-purple-400" />
-            <span>ARENA PORTAL // READY FOR COMBAT</span>
-          </div>
-
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight uppercase font-sans">
-            Ready to Enter<br />
-            <span className="bg-gradient-to-r from-purple-400 via-violet-300 to-fuchsia-400 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(168,85,247,0.7)]">
-              the Arena?
-            </span>
-          </h2>
-
-          <p className="text-slate-300 text-base sm:text-lg font-medium max-w-xl mx-auto leading-relaxed">
-            Test your logic, precision, and problem-solving speed under tournament pressure. Register your credentials now or jump directly into the live challenge track!
-          </p>
-
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              to="/register"
-              className="group relative overflow-hidden px-10 py-4 rounded-full border border-purple-500 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center gap-3 shadow-[0_0_25px_rgba(168,85,247,0.5)] hover:shadow-[0_0_40px_rgba(168,85,247,0.8)] hover:scale-105 active:scale-95"
-            >
-              <span className="relative z-10">ENTER THE WORLD</span>
-              <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-            </Link>
-
-            <Link
-              to="/rules"
-              className="px-8 py-4 rounded-full border border-slate-700 bg-[#0D0F18]/90 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-sm uppercase tracking-wider transition-all duration-300 hover:border-purple-500/50 flex items-center gap-2 backdrop-blur-md"
-            >
-              <ClipboardList className="w-4 h-4 text-purple-400" />
-              <span>View Rules &amp; Protocol</span>
-            </Link>
           </div>
         </div>
       </section>
 
+      {/* ── SECTION 3: HOW IT WORKS (DARK SECTION // EDITORIAL 3-PHASE JOURNEY WITH IMAGES) ── */}
+      <section className="w-full bg-[#07080D] text-slate-100 py-24 px-6 sm:px-8 lg:px-12 border-b border-purple-900/20 relative">
+        <div className="max-w-7xl mx-auto space-y-16">
+
+          {/* Section Header */}
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-white tracking-tight">
+              Tournament Gameplay Protocol
+            </h2>
+            <p className="text-sm text-slate-400 font-normal leading-relaxed">
+              From checkpoint problem solving to code assembly and compiler execution — master the 3 core phases.
+            </p>
+          </div>
+
+          {/* Editorial 3-Phase Showcase with Real Images (No Repetitive Cards) */}
+          <div className="space-y-12">
+
+            {/* Phase 1: Tasks & Golden Key */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-purple-950/60 bg-[#0B0D15] p-6 sm:p-8 rounded-none">
+              <div className="lg:col-span-5 space-y-4">
+                <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                  Phase 01 // Checkpoint Clearance
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-normal text-white leading-tight">
+                  Solve Tasks &amp; Earn The Golden Key
+                </h3>
+                <p className="text-sm text-slate-400 font-normal leading-relaxed">
+                  Each challenge begins with locked checkpoints. Solve targeted Multiple Choice Questions (MCQ) or predict code outputs to verify your computational logic. Answer correctly to reveal the QR checkpoint and receive your digital Golden Key.
+                </p>
+                <div className="pt-2 flex items-center gap-6 text-xs text-slate-400 border-t border-purple-950/80">
+                  <div>
+                    <span className="text-white font-medium block">MCQ &amp; Logic</span>
+                    <span>Task Format</span>
+                  </div>
+                  <div>
+                    <span className="text-rose-400 font-medium block">-20 pts</span>
+                    <span>Wrong Answer</span>
+                  </div>
+                  <div>
+                    <span className="text-emerald-400 font-medium block">Key Reveal</span>
+                    <span>On Success</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 overflow-hidden rounded-none border border-purple-900/30 bg-[#06070B] aspect-[16/10] flex items-center justify-center p-6 sm:p-8">
+                <img
+                  src="/mythic-golden-key.png"
+                  alt="Golden Key Checkpoint"
+                  className="w-full h-full object-contain drop-shadow-[0_0_35px_rgba(245,158,11,0.25)] rounded-none"
+                />
+              </div>
+            </div>
+
+            {/* Phase 2: Vault Chest & Fragment Extraction */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-purple-950/60 bg-[#0B0D15] p-6 sm:p-8 rounded-none">
+              <div className="lg:col-span-7 order-2 lg:order-1 overflow-hidden rounded-none border border-purple-900/30 bg-[#06070B] aspect-[16/10] flex items-center justify-center p-6 sm:p-8">
+                <img
+                  src="/treasure-chest-open.png"
+                  alt="Vault Chest and Scrambled Fragments"
+                  className="w-full h-full object-contain drop-shadow-[0_0_35px_rgba(245,158,11,0.25)] rounded-none"
+                />
+              </div>
+
+              <div className="lg:col-span-5 order-1 lg:order-2 space-y-4">
+                <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                  Phase 02 // Vault Extraction
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-normal text-white leading-tight">
+                  Unlock Vault Chests &amp; Gather Fragments
+                </h3>
+                <p className="text-sm text-slate-400 font-normal leading-relaxed">
+                  Scan the unlocked QR block to open the chest vault. Extract jumbled code fragments that make up the full algorithmic solution. Every challenge consists of 3 to 6 fragmented blocks that must all be collected before assembly.
+                </p>
+                <div className="pt-2 flex items-center gap-6 text-xs text-slate-400 border-t border-purple-950/80">
+                  <div>
+                    <span className="text-white font-medium block">Encrypted QR</span>
+                    <span>Checkpoint Access</span>
+                  </div>
+                  <div>
+                    <span className="text-purple-300 font-medium block">3 to 6 Blocks</span>
+                    <span>Code Extraction</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Phase 3: Assembly Board & Sandbox Execution */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-purple-950/60 bg-[#0B0D15] p-6 sm:p-8 rounded-none">
+              <div className="lg:col-span-5 space-y-4">
+                <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                  Phase 03 // Execution &amp; Scoring
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-normal text-white leading-tight">
+                  Assemble Logic &amp; Run In Sandbox
+                </h3>
+                <p className="text-sm text-slate-400 font-normal leading-relaxed">
+                  Drag and reorder your collected code fragments on the interactive Assembly Board. Test your solution with 3 free runs against test cases in Judge0. Submit your final code before the 15-minute timer elapses to lock in your score.
+                </p>
+                <div className="pt-2 flex items-center gap-6 text-xs text-slate-400 border-t border-purple-950/80">
+                  <div>
+                    <span className="text-emerald-400 font-medium block">3 Free Runs</span>
+                    <span>Zero Penalty</span>
+                  </div>
+                  <div>
+                    <span className="text-rose-400 font-medium block">-10 pts</span>
+                    <span>Extra Run (4+)</span>
+                  </div>
+                  <div>
+                    <span className="text-white font-medium block">C, C++, Java, Py</span>
+                    <span>Supported</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 overflow-hidden rounded-none border border-purple-900/30 bg-[#06070B] aspect-[16/10] flex items-center justify-center">
+                <img
+                  src="/tier-medium.jpg"
+                  alt="Code Assembly & Sandbox"
+                  className="w-full h-full object-cover rounded-none"
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION 4: TOURNAMENT RULES & CONSTRAINTS (PURE WHITE SECTION // EDITORIAL) ── */}
+      <section className="w-full bg-white text-slate-900 py-24 px-6 sm:px-8 lg:px-12 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto space-y-16">
+
+          {/* Header */}
+          <div className="max-w-3xl text-left space-y-2">
+            <h2 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
+              Competition Rules &amp; Scoring System
+            </h2>
+            <p className="text-sm text-slate-500 font-normal leading-relaxed">
+              Understand the core mechanics, penalty schedules, and how winner placement is calculated.
+            </p>
+          </div>
+
+          {/* 3-Column Editorial Comparison (No repetitive generic dark cards) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            {/* Column 1 */}
+            <div className="border border-slate-200 bg-slate-50/60 p-8 rounded-none flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="text-xs font-mono text-purple-700 font-semibold uppercase tracking-wider">
+                  Constraint 01 // Speed
+                </div>
+                <h3 className="text-2xl font-medium text-slate-900">
+                  15-Minute Countdown &amp; Elapsed Penalty
+                </h3>
+                <p className="text-sm text-slate-600 font-normal leading-relaxed">
+                  Every challenge runs on an independent 15-minute timer (900s). For every minute that elapses during your run, a penalty of -10 points is applied in real time. Fast solving preserves your standing.
+                </p>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200 space-y-2">
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>1 min elapsed</span>
+                  <span className="font-mono text-rose-600 font-medium">-10 pts</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>5 mins elapsed</span>
+                  <span className="font-mono text-rose-600 font-medium">-50 pts</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>15 mins elapsed</span>
+                  <span className="font-mono text-rose-600 font-medium">-150 pts</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2 */}
+            <div className="border border-slate-200 bg-slate-50/60 p-8 rounded-none flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="text-xs font-mono text-purple-700 font-semibold uppercase tracking-wider">
+                  Constraint 02 // Accuracy
+                </div>
+                <h3 className="text-2xl font-medium text-slate-900">
+                  Checkpoint Accuracy &amp; 3-Attempt Reveal
+                </h3>
+                <p className="text-sm text-slate-600 font-normal leading-relaxed">
+                  Mini tasks require precision. Each incorrect answer deducts -20 points. If a contestant misses 3 consecutive attempts, the correct answer is revealed with an explanation so they can proceed.
+                </p>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200 space-y-2">
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Incorrect attempt</span>
+                  <span className="font-mono text-rose-600 font-medium">-20 pts</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Max attempts per task</span>
+                  <span className="font-mono text-slate-900 font-medium">3 attempts</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Auto-reveal after 3 fails</span>
+                  <span className="font-mono text-purple-700 font-medium">Available</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3 */}
+            <div className="border border-slate-200 bg-slate-50/60 p-8 rounded-none flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="text-xs font-mono text-purple-700 font-semibold uppercase tracking-wider">
+                  Constraint 03 // Winner Criteria
+                </div>
+                <h3 className="text-2xl font-medium text-slate-900">
+                  Minimum Negative Points
+                </h3>
+                <p className="text-sm text-slate-600 font-normal leading-relaxed">
+                  All contestants start at 0 points. Penalties accumulate across Easy, Medium, and Hard tiers. The contestant who completes all 3 challenges with the lowest negative score (closest to 0) wins the championship.
+                </p>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-200 space-y-2">
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Starting balance</span>
+                  <span className="font-mono text-emerald-700 font-medium">0 pts</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Free compiler tests</span>
+                  <span className="font-mono text-emerald-700 font-medium">3 runs</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>Winner placement</span>
+                  <span className="font-mono text-purple-700 font-medium">Min Negative Pts</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION 5: ARENA PORTAL CTA (DARK SECTION) ── */}
+      <section className="w-full bg-[#07080D] py-28 px-6 sm:px-8 lg:px-12 text-center text-white relative">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <h2 className="text-4xl sm:text-5xl font-normal text-white tracking-tight leading-tight">
+            Ready to enter the tournament?
+          </h2>
+
+          <p className="text-slate-400 text-base sm:text-lg font-normal max-w-2xl mx-auto leading-relaxed">
+            Test your algorithmic logic, rapid assembly skills, and debugging precision under competitive arena conditions.
+          </p>
+
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              to="/register"
+              className="px-8 py-3.5 bg-white text-purple-800 hover:bg-slate-100 font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm"
+            >
+              Enter The World
+            </Link>
+
+            <Link
+              to="/rules"
+              className="px-8 py-3.5 bg-transparent text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 font-medium text-sm tracking-wide rounded-none transition-colors duration-200"
+            >
+              View Full Rules &amp; Protocol
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

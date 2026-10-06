@@ -1,9 +1,23 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useParticipant } from '../context/ParticipantContext';
 import { participantApi } from '../services/participantApi';
-import { User, Mail, Phone, Building2, BookOpen, GraduationCap, ArrowRight, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
-import api from '../services/api';
+import {
+  User,
+  Mail,
+  Phone,
+  Building2,
+  BookOpen,
+  GraduationCap,
+  ArrowRight,
+  AlertCircle,
+  RefreshCw,
+  LogIn,
+  KeyRound,
+  ShieldCheck,
+  Cpu,
+  Trophy,
+} from 'lucide-react';
 
 export default function Register() {
   const { registerParticipant, loginParticipant, participant } = useParticipant();
@@ -45,10 +59,10 @@ export default function Register() {
     setServerError(null);
     setCanDirectLogin(false);
     if (!validate()) return;
-    
+
     try {
       setIsSubmitting(true);
-      
+
       await registerParticipant({
         name: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
@@ -56,11 +70,11 @@ export default function Register() {
         department: form.department.trim(),
         phone: form.phone.trim(),
         yearOfStudy: form.yearOfStudy,
-        participantId: form.phone.trim() // using phone as fallback
+        participantId: form.phone.trim()
       });
-      
+
       navigate(redirectUrl || '/rules');
-      
+
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Registration failed. Please check your credentials.';
       setServerError(msg);
@@ -97,7 +111,6 @@ export default function Register() {
         email: form.email.trim().toLowerCase(),
         participantId: form.phone.trim(),
       });
-      // Now re-register fresh
       await registerParticipant({
         name: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
@@ -118,203 +131,274 @@ export default function Register() {
   const years = ['1st Year', '2nd Year', '3rd Year', 'Final Year'];
 
   return (
-    <div className="min-h-screen bg-[#07080D] flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden text-slate-100">
-      {/* Decorative ambient glowing orbs */}
-      <div className="absolute top-1/4 right-1/4 w-[450px] h-[450px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/4 w-[450px] h-[450px] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
+    <div className="min-h-screen bg-[#07080D] text-slate-100 font-sans selection:bg-purple-600 selection:text-white py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
 
-      <div className="max-w-[550px] w-full bg-[#0D0F18]/90 rounded-[2rem] shadow-[0_0_50px_rgba(168,85,247,0.18)] border border-purple-500/30 p-6 sm:p-8 relative overflow-hidden backdrop-blur-xl z-10 font-mono">
-        
-        {/* Header Section */}
-        <div className="mb-6 relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-widest shadow-sm">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block shadow-[0_0_6px_#10b981]" />
-            BUILT FOR CREATORS // CONTESTANT ACCESS
+      <div className="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+
+        {/* ── LEFT COLUMN: CREATIVE HERO VISUAL SHOWCASE ── */}
+        <div className="lg:col-span-6 border border-purple-900/30 bg-[#0B0D15] flex flex-col justify-between overflow-hidden relative">
+
+          {/* Top Hero Image Banner */}
+          <div className="relative aspect-[16/10] overflow-hidden bg-black border-b border-purple-900/30">
+            <img
+              src="/hero-adventure.jpg"
+              alt="Mind Craft Nether Arena"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0D15] via-transparent to-black/40" />
+            
+            {/* Overlay Title */}
+            <div className="absolute bottom-6 left-6 right-6 space-y-1">
+              <span className="text-xs font-mono text-purple-400 font-medium uppercase tracking-wider block">
+                Official Arena Enrollment
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-normal text-white tracking-tight">
+                Enter Mind Craft 2026
+              </h2>
+            </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            PARTICIPANT <span className="bg-gradient-to-r from-purple-400 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">REGISTRATION</span>
-          </h2>
-          <p className="text-purple-200/60 text-xs font-sans">
-            Fill in your contestant details to access the Mind Craft Nether Arena.
-          </p>
+
+          {/* Middle: Mission Highlights */}
+          <div className="p-6 sm:p-8 space-y-6 flex-1 flex flex-col justify-between">
+            <p className="text-sm text-slate-400 font-normal leading-relaxed">
+              Enrolling grants you verified entry into the 3-Tier Linear Mission Track. Solve checkpoints, earn golden keys, extract code from vault chests, and compile your solution under timed tournament conditions.
+            </p>
+
+            {/* 3 Editorial Feature Pillars */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2">
+                <KeyRound className="w-5 h-5 text-amber-400" />
+                <h4 className="text-sm font-medium text-white">Checkpoint Tasks</h4>
+                <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                  Solve MCQs &amp; predict code output to unlock keys.
+                </p>
+              </div>
+
+              <div className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2">
+                <Cpu className="w-5 h-5 text-purple-400" />
+                <h4 className="text-sm font-medium text-white">Judge0 Sandbox</h4>
+                <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                  Execute C, C++, Java or Python with 3 free test runs.
+                </p>
+              </div>
+
+              <div className="border border-purple-950/80 bg-[#07080D] p-4 space-y-2">
+                <Trophy className="w-5 h-5 text-emerald-400" />
+                <h4 className="text-sm font-medium text-white">Speed Scoring</h4>
+                <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                  15-min countdown per level. Min negative points win.
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Citation */}
+            <div className="pt-4 border-t border-purple-950/80 flex items-center justify-between text-xs text-slate-500 font-mono">
+              <span className="flex items-center gap-1.5 text-purple-300">
+                <ShieldCheck className="w-4 h-4 text-purple-400" />
+                Official Contestant Access
+              </span>
+              <Link to="/rules" className="text-slate-400 hover:text-white transition-colors underline">
+                View Tournament Rules
+              </Link>
+            </div>
+          </div>
+
         </div>
 
-        {serverError && (
-          <div className="mb-4 p-4 bg-rose-950/50 border border-rose-500/40 rounded-xl text-rose-300 text-xs space-y-2.5 relative z-10 animate-fadeIn">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
-              <span className="font-semibold text-[13px] leading-snug">{serverError}</span>
+        {/* ── RIGHT COLUMN: CLEAN EDITORIAL REGISTRATION FORM (PURE WHITE BG) ── */}
+        <div className="lg:col-span-6 border border-slate-200 bg-white text-slate-900 p-8 sm:p-10 flex flex-col justify-between rounded-none shadow-sm">
+
+          <div>
+            {/* Header */}
+            <div className="space-y-2 mb-8 text-left">
+              <h1 className="text-3xl sm:text-4xl font-normal text-slate-900 tracking-tight">
+                Participant Registration
+              </h1>
+              <p className="text-sm text-slate-500 font-normal leading-relaxed">
+                Provide your contestant details to initiate your profile and begin the Easy challenge.
+              </p>
             </div>
-            {canDirectLogin && (
-              <div className="pt-2 border-t border-rose-500/30 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleDirectLogin}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg text-xs transition shadow-sm border border-purple-400/40"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  Continue with this Account
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleResetAndRegister}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141724] border border-rose-400/40 text-rose-300 hover:bg-rose-950/60 font-semibold rounded-lg text-xs transition"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Reset & Register Fresh
-                </button>
+
+            {/* Server Error Alert */}
+            {serverError && (
+              <div className="mb-6 p-4 border border-rose-200 bg-rose-50 text-rose-800 text-xs space-y-3 text-left">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                  <span className="font-normal text-sm leading-snug">{serverError}</span>
+                </div>
+                {canDirectLogin && (
+                  <div className="pt-2 border-t border-rose-200 flex flex-wrap gap-2.5">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleDirectLogin}
+                      className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs rounded-none transition-colors flex items-center gap-1.5"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Continue with this Account</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleResetAndRegister}
+                      className="px-4 py-2 border border-rose-300 text-rose-700 hover:bg-rose-100 font-medium text-xs rounded-none transition-colors flex items-center gap-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Reset &amp; Register Fresh</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 relative z-10 text-xs font-sans">
-          
-          {/* Full Name */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-bold text-purple-200 uppercase tracking-wider font-mono">
-              <User className="w-3.5 h-3.5 text-purple-400" /> 
-              <span>Full Name <span className="text-purple-400">*</span></span>
-            </label>
-            <input
-              type="text"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              placeholder="Enter your full name"
-              className={`w-full px-4 py-2.5 bg-[#141724]/90 border ${errors.fullName ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-purple-500/30 focus:border-purple-400 focus:ring-purple-500/20'} rounded-xl text-white placeholder:text-purple-300/40 text-xs focus:outline-none focus:ring-2 transition-all font-mono`}
-            />
-          </div>
+            {/* Registration Form */}
+            <form onSubmit={handleSubmit} className="space-y-5 text-xs text-left">
 
-          {/* Email ID */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-bold text-purple-200 uppercase tracking-wider font-mono">
-              <Mail className="w-3.5 h-3.5 text-purple-400" /> 
-              <span>Email ID <span className="text-purple-400">*</span></span>
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="Enter your email address"
-              className={`w-full px-4 py-2.5 bg-[#141724]/90 border ${errors.email ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-purple-500/30 focus:border-purple-400 focus:ring-purple-500/20'} rounded-xl text-white placeholder:text-purple-300/40 text-xs focus:outline-none focus:ring-2 transition-all font-mono`}
-            />
-          </div>
+              {/* Full Name */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-mono text-slate-700 uppercase tracking-wider">
+                  <User className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Full Name <span className="text-purple-600">*</span></span>
+                </label>
+                <input
+                  type="text"
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  placeholder="e.g. Alex Mercer"
+                  className={`w-full px-4 py-3 bg-slate-50 border ${
+                    errors.fullName ? 'border-rose-400' : 'border-slate-300 focus:border-purple-600 focus:bg-white'
+                  } rounded-none text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none transition-colors font-sans`}
+                />
+              </div>
 
-          {/* Phone / WhatsApp Number */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-bold text-purple-200 uppercase tracking-wider font-mono">
-              <Phone className="w-3.5 h-3.5 text-purple-400" /> 
-              <span>Phone / WhatsApp Number <span className="text-purple-400">*</span></span>
-            </label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="Enter your phone / WhatsApp number"
-              className={`w-full px-4 py-2.5 bg-[#141724]/90 border ${errors.phone ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-purple-500/30 focus:border-purple-400 focus:ring-purple-500/20'} rounded-xl text-white placeholder:text-purple-300/40 text-xs focus:outline-none focus:ring-2 transition-all font-mono`}
-            />
-          </div>
-
-          {/* College Name */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-bold text-purple-200 uppercase tracking-wider font-mono">
-              <Building2 className="w-3.5 h-3.5 text-purple-400" /> 
-              <span>College Name <span className="text-purple-400">*</span></span>
-            </label>
-            <input
-              type="text"
-              value={form.college}
-              onChange={(e) => setForm({ ...form, college: e.target.value })}
-              placeholder="Enter your college name"
-              className={`w-full px-4 py-2.5 bg-[#141724]/90 border ${errors.college ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-purple-500/30 focus:border-purple-400 focus:ring-purple-500/20'} rounded-xl text-white placeholder:text-purple-300/40 text-xs focus:outline-none focus:ring-2 transition-all font-mono`}
-            />
-          </div>
-
-          {/* Department */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-bold text-purple-200 uppercase tracking-wider font-mono">
-              <BookOpen className="w-3.5 h-3.5 text-purple-400" /> 
-              <span>Department <span className="text-purple-400">*</span></span>
-            </label>
-            <select
-              value={form.department}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
-              className={`w-full px-4 py-2.5 bg-[#141724]/90 border ${errors.department ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-purple-500/30 focus:border-purple-400 focus:ring-purple-500/20'} rounded-xl text-white text-xs appearance-none focus:outline-none focus:ring-2 transition-all cursor-pointer font-mono`}
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C084FC'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 1rem center',
-                backgroundSize: '1.2em'
-              }}
-            >
-              <option value="" disabled className="bg-[#0D0F18] text-slate-400">Select your department</option>
-              <option value="Computer Science" className="bg-[#0D0F18]">Computer Science</option>
-              <option value="Information Technology" className="bg-[#0D0F18]">Information Technology</option>
-              <option value="Artificial Intelligence" className="bg-[#0D0F18]">Artificial Intelligence</option>
-              <option value="Electronics & Communication" className="bg-[#0D0F18]">Electronics & Communication</option>
-              <option value="Electrical & Electronics" className="bg-[#0D0F18]">Electrical & Electronics</option>
-              <option value="Mechanical Engineering" className="bg-[#0D0F18]">Mechanical Engineering</option>
-              <option value="Civil Engineering" className="bg-[#0D0F18]">Civil Engineering</option>
-              <option value="Other" className="bg-[#0D0F18]">Other</option>
-            </select>
-          </div>
-
-          {/* Year of Study */}
-          <div className="space-y-2 pt-1 font-mono">
-            <label className="flex items-center gap-2 text-xs font-bold text-purple-200 uppercase tracking-wider">
-              <GraduationCap className="w-3.5 h-3.5 text-purple-400" /> 
-              <span>Year of Study <span className="text-purple-400">*</span></span>
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {years.map((year) => {
-                const isSelected = form.yearOfStudy === year;
-                return (
-                  <label 
-                    key={year} 
-                    className={`
-                      relative flex flex-col items-center justify-center p-3 rounded-xl border cursor-pointer transition-all
-                      ${isSelected 
-                        ? 'border-purple-400 bg-purple-950/60 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
-                        : 'border-purple-500/20 bg-[#141724]/60 hover:border-purple-500/40'
-                      }
-                    `}
-                  >
-                    <input 
-                      type="radio" 
-                      name="yearOfStudy" 
-                      value={year}
-                      checked={isSelected}
-                      onChange={(e) => setForm({ ...form, yearOfStudy: e.target.value })}
-                      className="sr-only"
-                    />
-                    <div className={`w-3.5 h-3.5 rounded-full border mb-1 flex items-center justify-center transition-colors ${isSelected ? 'border-purple-300' : 'border-slate-600'}`}>
-                      {isSelected && <div className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]"></div>}
-                    </div>
-                    <span className={`text-[11px] font-semibold ${isSelected ? 'text-white' : 'text-purple-200/60'}`}>
-                      {year}
-                    </span>
+              {/* Email & Phone Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-mono text-slate-700 uppercase tracking-wider">
+                    <Mail className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Email Address <span className="text-purple-600">*</span></span>
                   </label>
-                );
-              })}
-            </div>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="alex@college.edu"
+                    className={`w-full px-4 py-3 bg-slate-50 border ${
+                      errors.email ? 'border-rose-400' : 'border-slate-300 focus:border-purple-600 focus:bg-white'
+                    } rounded-none text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none transition-colors font-sans`}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-mono text-slate-700 uppercase tracking-wider">
+                    <Phone className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Phone / WhatsApp <span className="text-purple-600">*</span></span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="e.g. 9876543210"
+                    className={`w-full px-4 py-3 bg-slate-50 border ${
+                      errors.phone ? 'border-rose-400' : 'border-slate-300 focus:border-purple-600 focus:bg-white'
+                    } rounded-none text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none transition-colors font-sans`}
+                  />
+                </div>
+              </div>
+
+              {/* College & Department Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-mono text-slate-700 uppercase tracking-wider">
+                    <Building2 className="w-3.5 h-3.5 text-purple-600" />
+                    <span>College Name <span className="text-purple-600">*</span></span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.college}
+                    onChange={(e) => setForm({ ...form, college: e.target.value })}
+                    placeholder="e.g. Engineering Institute"
+                    className={`w-full px-4 py-3 bg-slate-50 border ${
+                      errors.college ? 'border-rose-400' : 'border-slate-300 focus:border-purple-600 focus:bg-white'
+                    } rounded-none text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none transition-colors font-sans`}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-mono text-slate-700 uppercase tracking-wider">
+                    <BookOpen className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Department <span className="text-purple-600">*</span></span>
+                  </label>
+                  <select
+                    value={form.department}
+                    onChange={(e) => setForm({ ...form, department: e.target.value })}
+                    className={`w-full px-4 py-3 bg-slate-50 border ${
+                      errors.department ? 'border-rose-400' : 'border-slate-300 focus:border-purple-600 focus:bg-white'
+                    } rounded-none text-slate-900 text-sm focus:outline-none transition-colors font-sans`}
+                  >
+                    <option value="" disabled className="text-slate-400">Select department</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Information Technology">Information Technology</option>
+                    <option value="Artificial Intelligence">Artificial Intelligence</option>
+                    <option value="Electronics & Communication">Electronics & Communication</option>
+                    <option value="Electrical & Electronics">Electrical & Electronics</option>
+                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                    <option value="Civil Engineering">Civil Engineering</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Year of Study Selector */}
+              <div className="space-y-2 pt-2">
+                <label className="flex items-center gap-2 text-xs font-mono text-slate-700 uppercase tracking-wider">
+                  <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Year of Study <span className="text-purple-600">*</span></span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {years.map((year) => {
+                    const isSelected = form.yearOfStudy === year;
+                    return (
+                      <button
+                        type="button"
+                        key={year}
+                        onClick={() => setForm({ ...form, yearOfStudy: year })}
+                        className={`p-3 text-center border font-mono text-xs transition-colors rounded-none ${
+                          isSelected
+                            ? 'border-purple-600 bg-purple-50 text-purple-900 font-medium'
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {year}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 px-8 bg-purple-700 hover:bg-purple-800 text-white font-medium text-sm tracking-wide rounded-none transition-colors duration-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  <span>{isSubmitting ? 'Registering Contestant...' : 'Enter The Arena'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+            </form>
           </div>
 
-          {/* Submit Button */}
-          <div className="pt-3">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(168,85,247,0.45)] border border-purple-400/40 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isSubmitting ? 'Registering...' : 'ENTER THE ARENA'} 
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <div className="pt-6 mt-6 border-t border-slate-200 text-xs text-slate-500 text-center font-mono">
+            Already enrolled? Contact tournament coordinators or use direct login above.
           </div>
-          
-        </form>
+
+        </div>
+
       </div>
+
     </div>
   );
 }
