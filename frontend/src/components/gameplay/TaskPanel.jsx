@@ -125,7 +125,7 @@ export default function TaskPanel({
 
   if (!task || !quiz) {
     return (
-      <div className="p-8 bg-white/90 border border-slate-200 rounded-2xl text-center text-slate-500 text-xs font-mono shadow-sm">
+      <div className="p-8 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl text-center text-purple-300/70 text-xs font-mono shadow-xl backdrop-blur-xl">
         No task available
       </div>
     );
@@ -378,8 +378,8 @@ export default function TaskPanel({
 
       {/* Cooldown Timer */}
       {cooldown > 0 && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono">
-          <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-200 text-xs font-mono shadow-sm">
+          <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
           <span>Cooldown active: {cooldown}s — preparing next attempt...</span>
         </div>
       )}
@@ -477,7 +477,7 @@ export default function TaskPanel({
           <button
             type="button"
             onClick={() => onUnlockKey && onUnlockKey(pendingKey)}
-            className="mt-2 text-xs font-mono font-bold text-amber-600 hover:text-amber-500 underline cursor-pointer"
+            className="mt-2 text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
           >
             Click or drag to open Chest #{pendingKey.taskIndex + 1} →
           </button>

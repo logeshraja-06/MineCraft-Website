@@ -156,13 +156,22 @@ export function ChallengeProvider({ children }) {
 
           if (sess.scannedBlocks && sess.scannedBlocks.length > 0) {
             setCollectedFragments(sess.scannedBlocks);
-            setCollectedFragmentIds(sess.scannedBlocks.map((b) => b.blockId || b._id));
+            const allIds = sess.scannedBlocks.map((b) => b.blockId || b._id);
+            setCollectedFragmentIds(allIds);
             setLastUnlockedBlock(sess.scannedBlocks[sess.scannedBlocks.length - 1]);
             setLanguageLocked(true);
-          }
 
-          if (sess.assemblyOrder && sess.assemblyOrder.length > 0) {
-            setAssemblyOrder(sess.assemblyOrder);
+            if (sess.assemblyOrder && sess.assemblyOrder.length > 0) {
+              const missing = allIds.filter((id) => !sess.assemblyOrder.includes(id));
+              const fullOrder = [...sess.assemblyOrder, ...missing];
+              setAssemblyOrder(fullOrder);
+            } else if (allIds.length > 0) {
+              const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === (sess.selectedLanguage || language));
+              const correctOrder = langCfg?.revealOrder || langCfg?.blocks?.map((b) => b.blockId) || [];
+              const mixed = getThoroughlyMixedOrder(allIds, correctOrder);
+              setShuffledVaultOrder(mixed);
+              setAssemblyOrder(mixed);
+            }
           }
 
           if (sess.points) {
@@ -179,6 +188,19 @@ export function ChallengeProvider({ children }) {
               if (taskData.currentTaskIndex !== undefined) setCurrentTaskIndex(taskData.currentTaskIndex);
               if (taskData.points) setPoints(taskData.points);
               if (taskData.attemptsCount !== undefined) setTaskAttemptsCount(taskData.attemptsCount);
+              if (taskData.unlockedBlocks && taskData.unlockedBlocks.length > 0) {
+                setCollectedFragments((prev) => {
+                  const map = new Map();
+                  prev.forEach((b) => map.set(b.blockId || b._id, b));
+                  taskData.unlockedBlocks.forEach((b) => map.set(b.blockId || b._id, b));
+                  return Array.from(map.values());
+                });
+                setCollectedFragmentIds((prev) => {
+                  const set = new Set(prev);
+                  taskData.unlockedBlocks.forEach((b) => set.add(b.blockId || b._id));
+                  return Array.from(set);
+                });
+              }
               if (taskData.allTasksCompleted) {
                 setAllTasksCompleted(true);
                 setPhase('ASSEMBLE');
@@ -242,10 +264,15 @@ export function ChallengeProvider({ children }) {
   }, [collectedFragments]);
 
   // ── Derived assembled fragments ──
-  const assemblyFragments = useMemo(
-    () => assemblyOrder.map((id) => fragmentMap[id]).filter(Boolean),
-    [assemblyOrder, fragmentMap]
-  );
+  const assemblyFragments = useMemo(() => {
+    const fromOrder = assemblyOrder.map((id) => fragmentMap[id]).filter(Boolean);
+    const seenIds = new Set(fromOrder.map((f) => f.id));
+    // If any collected fragments are not yet in assemblyOrder, include them so no fragment is ever lost
+    const missing = collectedFragments
+      .map((f) => fragmentMap[f.blockId || f._id])
+      .filter((f) => f && !seenIds.has(f.id));
+    return [...fromOrder, ...missing];
+  }, [assemblyOrder, fragmentMap, collectedFragments]);
 
   // ── Derived assembled source code ──
   const assembledCode = useMemo(() => combineFragments(assemblyFragments), [assemblyFragments]);
@@ -280,28 +307,36 @@ export function ChallengeProvider({ children }) {
   // ── Thoroughly mix fragments when entering ASSEMBLE phase ──
   useEffect(() => {
     if (phase !== 'ASSEMBLE' && phase !== 'DONE') return;
-    const canonicalIds = collectedFragmentIds;
+    const canonicalIds = collectedFragmentIds.length > 0
+      ? collectedFragmentIds
+      : collectedFragments.map((b) => b.blockId || b._id);
     if (canonicalIds.length === 0) return;
 
     const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
-    const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
+    const correctOrder = langCfg?.revealOrder || langCfg?.blocks?.map((b) => b.blockId) || [];
 
-    // Check if assemblyOrder is already thoroughly scrambled.
-    // If it accidentally equals or resembles the canonical correct program order, thoroughly mix it!
-    const matchesCanonical =
-      assemblyOrder.length > 1 &&
-      correctOrder.length === assemblyOrder.length &&
-      assemblyOrder.every((id, idx) => id === correctOrder[idx]);
+    if (assemblyOrder.length > 0) {
+      // Append any newly collected fragments that are not yet in assemblyOrder
+      const missing = canonicalIds.filter((id) => !assemblyOrder.includes(id));
+      if (missing.length > 0) {
+        const updatedOrder = [...assemblyOrder, ...missing];
+        setAssemblyOrder(updatedOrder);
+        const newFragments = updatedOrder.map((id) => fragmentMap[id]).filter(Boolean);
+        const newCode = combineFragments(newFragments);
+        syncAssemblyToServer(updatedOrder, newCode);
+      }
+      // Never re-mix an existing arrangement, especially when it matches the correct canonical order!
+      return;
+    }
 
-    if (assemblyOrder.length > 0 && !matchesCanonical) return;
-
+    // Initialize assemblyOrder with a mixed arrangement only if currently empty
     const mixed = getThoroughlyMixedOrder(canonicalIds, correctOrder);
     setShuffledVaultOrder(mixed);
     setAssemblyOrder(mixed);
     const newFragments = mixed.map((id) => fragmentMap[id]).filter(Boolean);
     const newCode = combineFragments(newFragments);
     syncAssemblyToServer(mixed, newCode);
-  }, [phase, collectedFragmentIds, assemblyOrder, activeChallengeInfo, language, fragmentMap, syncAssemblyToServer]);
+  }, [phase, collectedFragmentIds, collectedFragments, assemblyOrder, activeChallengeInfo, language, fragmentMap, syncAssemblyToServer]);
 
   // ── Actions ──
 
@@ -436,6 +471,22 @@ export function ChallengeProvider({ children }) {
         setRevealedAnswerInfo(null);
         setTaskAttemptsCount(0);
 
+        if (res.unlockedBlocks && res.unlockedBlocks.length > 0) {
+          setCollectedFragments((prev) => {
+            const map = new Map();
+            prev.forEach((b) => map.set(b.blockId || b._id, b));
+            res.unlockedBlocks.forEach((b) => map.set(b.blockId || b._id, b));
+            if (res.unlockedBlock) map.set(res.unlockedBlock.blockId || res.unlockedBlock._id, res.unlockedBlock);
+            return Array.from(map.values());
+          });
+          setCollectedFragmentIds((prev) => {
+            const set = new Set(prev);
+            res.unlockedBlocks.forEach((b) => set.add(b.blockId || b._id));
+            if (res.unlockedBlock) set.add(res.unlockedBlock.blockId || res.unlockedBlock._id);
+            return Array.from(set);
+          });
+        }
+
         const keyData = {
           taskIndex: currentTaskIndex,
           taskTitle: currentTask?.title || `Task ${currentTaskIndex + 1}`,
@@ -466,6 +517,22 @@ export function ChallengeProvider({ children }) {
           explain: res.explain || '',
         });
         setTaskAttemptsCount(0);
+
+        if (res.unlockedBlocks && res.unlockedBlocks.length > 0) {
+          setCollectedFragments((prev) => {
+            const map = new Map();
+            prev.forEach((b) => map.set(b.blockId || b._id, b));
+            res.unlockedBlocks.forEach((b) => map.set(b.blockId || b._id, b));
+            if (res.unlockedBlock) map.set(res.unlockedBlock.blockId || res.unlockedBlock._id, res.unlockedBlock);
+            return Array.from(map.values());
+          });
+          setCollectedFragmentIds((prev) => {
+            const set = new Set(prev);
+            res.unlockedBlocks.forEach((b) => set.add(b.blockId || b._id));
+            if (res.unlockedBlock) set.add(res.unlockedBlock.blockId || res.unlockedBlock._id);
+            return Array.from(set);
+          });
+        }
 
         const keyData = {
           taskIndex: currentTaskIndex,
@@ -521,14 +588,29 @@ export function ChallengeProvider({ children }) {
     const k = keyInfo || pendingKey;
     if (!k) return;
 
-    if (k.unlockedBlock) {
+    // Collect all blocks from k.unlockedBlocks and k.unlockedBlock
+    const blocksToMerge = [
+      ...(Array.isArray(k.unlockedBlocks) ? k.unlockedBlocks : []),
+      ...(k.unlockedBlock ? [k.unlockedBlock] : [])
+    ];
+
+    if (blocksToMerge.length > 0) {
       setCollectedFragments((prev) => {
-        if (prev.find((f) => (f.blockId || f._id) === (k.unlockedBlock.blockId || k.unlockedBlock._id))) return prev;
-        return [...prev, k.unlockedBlock];
+        const map = new Map();
+        prev.forEach((b) => map.set(b.blockId || b._id, b));
+        blocksToMerge.forEach((b) => {
+          const id = b.blockId || b._id;
+          if (id) map.set(id, b);
+        });
+        return Array.from(map.values());
       });
       setCollectedFragmentIds((prev) => {
-        const id = k.unlockedBlock.blockId || k.unlockedBlock._id;
-        return prev.includes(id) ? prev : [...prev, id];
+        const set = new Set(prev);
+        blocksToMerge.forEach((b) => {
+          const id = b.blockId || b._id;
+          if (id) set.add(id);
+        });
+        return Array.from(set);
       });
     }
 
@@ -542,24 +624,42 @@ export function ChallengeProvider({ children }) {
       setPoints(k.points);
     }
 
-    setLastUnlockedBlock({
-      ...k.unlockedBlock,
-      taskIndex: k.taskIndex,
-      taskTitle: k.taskTitle,
-    });
+    if (k.unlockedBlock) {
+      setLastUnlockedBlock({
+        ...k.unlockedBlock,
+        taskIndex: k.taskIndex,
+        taskTitle: k.taskTitle,
+      });
+    }
     setPendingKey(null);
 
     if (k.allTasksCompleted) {
       setAllTasksCompleted(true);
-      const unlocked = k.unlockedBlocks || [...collectedFragments, k.unlockedBlock].filter(Boolean);
-      const unlockedIds = unlocked.map((b) => b.blockId || b._id);
+      const map = new Map();
+      collectedFragments.forEach((b) => map.set(b.blockId || b._id, b));
+      blocksToMerge.forEach((b) => {
+        const id = b.blockId || b._id;
+        if (id) map.set(id, b);
+      });
+      const allMerged = Array.from(map.values());
+      const allMergedIds = Array.from(map.keys());
+
       const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
-      const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
-      const mixedOrder = getThoroughlyMixedOrder(unlockedIds, correctOrder);
+      const correctOrder = langCfg?.revealOrder || langCfg?.blocks?.map((b) => b.blockId) || [];
+      const mixedOrder = getThoroughlyMixedOrder(allMergedIds, correctOrder);
 
       setShuffledVaultOrder(mixedOrder);
       setAssemblyOrder(mixedOrder);
-      const newFragments = mixedOrder.map((id) => fragmentMap[id] || unlocked.find((u) => (u.blockId || u._id) === id)).filter(Boolean);
+
+      const fullFragmentMap = { ...fragmentMap };
+      allMerged.forEach((f) => {
+        const id = f.blockId || f._id;
+        if (id) {
+          fullFragmentMap[id] = { id, code: f.code || f.codeSnippet || '', role: f.type || f.role || 'LOGIC' };
+        }
+      });
+
+      const newFragments = mixedOrder.map((id) => fullFragmentMap[id]).filter(Boolean);
       const newCode = combineFragments(newFragments);
       syncAssemblyToServer(mixedOrder, newCode);
     } else {
@@ -568,9 +668,43 @@ export function ChallengeProvider({ children }) {
     }
   }, [pendingKey, collectedFragments, activeChallengeInfo, language, fragmentMap, syncAssemblyToServer]);
 
-  const startAssemblyPhase = useCallback(() => {
+  const startAssemblyPhase = useCallback(async () => {
     setPhase('ASSEMBLE');
-  }, []);
+    if (!challengeId) return;
+
+    try {
+      const res = await sessionApi.getCurrentSession(challengeId);
+      if (res.success && res.session) {
+        const sess = res.session;
+        if (sess.scannedBlocks && sess.scannedBlocks.length > 0) {
+          setCollectedFragments(sess.scannedBlocks);
+          const allIds = sess.scannedBlocks.map((b) => b.blockId || b._id);
+          setCollectedFragmentIds(allIds);
+
+          const existingOrder = sess.assemblyOrder && sess.assemblyOrder.length >= sess.scannedBlocks.length
+            ? sess.assemblyOrder
+            : (assemblyOrder.length >= sess.scannedBlocks.length ? assemblyOrder : null);
+
+          if (!existingOrder) {
+            const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === (sess.selectedLanguage || language));
+            const correctOrder = langCfg?.revealOrder || langCfg?.blocks?.map((b) => b.blockId) || [];
+            const mixed = getThoroughlyMixedOrder(allIds, correctOrder);
+            setShuffledVaultOrder(mixed);
+            setAssemblyOrder(mixed);
+
+            const fMap = {};
+            sess.scannedBlocks.forEach((f) => {
+              const id = f.blockId || f._id;
+              if (id) fMap[id] = { id, code: f.code || f.codeSnippet || '', role: f.type || f.role || 'LOGIC' };
+            });
+            const newFrags = mixed.map((id) => fMap[id]).filter(Boolean);
+            const newCode = combineFragments(newFrags);
+            syncAssemblyToServer(mixed, newCode);
+          }
+        }
+      }
+    } catch (_) {}
+  }, [challengeId, language, activeChallengeInfo, assemblyOrder, syncAssemblyToServer]);
 
   const dismissRevealedAnswer = useCallback(() => {
     setRevealedAnswerInfo(null);
@@ -597,8 +731,12 @@ export function ChallengeProvider({ children }) {
 
   const resetAssemblyOrder = useCallback(() => {
     const langCfg = (activeChallengeInfo?.languageConfigs || []).find((lc) => lc.language === language);
-    const correctOrder = langCfg?.blocks?.map((b) => b.blockId) || [];
-    const baseIds = collectedFragmentIds.length > 0 ? collectedFragmentIds : shuffledVaultOrder;
+    const correctOrder = langCfg?.revealOrder || langCfg?.blocks?.map((b) => b.blockId) || [];
+    const baseIds = collectedFragmentIds.length > 0
+      ? collectedFragmentIds
+      : collectedFragments.map((b) => b.blockId || b._id);
+    if (baseIds.length === 0) return;
+
     const mixed = getThoroughlyMixedOrder(baseIds, correctOrder);
 
     setShuffledVaultOrder(mixed);
@@ -607,7 +745,7 @@ export function ChallengeProvider({ children }) {
     const newCode = combineFragments(newFragments);
     syncAssemblyToServer(mixed, newCode);
     setCompileOutput(null);
-  }, [activeChallengeInfo, language, collectedFragmentIds, shuffledVaultOrder, fragmentMap, syncAssemblyToServer]);
+  }, [activeChallengeInfo, language, collectedFragmentIds, collectedFragments, fragmentMap, syncAssemblyToServer]);
 
   // ── Execution (Real backend / Judge0) ──
 
@@ -683,14 +821,23 @@ export function ChallengeProvider({ children }) {
           previousChallengesPenalty: outcome.previousChallengesPenalty ?? prev.previousChallengesPenalty,
           overallTotalPenaltyPoints: outcome.overallTotalPenaltyPoints ?? prev.overallTotalPenaltyPoints,
           overallScore: outcome.overallScore ?? prev.overallScore,
+          wrongSubmissionPenalty: outcome.wrongSubmissionPenalty ?? (isAutoSubmit && !isAccepted ? 50 : 0),
         }));
       }
+
+      const calculatedScore = outcome.score !== undefined
+        ? outcome.score
+        : (isAccepted ? 0 : -(outcome.totalPenaltyPoints || 0));
 
       const record = {
         ...outcome,
         passed: isAccepted,
-        finalScore: outcome.score !== undefined ? outcome.score : (isAccepted ? 0 : (isAutoSubmit ? -50 : 0)),
-        score: outcome.score !== undefined ? outcome.score : (isAccepted ? 0 : (isAutoSubmit ? -50 : 0)),
+        finalScore: calculatedScore,
+        score: calculatedScore,
+        totalPenaltyPoints: outcome.totalPenaltyPoints ?? (isAccepted ? 0 : Math.abs(calculatedScore)),
+        taskPenaltyPoints: outcome.taskPenaltyPoints,
+        timePenaltyPoints: outcome.timePenaltyPoints,
+        wrongSubmissionPenalty: outcome.wrongSubmissionPenalty ?? (isAutoSubmit && !isAccepted ? 50 : 0),
         participantName: participant?.name || '',
         participantId: participant?.participantId || '',
         challengeId,
@@ -713,6 +860,13 @@ export function ChallengeProvider({ children }) {
       if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
         setLockedNotice(err.response.data.message || 'This challenge is locked.');
       }
+      const unsubmittedTasks = Math.max(0, totalTasks - completedTaskIds.length);
+      const taskPenalty = (points?.taskPenaltyPoints || 0) + unsubmittedTasks * 20;
+      const timePenalty = 150;
+      const wrongSolution = 50;
+      const totalCalcPenalty = taskPenalty + (points?.runPenaltyPoints || 0) + timePenalty + wrongSolution;
+      const calcScore = isAutoSubmit ? -totalCalcPenalty : 0;
+
       const errRecord = {
         success: false,
         status: 'WRONG_ANSWER',
@@ -724,10 +878,22 @@ export function ChallengeProvider({ children }) {
         executionTime: '0.00s',
         memory: '0.0 MB',
         isAutoSubmit,
-        finalScore: isAutoSubmit ? -50 : 0,
-        score: isAutoSubmit ? -50 : 0,
+        finalScore: calcScore,
+        score: calcScore,
+        totalPenaltyPoints: isAutoSubmit ? totalCalcPenalty : 0,
+        taskPenaltyPoints: taskPenalty,
+        timePenaltyPoints: timePenalty,
+        wrongSubmissionPenalty: isAutoSubmit ? 50 : 0,
       };
       if (isAutoSubmit) {
+        setPoints((prev) => ({
+          ...prev,
+          taskPenaltyPoints: taskPenalty,
+          timePenaltyPoints: timePenalty,
+          totalPenaltyPoints: totalCalcPenalty,
+          currentScore: calcScore,
+          wrongSubmissionPenalty: 50,
+        }));
         setFinalResult(errRecord);
         setPhase('DONE');
       }

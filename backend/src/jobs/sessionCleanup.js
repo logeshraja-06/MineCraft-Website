@@ -1,6 +1,7 @@
 const ParticipantSession = require('../models/ParticipantSession');
 const { logger } = require('../utils/logger');
 const { checkIfSessionExpired } = require('../services/session/timerService');
+const { applySessionExpirationPenalties } = require('../services/session/sessionService');
 
 exports.cleanupExpiredSessions = async () => {
   try {
@@ -15,9 +16,7 @@ exports.cleanupExpiredSessions = async () => {
     for (const session of activeSessions) {
       const duration = session.durationSeconds || 1200;
       if (checkIfSessionExpired(session.startTime, duration)) {
-        session.status = 'EXPIRED';
-        session.isCompleted = true;
-        session.endTime = new Date();
+        await applySessionExpirationPenalties(session);
         await session.save();
         expiredCount++;
       }

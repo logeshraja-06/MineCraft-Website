@@ -15,7 +15,8 @@ export default function ProgressCard({
   const taskPenalties = points?.taskPenaltyPoints ?? 0;
   const runPenalties = points?.runPenaltyPoints ?? 0;
   const timePenalties = points?.timePenaltyPoints ?? 0;
-  const currentChallengePenalties = points?.totalPenaltyPoints ?? (taskPenalties + runPenalties + timePenalties);
+  const wrongSubPenalty = points?.wrongSubmissionPenalty ?? 0;
+  const currentChallengePenalties = points?.totalPenaltyPoints ?? (taskPenalties + runPenalties + timePenalties + wrongSubPenalty);
   const currentScore = points?.currentScore ?? -currentChallengePenalties;
 
   const previousPenalties = points?.previousChallengesPenalty ?? 0;
@@ -100,6 +101,17 @@ export default function ProgressCard({
             -{timePenalties} pts ({timeMinutes}m)
           </span>
         </div>
+
+        {wrongSubPenalty > 0 && (
+          <div className="flex items-center justify-between p-2 rounded-lg bg-[#07080D]/80 border border-purple-500/20">
+            <span className="text-slate-300 flex items-center gap-1.5">
+              <ShieldAlert className="w-3 h-3 text-rose-400" /> Wrong Assembly (-50 pts):
+            </span>
+            <span className="font-bold text-rose-400">
+              -{wrongSubPenalty} pts
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Game Progression Status */}

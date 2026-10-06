@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { useParticipant } from '../context/ParticipantContext';
 import { useChallenge } from '../hooks/useChallenge';
 import { useTimer } from '../hooks/useTimer';
@@ -7,7 +8,6 @@ import { challengeApi } from '../services/challengeApi';
 
 // layout / shared
 import Timer from '../components/timer/Timer';
-import TimeExpiredModal from '../components/timer/TimeExpiredModal';
 import Toast from '../components/common/Toast';
 import Button from '../components/common/Button';
 import AssemblyBoard from '../components/assembly/AssemblyBoard';
@@ -37,6 +37,13 @@ export default function Challenge() {
 
   const [searchParams] = useSearchParams();
   const urlId = searchParams.get('id') || searchParams.get('challengeId');
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
 
   const {
     challenge,
@@ -259,14 +266,17 @@ export default function Challenge() {
   // ── Real-time points & penalties calculation (including live elapsed minute penalty) ──
   const elapsedSeconds = Math.max(0, (challenge.duration || 900) - secondsRemaining);
   const liveElapsedMinutes = Math.floor(elapsedSeconds / 60);
-  const liveTimePenalty = liveElapsedMinutes * 10;
+  const liveTimePenalty = isTimeExpired ? 150 : (liveElapsedMinutes * 10);
 
   const livePoints = useMemo(() => {
     const baseTask = points?.taskPenaltyPoints ?? 0;
     const baseRun = points?.runPenaltyPoints ?? 0;
     const baseTime = Math.max(points?.timePenaltyPoints ?? 0, liveTimePenalty);
     const prevPenalties = points?.previousChallengesPenalty ?? 0;
-    const currentChallengePenalty = baseTask + baseRun + baseTime;
+    const wrongSubPenalty = points?.wrongSubmissionPenalty ?? 0;
+    const currentChallengePenalty = (points?.totalPenaltyPoints !== undefined && points.totalPenaltyPoints > (baseTask + baseRun + baseTime))
+      ? points.totalPenaltyPoints
+      : (baseTask + baseRun + baseTime + wrongSubPenalty);
     const totalPenalty = prevPenalties + currentChallengePenalty;
 
     return {
@@ -274,6 +284,7 @@ export default function Challenge() {
       taskPenaltyPoints: baseTask,
       runPenaltyPoints: baseRun,
       timePenaltyPoints: baseTime,
+      wrongSubmissionPenalty: wrongSubPenalty,
       timeMinutesExhausted: Math.max(points?.timeMinutesExhausted ?? 0, liveElapsedMinutes),
       totalPenaltyPoints: currentChallengePenalty,
       currentScore: -currentChallengePenalty,
@@ -372,41 +383,70 @@ export default function Challenge() {
   // ─── SETUP phase UI ─────────────────────────────────────────────────────
   if (phase === 'SETUP') {
     return (
-      <div className="min-h-screen bg-[#07080D] flex flex-col justify-center py-10 px-4 relative overflow-hidden text-slate-100 font-mono">
-        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="max-w-lg mx-auto w-full space-y-6 relative z-10">
-          <MissionStepper progress={userProgress} compact />
+      <div className="min-h-screen bg-[#07080D] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden text-slate-100 font-sans selection:bg-purple-600 selection:text-white">
+        {/* Top Scroll Progress Bar */}
+        <motion.div
+          style={{ scaleX }}
+          className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-fuchsia-400 to-amber-400 origin-left z-[100] shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+        />
+
+        {/* Ambient atmospheric backdrop matching Home & Rules */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <img
+            src="/portal-hero.jpg"
+            alt="Arena Portal Ambience"
+            className="w-full h-full object-cover filter brightness-[0.5] contrast-[1.1] opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#07080D] via-[#07080D]/70 to-[#07080D]" />
+          <div className="absolute inset-0 bg-radial from-transparent via-[#07080D]/50 to-[#07080D]" />
+        </div>
+
+        {/* Ambient atmospheric radial glow flares */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-xl mx-auto w-full space-y-6 relative z-10">
+          <div className="bg-[#0D0F18]/80 border border-purple-500/25 rounded-2xl p-2 shadow-xl backdrop-blur-xl">
+            <MissionStepper progress={userProgress} compact />
+          </div>
+
           <div className="flex items-center justify-between">
             <Link
               to="/challenges"
-              className="inline-flex items-center gap-1.5 text-xs text-purple-300 hover:text-white font-mono transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 text-xs text-purple-200 hover:text-white font-mono transition shadow-sm"
             >
               ← Back to Roadmap
             </Link>
-            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-950/80 text-purple-200 font-bold uppercase tracking-wider border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.25)]">
+            <span className="text-[10px] px-3.5 py-1.5 rounded-full bg-purple-950/80 text-purple-200 font-bold uppercase tracking-wider border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.25)] font-mono">
               {challenge.difficulty} // {challenge.points} PTS
             </span>
           </div>
 
-          <div className="text-center space-y-2">
-            <span className="text-[10px] px-3 py-1 rounded-full bg-emerald-950/60 text-emerald-400 font-bold uppercase tracking-wider border border-emerald-500/30">
+          <div className="text-center space-y-3">
+            <span className="text-[10px] px-3.5 py-1 rounded-full bg-emerald-950/70 text-emerald-300 font-bold uppercase tracking-wider border border-emerald-500/40 font-mono inline-block shadow-[0_0_12px_rgba(16,185,129,0.2)]">
               MIND CRAFT ARENA
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">{challenge.title}</h1>
-            <p className="text-xs text-purple-200/70 font-sans leading-relaxed">{challenge.description}</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight font-sans drop-shadow-[0_0_35px_rgba(255,255,255,0.12)]">
+              {challenge.title}
+            </h1>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-sans max-w-lg mx-auto">
+              {challenge.description}
+            </p>
           </div>
 
-          <div className="p-6 bg-[#0D0F18]/90 border border-purple-500/30 rounded-3xl shadow-[0_0_50px_rgba(168,85,247,0.18)] backdrop-blur-xl space-y-5">
+          <div className="p-6 sm:p-8 bg-[#0D0F18]/90 border border-purple-500/30 rounded-3xl shadow-[0_0_60px_rgba(168,85,247,0.2)] backdrop-blur-2xl space-y-6 relative overflow-hidden">
+            {/* Top accent line */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-purple-500/80 to-transparent" />
+
             <LanguagePicker
               language={language}
               onSelect={selectLanguage}
               locked={languageLocked}
             />
 
-            <Button
-              variant="portal"
-              size="lg"
-              className="w-full font-black rounded-full"
+            <button
+              type="button"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2.5 shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:shadow-[0_0_45px_rgba(168,85,247,0.7)] hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 cursor-pointer font-sans"
               onClick={async () => {
                 try {
                   await startChallenge();
@@ -421,10 +461,10 @@ export default function Challenge() {
                 }
               }}
             >
-              ▶ START HUNT
-            </Button>
+              <span>▶ START HUNT</span>
+            </button>
 
-            <p className="text-[11px] text-purple-300/50 text-center font-sans">
+            <p className="text-xs text-purple-300/70 text-center font-sans tracking-wide">
               You can change language until the first task is answered.
             </p>
           </div>
@@ -437,7 +477,20 @@ export default function Challenge() {
 
   // ─── HUNT + ASSEMBLE + DONE layout ───────────────────────────────────────
   return (
-    <div className="max-w-[1700px] mx-auto px-4 py-5 space-y-4 font-mono text-slate-200">
+    <div className="min-h-screen bg-[#07080D] font-sans text-slate-200 selection:bg-purple-600 selection:text-white relative overflow-hidden">
+      {/* ── TOP SCROLL PROGRESS BAR (MATCHING HOME & RULES) ── */}
+      <motion.div
+        style={{ scaleX }}
+        className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-fuchsia-400 to-amber-400 origin-left z-[100] shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+      />
+
+      {/* ── AMBIENT BACKGROUND GLOWS ── */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-600/10 rounded-full blur-[140px]" />
+        <div className="absolute top-2/3 -right-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px]" />
+      </div>
+
+      <div className="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 py-5 space-y-4">
 
       {/* ── ARENA HEADER ── */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-[#0D0F18]/90 border border-purple-500/30 rounded-2xl shadow-[0_0_30px_rgba(168,85,247,0.12)] backdrop-blur-xl">
@@ -517,163 +570,190 @@ export default function Challenge() {
         totalCount={totalFragments}
       />
 
-      {/* ── PHASE 1: HUNT PHASE (Task Hunt + Treasure Vault) ── */}
+      {/* ── PHASE 1: HUNT PHASE (2-COLUMN LAYOUT WITH DESCRIPTION ON TOP) ── */}
       {phase === 'HUNT' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* COLUMN 1: Challenge Brief + Live Score (col-span-3) */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="p-5 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl space-y-4 shadow-xl backdrop-blur-xl font-sans">
-              <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
-                <h3 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                  <span className="text-base">💡</span>
-                  <span>Challenge Brief</span>
-                </h3>
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase bg-purple-900/80 text-purple-200 border border-purple-500/40 font-mono shadow-xs">
-                  {challenge.difficulty || 'EASY'}
+        <div className="space-y-5 animate-fadeIn">
+          {/* 1. TOP FULL-WIDTH SECTION: CHALLENGE DESCRIPTION & OBJECTIVE */}
+          <div className="p-5 sm:p-6 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl shadow-xl backdrop-blur-xl font-sans space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-500/20 pb-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.25)] shrink-0">
+                  <BookOpen className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-400">
+                      {challenge.category || 'Algorithms'}
+                    </span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                      +{challenge.points || 100} PTS REWARD
+                    </span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight font-sans">
+                    {challenge.title}
+                  </h2>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-mono px-3 py-1 rounded-full font-bold uppercase border shadow-sm ${
+                  challenge.difficulty === 'Easy'
+                    ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
+                    : challenge.difficulty === 'Hard'
+                    ? 'bg-rose-950/70 text-rose-300 border-rose-500/40'
+                    : 'bg-purple-950/70 text-purple-200 border-purple-500/40'
+                }`}>
+                  {challenge.difficulty || 'MEDIUM'}
                 </span>
               </div>
+            </div>
 
-              <div className="space-y-1.5">
+            {/* Problem Description & Sample Test Case side-by-side inside top brief */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              <div className="lg:col-span-7 flex flex-col justify-between space-y-1.5">
                 <label className="text-[10px] text-purple-300/70 font-bold uppercase tracking-wider block font-mono">
-                  Problem
+                  Problem Description
                 </label>
-                <p className="text-slate-200 whitespace-pre-line bg-[#07080D]/90 p-3.5 rounded-xl border border-purple-500/20 text-xs font-mono leading-relaxed">
+                <p className="text-slate-200 text-xs sm:text-sm leading-relaxed font-sans whitespace-pre-line bg-[#07080D]/90 p-4 rounded-xl border border-purple-500/20 flex-1">
                   {challenge.description}
                 </p>
               </div>
 
-              {/* Sample I/O */}
-              <div className="space-y-1.5 pt-1 border-t border-purple-500/20">
+              <div className="lg:col-span-5 flex flex-col justify-between space-y-1.5">
                 <span className="text-[10px] text-purple-300/70 font-bold uppercase tracking-wider block font-mono">
-                  Sample Test
+                  Sample Test Case
                 </span>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block mb-1">Input:</span>
-                    <div className="p-2.5 bg-[#07080D]/90 border border-purple-500/20 rounded-xl text-slate-200 text-[11px] font-mono min-h-[38px] flex items-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 flex-1">
+                  <div className="p-3 bg-[#07080D]/90 border border-purple-500/20 rounded-xl space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-mono font-semibold">Standard Input:</span>
+                    <div className="text-slate-200 text-xs font-mono font-medium overflow-x-auto">
                       {challenge.sampleInput || 'N/A'}
                     </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block mb-1">Output:</span>
-                    <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-emerald-300 font-bold text-[11px] font-mono min-h-[38px] flex items-center">
+                  <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-xl space-y-1">
+                    <span className="text-[10px] text-emerald-400/80 block font-mono font-semibold">Expected Output:</span>
+                    <div className="text-emerald-300 text-xs font-mono font-bold overflow-x-auto">
                       {challenge.sampleOutput || 'N/A'}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Progress Card */}
-            <ProgressCard
-              collectedCount={collectedFragmentIds.length}
-              totalCount={totalFragments}
-              penaltySeconds={penaltySeconds}
-              quizAttempts={quizAttempts}
-              phase={phase}
-              points={livePoints}
-            />
           </div>
 
-          {/* COLUMN 2: Task Progression & Task Panel (col-span-5) */}
-          <div className="lg:col-span-5 space-y-4">
-            {/* Task progress bar & circular step badges */}
-            <div className="p-4 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl space-y-3 shadow-xl backdrop-blur-xl font-sans">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                  <span className="text-base">🎯</span>
-                  <span>Task Progress</span>
-                </h3>
-                <span className="text-xs font-bold text-purple-300 font-mono">
-                  {completedTaskIds.length} / {totalTasks} tasks
-                </span>
+          {/* 2. 2-COLUMN MAIN WORKSPACE */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            {/* ── LEFT COLUMN (lg:col-span-7): Task Progression & Interactive Quiz ── */}
+            <div className="lg:col-span-7 space-y-5">
+              {/* Task progress bar & circular step badges */}
+              <div className="p-4 sm:p-5 bg-[#0D0F18]/90 border border-purple-500/25 rounded-2xl space-y-3.5 shadow-xl backdrop-blur-xl font-sans">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                    <span className="text-base">🎯</span>
+                    <span>Task Progress</span>
+                  </h3>
+                  <span className="text-xs font-bold text-purple-300 font-mono">
+                    {completedTaskIds.length} / {totalTasks} tasks completed
+                  </span>
+                </div>
+
+                {/* Circular step badges */}
+                <div className="flex items-center gap-3 pt-0.5 overflow-x-auto pb-1 scrollbar-none">
+                  {Array.from({ length: totalTasks || 4 }, (_, i) => {
+                    const isDone = i < completedTaskIds.length;
+                    const isCurrent = i === currentTaskIndex && !isDone;
+                    return (
+                      <div
+                        key={i}
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 shrink-0 ${
+                          isDone
+                            ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                            : isCurrent
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] ring-2 ring-purple-400'
+                            : 'bg-purple-950/40 text-purple-400/50 border border-purple-500/20'
+                        }`}
+                      >
+                        {isDone ? '✓' : i + 1}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Circular step badges: 1, 2, 3, 4 */}
-              <div className="flex items-center gap-3 pt-0.5">
-                {Array.from({ length: totalTasks || 4 }, (_, i) => {
-                  const isDone = i < completedTaskIds.length;
-                  const isCurrent = i === currentTaskIndex && !isDone;
-                  return (
-                    <div
-                      key={i}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-300 ${
-                        isDone
-                          ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                          : isCurrent
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] ring-2 ring-purple-400'
-                          : 'bg-purple-950/40 text-purple-400/50 border border-purple-500/20'
-                      }`}
-                    >
-                      {isDone ? '✓' : i + 1}
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Task Panel: displays current quiz & key unlocking container */}
+              {currentTask && !allTasksCompleted && (
+                <TaskPanel
+                  task={currentTask}
+                  onSubmit={handleQuizAnswer}
+                  cooldown={taskCooldownRemaining}
+                  taskIndex={currentTaskIndex}
+                  totalTasks={totalTasks}
+                  disabled={isTimeExpired}
+                  lastResult={lastQuizCorrect}
+                  lastExplain={lastQuizExplain}
+                  isSubmitting={taskSubmitting}
+                  attemptsCount={taskAttemptsCount}
+                  maxAttempts={3}
+                  revealedAnswerInfo={revealedAnswerInfo}
+                  onDismissReveal={dismissRevealedAnswer}
+                  pendingKey={pendingKey}
+                  onUnlockKey={handleOpenChest}
+                />
+              )}
+
+              {/* Waiting state: no current task but not all done */}
+              {!currentTask && !allTasksCompleted && (
+                <div className="p-6 bg-[#0D0F18]/80 border border-dashed border-purple-500/30 rounded-2xl text-center text-xs text-purple-300/70 font-mono shadow-sm">
+                  Loading next task...
+                </div>
+              )}
+
+              {/* All tasks completed — transition message */}
+              {allTasksCompleted && (
+                <div className="p-6 bg-gradient-to-r from-purple-950/80 to-indigo-950/80 border border-purple-400/50 rounded-2xl text-center space-y-3 animate-fadeIn shadow-[0_0_30px_rgba(168,85,247,0.25)] font-sans">
+                  <span className="text-3xl">🎉</span>
+                  <p className="text-base font-bold text-purple-100">All Tasks Completed!</p>
+                  <p className="text-xs text-purple-300/80">All code fragments are unlocked in your Treasure Vault on the right.</p>
+                  <button
+                    onClick={startAssemblyPhase}
+                    className="mt-2 px-8 py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(168,85,247,0.4)] transition cursor-pointer font-mono"
+                  >
+                    Proceed to Assembly Board →
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Task Panel: displays current quiz & key unlocking container */}
-            {currentTask && !allTasksCompleted && (
-              <TaskPanel
-                task={currentTask}
-                onSubmit={handleQuizAnswer}
-                cooldown={taskCooldownRemaining}
-                taskIndex={currentTaskIndex}
-                totalTasks={totalTasks}
-                disabled={isTimeExpired}
-                lastResult={lastQuizCorrect}
-                lastExplain={lastQuizExplain}
-                isSubmitting={taskSubmitting}
-                attemptsCount={taskAttemptsCount}
-                maxAttempts={3}
-                revealedAnswerInfo={revealedAnswerInfo}
-                onDismissReveal={dismissRevealedAnswer}
+            {/* ── RIGHT COLUMN (lg:col-span-5): Fragment Vault & Points/Penalties HUD ── */}
+            <div className="lg:col-span-5 space-y-5">
+              {/* Fragment Vault */}
+              <FragmentVault
+                fragments={collectedFragments.map((f) => ({
+                  id: f.blockId || f._id,
+                  code: f.code,
+                  role: f.role || f.type || 'LOGIC',
+                }))}
+                collectedIds={collectedFragmentIds}
+                shuffledOrder={shuffledVaultOrder}
+                phase={phase}
+                totalExpected={totalTasks || totalFragments || 4}
                 pendingKey={pendingKey}
-                onUnlockKey={handleOpenChest}
+                openingKeyTrigger={openingChestKey}
+                onUnlockKey={handleKeyUnlocked}
+                lastUnlockedBlock={lastUnlockedBlock}
+                onProceedToAssembly={startAssemblyPhase}
               />
-            )}
 
-            {/* Waiting state: no current task but not all done */}
-            {!currentTask && !allTasksCompleted && (
-              <div className="p-6 bg-[#0D0F18]/80 border border-dashed border-purple-500/30 rounded-2xl text-center text-xs text-purple-300/70 font-mono shadow-sm">
-                Loading next task...
-              </div>
-            )}
-
-            {/* All tasks completed — transition message */}
-            {allTasksCompleted && (
-              <div className="p-6 bg-gradient-to-r from-purple-950/80 to-indigo-950/80 border border-purple-400/50 rounded-2xl text-center space-y-3 animate-fadeIn shadow-[0_0_30px_rgba(168,85,247,0.25)]">
-                <span className="text-3xl">🎉</span>
-                <p className="text-sm font-bold text-purple-100">All Tasks Completed!</p>
-                <p className="text-xs text-purple-300/80">All code fragments unlocked in the Treasure Box.</p>
-                <button
-                  onClick={startAssemblyPhase}
-                  className="mt-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-[0_0_20px_rgba(168,85,247,0.4)] transition cursor-pointer"
-                >
-                  Proceed to Assembly Board →
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* COLUMN 3: Fragment Vault (col-span-4) */}
-          <div className="lg:col-span-4 space-y-4">
-            <FragmentVault
-              fragments={collectedFragments.map((f) => ({
-                id: f.blockId || f._id,
-                code: f.code,
-                role: f.role || f.type || 'LOGIC',
-              }))}
-              collectedIds={collectedFragmentIds}
-              shuffledOrder={shuffledVaultOrder}
-              phase={phase}
-              totalExpected={totalTasks || totalFragments || 4}
-              pendingKey={pendingKey}
-              openingKeyTrigger={openingChestKey}
-              onUnlockKey={handleKeyUnlocked}
-              lastUnlockedBlock={lastUnlockedBlock}
-              onProceedToAssembly={startAssemblyPhase}
-            />
+              {/* Points & Penalties HUD Card */}
+              <ProgressCard
+                collectedCount={collectedFragmentIds.length}
+                totalCount={totalFragments}
+                penaltySeconds={penaltySeconds}
+                quizAttempts={quizAttempts}
+                phase={phase}
+                points={livePoints}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -849,12 +929,10 @@ export default function Challenge() {
         </div>
       )}
 
-      {/* ── MODALS & TOAST ── */}
-      <TimeExpiredModal
-        isOpen={isTimeExpired && !finalResult}
-        onAcknowledge={() => navigate('/result')}
-      />
+      {/* ── TOAST NOTIFICATIONS ── */}
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage(null)} />
+      </div>
     </div>
   );
 }
+

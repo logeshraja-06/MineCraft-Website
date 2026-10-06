@@ -160,6 +160,23 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
         if (challengePenalty > 0) {
           totalPenalties += challengePenalty;
           totalScore += -challengePenalty;
+          totalTaskPenalties += Number(lastSub?.taskPenaltyPoints) || Number(session?.taskPenaltyPoints) || 0;
+          totalRunPenalties += Number(lastSub?.runPenaltyPoints) || Number(session?.runPenaltyPoints) || 0;
+          totalTimePenalties += Number(lastSub?.timePenaltyPoints) || Number(session?.timePenaltyPoints) || 0;
+        }
+      }
+    });
+
+    // Also include any expired/completed sessions that didn't have submissions recorded
+    userSessions.forEach((session, cId) => {
+      if (!challengeMap.has(cId) && (session.status === 'EXPIRED' || session.isCompleted)) {
+        const challengePenalty = Number(session?.totalPenaltyPoints) || 0;
+        if (challengePenalty > 0) {
+          totalPenalties += challengePenalty;
+          totalScore += -challengePenalty;
+          totalTaskPenalties += Number(session?.taskPenaltyPoints) || 0;
+          totalRunPenalties += Number(session?.runPenaltyPoints) || 0;
+          totalTimePenalties += Number(session?.timePenaltyPoints) || 0;
         }
       }
     });

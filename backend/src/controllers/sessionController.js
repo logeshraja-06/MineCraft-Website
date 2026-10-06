@@ -3,6 +3,7 @@ const ParticipantSession = require('../models/ParticipantSession');
 const Challenge = require('../models/Challenge');
 const QRBlock = require('../models/QRBlock');
 const { checkIfSessionExpired, calculateRemainingTime } = require('../services/session/timerService');
+const { computeSessionPointsWithHistory, applySessionExpirationPenalties } = require('../services/session/sessionService');
 const { checkChallengeLock } = require('../services/challenge/progressionService');
 
 async function findChallenge(idOrSlug) {
@@ -47,14 +48,14 @@ exports.startSession = asyncHandler(async (req, res) => {
 
   if (session) {
     if (checkIfSessionExpired(session.startTime, session.durationSeconds || durationSeconds)) {
-      session.status = 'EXPIRED';
-      session.isCompleted = true;
-      session.endTime = new Date();
+      await applySessionExpirationPenalties(session, challenge);
       await session.save();
+      const pointsInfo = await computeSessionPointsWithHistory(session);
       return res.status(403).json({
         success: false,
         message: 'Your challenge session has expired.',
         isExpired: true,
+        points: pointsInfo,
       });
     }
 
@@ -79,6 +80,7 @@ exports.startSession = asyncHandler(async (req, res) => {
   }
 
   const remainingSeconds = calculateRemainingTime(session.startTime, session.durationSeconds);
+  const pointsInfo = await computeSessionPointsWithHistory(session);
 
   res.status(200).json({
     success: true,
@@ -92,7 +94,13 @@ exports.startSession = asyncHandler(async (req, res) => {
       scannedBlocks: session.scannedBlocks,
       assemblyOrder: session.assemblyOrder,
       assembledCode: session.assembledCode,
+      points: pointsInfo,
+      currentScore: pointsInfo.currentScore,
+      previousChallengesPenalty: pointsInfo.previousChallengesPenalty,
+      overallTotalPenaltyPoints: pointsInfo.overallTotalPenaltyPoints,
+      overallScore: pointsInfo.overallScore,
     },
+    points: pointsInfo,
     serverTime: Date.now(),
     remainingSeconds,
   });
@@ -125,18 +133,21 @@ exports.saveAssembly = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Active session not found' });
   }
 
-  if (checkIfSessionExpired(session.startTime, session.durationSeconds)) {
-    session.status = 'EXPIRED';
-    session.isCompleted = true;
-    session.endTime = new Date();
-    await session.save();
-    return res.status(403).json({ success: false, message: 'Session has expired', isExpired: true });
-  }
-
-  session.assemblyOrder = Array.isArray(assemblyOrder) ? assemblyOrder : [];
-  session.assembledCode = typeof assembledCode === 'string' ? assembledCode : '';
+  session.assemblyOrder = Array.isArray(assemblyOrder) ? assemblyOrder : session.assemblyOrder;
+  session.assembledCode = typeof assembledCode === 'string' ? assembledCode : session.assembledCode;
   session.lastActivityAt = new Date();
   await session.save();
+
+  const isExpired = checkIfSessionExpired(session.startTime, session.durationSeconds);
+  if (isExpired) {
+    return res.json({
+      success: true,
+      message: 'Assembly order saved before expiration',
+      assemblyOrder: session.assemblyOrder,
+      assembledCode: session.assembledCode,
+      isExpired: true,
+    });
+  }
 
   res.json({
     success: true,
@@ -167,12 +178,11 @@ exports.getCurrentSession = asyncHandler(async (req, res) => {
 
   const isExpired = checkIfSessionExpired(session.startTime, session.durationSeconds);
   if (isExpired && !session.isCompleted) {
-    session.status = 'EXPIRED';
-    session.isCompleted = true;
-    session.endTime = new Date();
+    await applySessionExpirationPenalties(session, challenge);
     await session.save();
   }
 
+  const pointsInfo = await computeSessionPointsWithHistory(session);
   const remainingSeconds = calculateRemainingTime(session.startTime, session.durationSeconds);
 
   res.json({
@@ -188,7 +198,13 @@ exports.getCurrentSession = asyncHandler(async (req, res) => {
       assemblyOrder: session.assemblyOrder,
       assembledCode: session.assembledCode,
       isCompleted: session.isCompleted,
+      points: pointsInfo,
+      currentScore: pointsInfo.currentScore,
+      previousChallengesPenalty: pointsInfo.previousChallengesPenalty,
+      overallTotalPenaltyPoints: pointsInfo.overallTotalPenaltyPoints,
+      overallScore: pointsInfo.overallScore,
     },
+    points: pointsInfo,
     serverTime: Date.now(),
     remainingSeconds,
     isExpired,

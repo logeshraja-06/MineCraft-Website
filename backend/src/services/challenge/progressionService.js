@@ -1,5 +1,6 @@
 const Challenge = require('../../models/Challenge');
 const Submission = require('../../models/Submission');
+const ParticipantSession = require('../../models/ParticipantSession');
 const Settings = require('../../models/Settings');
 
 /**
@@ -75,7 +76,7 @@ async function getProgressForUser(userId, userObj = null) {
   // 1. Fetch participant-facing sequence
   const challenges = await getSequence();
 
-  // 2. Fetch accepted submissions for user (source of truth = ACCEPTED submission only)
+  // 2. Fetch accepted submissions or finished/expired sessions for user
   const acceptedIds = new Set();
   if (userId) {
     const acceptedSubs = await Submission.find({
@@ -88,6 +89,23 @@ async function getProgressForUser(userId, userObj = null) {
     acceptedSubs.forEach((sub) => {
       if (sub.challengeId) {
         acceptedIds.add(String(sub.challengeId).toLowerCase());
+      }
+    });
+
+    // Also include completed or auto-submitted/expired sessions
+    const finishedSessions = await ParticipantSession.find({
+      userId,
+      $or: [
+        { isCompleted: true },
+        { status: { $in: ['COMPLETED', 'EXPIRED'] } },
+      ],
+    })
+      .select('challengeId')
+      .lean();
+
+    finishedSessions.forEach((s) => {
+      if (s.challengeId) {
+        acceptedIds.add(String(s.challengeId).toLowerCase());
       }
     });
   }

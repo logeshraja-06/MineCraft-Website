@@ -253,9 +253,11 @@ exports.submitSolution = asyncHandler(async (req, res) => {
 
   const targetChallengeId = challenge ? challenge._id : challengeId;
 
-  // Enforce sequential tier progression
-  const isProgressionUnlocked = await checkChallengeLock(req, res, challenge || challengeId);
-  if (!isProgressionUnlocked) return;
+  // Enforce sequential tier progression (skip lock check if auto-submitting)
+  if (!isAutoSubmit) {
+    const isProgressionUnlocked = await checkChallengeLock(req, res, challenge || challengeId);
+    if (!isProgressionUnlocked) return;
+  }
 
   // 2. Fetch participant session and enforce session checks
   let session = null;
@@ -369,12 +371,18 @@ exports.submitSolution = asyncHandler(async (req, res) => {
       totalPenaltyPoints = 0;
       finalScore = 0;
     } else {
-      // Auto-submit incorrect: -50 negative penalty points
-      taskPenaltyPoints = 0;
-      runPenaltyPoints = 0;
-      timePenaltyPoints = 0;
-      totalPenaltyPoints = 50;
-      finalScore = -50;
+      // Auto-submit incorrect: calculate suitable negative points including penalty for unsubmitted tasks and 150 pts time penalty
+      const totalTasksInChallenge = (challenge?.tasks && challenge.tasks.length > 0) ? challenge.tasks.length : 4;
+      const completedTasksCount = session?.completedTaskIds ? session.completedTaskIds.length : 0;
+      const unsubmittedTasksCount = Math.max(0, totalTasksInChallenge - completedTasksCount);
+      const unsubmittedTaskPenalty = unsubmittedTasksCount * 20; // 20 pts per uncompleted task
+      const existingTaskPenalties = session?.taskPenaltyPoints || 0;
+      taskPenaltyPoints = existingTaskPenalties + unsubmittedTaskPenalty;
+      runPenaltyPoints = session?.runPenaltyPoints || 0;
+      timePenaltyPoints = Math.max(150, timeMinutesExhausted * 10); // 150 pts time exhausted penalty
+      const wrongSolutionPenalty = 50; // wrong assembly penalty
+      totalPenaltyPoints = taskPenaltyPoints + runPenaltyPoints + timePenaltyPoints + wrongSolutionPenalty;
+      finalScore = -totalPenaltyPoints;
     }
   } else {
     // Normal manual submission
@@ -386,12 +394,13 @@ exports.submitSolution = asyncHandler(async (req, res) => {
   }
 
   let previousChallengesPenalty = 0;
-  if (req.user && targetChallengeId) {
+  if (req.user) {
     const otherSessions = await ParticipantSession.find({
       userId: req.user._id,
-      challengeId: { $ne: targetChallengeId },
+      _id: { $ne: session?._id },
     }).lean();
     for (const s of otherSessions) {
+      if (targetChallengeId && String(s.challengeId) === String(targetChallengeId)) continue;
       previousChallengesPenalty += (s.totalPenaltyPoints || 0);
     }
   }
@@ -508,7 +517,7 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     message: isAccepted
       ? 'All test cases passed successfully!'
       : (isAutoSubmit
-          ? 'Time expired. Solution was auto-submitted and failed test cases (-50 pts penalty applied).'
+          ? `Time expired. Auto-submitted and evaluated (-${totalPenaltyPoints} pts penalty applied).`
           : 'Some test cases failed. Re-evaluate your block arrangement.'),
     score: finalScore,
     currentScore: finalScore,

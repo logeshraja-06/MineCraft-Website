@@ -89,7 +89,8 @@ export default function CinematicChestModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-xl overflow-y-auto"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-xl overflow-y-auto cursor-pointer"
+        onClick={onClose}
       >
         {/* ── BACKGROUND VOLUMETRIC GOD-RAYS & VIGNETTE ── */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -133,25 +134,23 @@ export default function CinematicChestModal({
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.8, y: 30 }}
           transition={{ type: 'spring', damping: 22, stiffness: 220 }}
-          className="relative w-full max-w-2xl bg-gradient-to-b from-slate-900/95 via-slate-950/95 to-black/95 border-2 border-amber-400/80 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(245,158,11,0.5)] text-center overflow-hidden font-sans"
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-xl bg-gradient-to-b from-slate-900/95 via-slate-950/95 to-black/95 border-2 border-amber-400/80 rounded-3xl p-4 sm:p-5 shadow-[0_0_80px_rgba(245,158,11,0.5)] text-center font-sans max-h-[92vh] flex flex-col overflow-y-auto scrollbar-thin cursor-default"
         >
           {/* Close / Dismiss Button */}
           <button
             type="button"
-            onClick={() => {
-              if (onCollect) onCollect(keyData);
-              if (onClose) onClose();
-            }}
-            className="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer z-30 text-sm font-bold border border-slate-700/50 shadow-md"
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer z-30 text-xs font-bold border border-slate-700/50 shadow-md"
             title="Close"
           >
             <X className="w-4 h-4" />
           </button>
 
           {/* Top HUD Banner */}
-          <div className="relative z-20 space-y-1 mb-2">
-            <span className="text-[10px] px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-mono font-black uppercase tracking-widest border border-amber-400/40 inline-flex items-center gap-1.5 shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+          <div className="relative z-20 space-y-0.5 mb-1 shrink-0">
+            <span className="text-[9px] px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-black uppercase tracking-widest border border-amber-400/40 inline-flex items-center gap-1.5 shadow-sm">
+              <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
               <span>
                 {isRelicVisible
                   ? 'Code Fragment Acquired!'
@@ -160,13 +159,15 @@ export default function CinematicChestModal({
                   : `Unlocking Chest #${chestIndex + 1}...`}
               </span>
             </span>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight font-mono">
+            <h2 className="text-lg sm:text-xl font-black text-slate-100 tracking-tight font-mono">
               Treasure Chest #{chestIndex + 1}
             </h2>
           </div>
 
           {/* ── 3D CHEST STAGE & KEY INSERTION CHOREOGRAPHY ── */}
-          <div className="relative flex flex-col items-center justify-center py-2 min-h-[220px]">
+          <div className={`relative flex flex-col items-center justify-center transition-all duration-500 shrink-0 ${
+            isRelicVisible ? 'py-0 min-h-0' : 'py-2 min-h-[190px]'
+          }`}>
             {/* ── KEY DESCENT & INSERTION ANIMATION ── */}
             <AnimatePresence>
               {!isChestOpen && (
@@ -188,7 +189,7 @@ export default function CinematicChestModal({
                   <img
                     src="/mythic-golden-key.png"
                     alt="Key Inserting"
-                    className="w-24 h-24 object-contain drop-shadow-[0_8px_25px_rgba(245,158,11,0.9)]"
+                    className="w-20 h-20 object-contain drop-shadow-[0_8px_25px_rgba(245,158,11,0.9)]"
                   />
                   {/* Glowing insertion flare */}
                   <motion.div
@@ -210,8 +211,8 @@ export default function CinematicChestModal({
                     }
                   : isChestOpen
                   ? {
-                      scale: [1, 1.05, 1],
-                      y: [0, -4, 0],
+                      scale: [1, 1.04, 1],
+                      y: [0, -3, 0],
                     }
                   : { scale: 1, y: 0 }
               }
@@ -220,7 +221,11 @@ export default function CinematicChestModal({
                   ? { repeat: Infinity, duration: 0.15 }
                   : { duration: 0.6 }
               }
-              className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-3xl overflow-hidden flex items-center justify-center"
+              className={`relative rounded-2xl overflow-hidden flex items-center justify-center transition-all duration-500 ${
+                isRelicVisible
+                  ? 'w-28 h-28 sm:w-32 sm:h-32'
+                  : 'w-52 h-52 sm:w-60 sm:h-60'
+              }`}
             >
               {/* Closed or Open Chest Image (Transparent PNG) */}
               <motion.img
@@ -230,7 +235,7 @@ export default function CinematicChestModal({
                 transition={{ duration: 0.4 }}
                 src={isChestOpen ? '/treasure-chest-open.png' : '/treasure-chest-closed.png'}
                 alt="Treasure Chest"
-                className="w-full h-full object-contain pointer-events-none select-none drop-shadow-[0_20px_45px_rgba(0,0,0,0.8)]"
+                className="w-full h-full object-contain pointer-events-none select-none drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)]"
               />
 
               {/* Intense molten gold light bursting from chest interior when open */}
@@ -333,29 +338,29 @@ export default function CinematicChestModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.9 }}
                 transition={{ duration: 0.6, type: 'spring', damping: 18, stiffness: 200 }}
-                className="mt-4 text-left space-y-3 relative z-30"
+                className="mt-2 text-left space-y-2.5 relative z-30 shrink-0"
               >
                 {/* Fragment Banner Pill */}
                 <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🎁</span>
-                    <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider font-mono">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg">🎁</span>
+                    <span className="text-xs font-black text-emerald-400 flex items-center gap-1 uppercase tracking-wider font-mono">
                       <span>Code Fragment #{chestIndex + 1} Revealed!</span>
                     </span>
                   </div>
                   {fragment?.role && (
-                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/50 font-mono uppercase tracking-wider shadow-sm">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/50 font-mono uppercase tracking-wider shadow-sm">
                       {fragment.role}
                     </span>
                   )}
                 </div>
 
                 {/* Dark Holographic Code Inspector Box */}
-                <div className="rounded-2xl overflow-hidden border-2 border-purple-500/30 bg-[#07080D] shadow-2xl font-mono text-xs">
+                <div className="rounded-2xl overflow-hidden border border-purple-500/30 bg-[#07080D] shadow-xl font-mono text-xs">
                   {/* Top Bar with Copy Button */}
-                  <div className="px-4 py-2.5 bg-[#0D0F18] border-b border-purple-500/20 flex items-center justify-between text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <Code2 className="w-4 h-4 text-purple-400" />
+                  <div className="px-3.5 py-1.5 bg-[#0D0F18] border-b border-purple-500/20 flex items-center justify-between text-slate-300">
+                    <div className="flex items-center gap-1.5">
+                      <Code2 className="w-3.5 h-3.5 text-purple-400" />
                       <span className="text-[11px] font-bold text-purple-200">
                         Fragment #{chestIndex + 1} • Logic Unit
                       </span>
@@ -363,16 +368,16 @@ export default function CinematicChestModal({
                     <button
                       type="button"
                       onClick={() => handleCopy(fragment?.code)}
-                      className="px-3 py-1 rounded-lg bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 hover:text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer border border-purple-500/30"
+                      className="px-2.5 py-1 rounded-lg bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 hover:text-white text-[10px] font-bold flex items-center gap-1 transition cursor-pointer border border-purple-500/30"
                     >
                       {copied ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <Check className="w-3 h-3 text-emerald-400" />
                           <span className="text-emerald-400">Copied!</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5 text-purple-400" />
+                          <Copy className="w-3 h-3 text-purple-400" />
                           <span>Copy</span>
                         </>
                       )}
@@ -380,15 +385,15 @@ export default function CinematicChestModal({
                   </div>
 
                   {/* Syntax-Highlighted Code Lines */}
-                  <div className="p-4 overflow-x-auto max-h-56 leading-relaxed text-[11.5px] bg-[#07080D]">
+                  <div className="p-3 overflow-x-auto max-h-32 sm:max-h-36 leading-relaxed text-[11px] bg-[#07080D]">
                     <table className="w-full border-collapse">
                       <tbody>
                         {(fragment?.code || '// Code fragment ready').split('\n').map((line, idx) => (
                           <tr key={idx} className="hover:bg-purple-950/20">
-                            <td className="pr-3 text-right text-purple-400/50 select-none text-[10px] w-7 align-top">
+                            <td className="pr-2.5 text-right text-purple-400/50 select-none text-[10px] w-6 align-top">
                               {idx + 1}
                             </td>
-                            <td className="text-purple-200 font-mono whitespace-pre font-medium pl-2">
+                            <td className="text-purple-200 font-mono whitespace-pre font-medium pl-1.5">
                               {line || ' '}
                             </td>
                           </tr>
@@ -398,24 +403,20 @@ export default function CinematicChestModal({
                   </div>
 
                   {/* Bottom Success Banner */}
-                  <div className="px-4 py-2 bg-emerald-950/40 border-t border-emerald-500/30 flex items-center gap-2 text-emerald-300 text-[11px] font-semibold">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Fragment saved to Vault! You can re-read it anytime on the right.</span>
+                  <div className="px-3 py-1.5 bg-emerald-950/40 border-t border-emerald-500/30 flex items-center justify-between text-emerald-300 text-[10px] font-semibold">
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Fragment saved to Vault! You can view it on the right.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="px-2.5 py-0.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-200 border border-emerald-500/40 transition cursor-pointer text-[10px] font-mono"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 </div>
-
-                {/* Big Action Button: Collect Fragment & Continue */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onCollect) onCollect(keyData);
-                    if (onClose) onClose();
-                  }}
-                  className="w-full py-4 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:shadow-[0_0_40px_rgba(168,85,247,0.7)] transition active:scale-95 cursor-pointer font-mono"
-                >
-                  <span>{isAllCompleted ? 'Proceed to Assembly Board' : 'Collect Fragment & Continue'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
               </motion.div>
             )}
           </AnimatePresence>

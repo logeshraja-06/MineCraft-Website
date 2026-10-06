@@ -27,7 +27,6 @@ export default function Result() {
   const totalTests = finalResult?.totalCount ?? 3;
 
   useEffect(() => {
-    if (!isAccepted) return;
     let cancelled = false;
 
     async function loadProgression() {
@@ -62,7 +61,7 @@ export default function Result() {
     return () => {
       cancelled = true;
     };
-  }, [isAccepted, challenge?.id, challenge?.slug]);
+  }, [challenge?.id, challenge?.slug]);
 
   if (!participant) {
     return null;
@@ -120,7 +119,7 @@ export default function Result() {
               {isAccepted
                 ? 'All test cases verified! Your solution was correctly assembled. 0 negative points applied.'
                 : hasTimeExpired
-                ? 'Time limit expired. Your assembly was automatically submitted and evaluated (-50 pts penalty applied).'
+                ? `Time limit expired. Your assembly was automatically submitted and evaluated (${finalResult?.totalPenaltyPoints !== undefined ? `-${finalResult.totalPenaltyPoints}` : (finalResult?.score !== undefined ? `${finalResult.score}` : '-200')} pts penalty applied).`
                 : 'Challenge session concluded. Review diagnostics and tournament standings below.'}
             </p>
           </div>
@@ -161,17 +160,17 @@ export default function Result() {
             <div className="pt-2 sm:pt-0">
               <span className="text-[10px] text-purple-300/70 font-semibold uppercase tracking-wider block">Penalty</span>
               <p className={`text-sm font-black font-mono mt-1 ${isAccepted ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {isAccepted ? '0 PTS' : '-50 PTS'}
+                {isAccepted ? '0 PTS' : (finalResult?.totalPenaltyPoints !== undefined ? `-${finalResult.totalPenaltyPoints} PTS` : (finalResult?.score !== undefined ? `${finalResult.score} PTS` : '-200 PTS'))}
               </p>
             </div>
           </div>
 
           {/* ACTIONS */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            {/* On ACCEPTED: show NEXT CHALLENGE if not all completed */}
-            {isAccepted && nextChallenge && !allCompleted && (
+            {/* Show NEXT REALM if next challenge exists and not all completed */}
+            {nextChallenge && !allCompleted && (
               <button
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm tracking-wide shadow-[0_0_30px_rgba(168,85,247,0.45)] hover:shadow-[0_0_40px_rgba(168,85,247,0.65)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm tracking-wide shadow-[0_0_30px_rgba(168,85,247,0.45)] hover:shadow-[0_0_40px_rgba(168,85,247,0.65)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                 onClick={() => {
                   const nextId = nextChallenge.slug || nextChallenge.challengeId;
                   selectChallenge(nextId);

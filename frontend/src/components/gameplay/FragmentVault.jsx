@@ -88,6 +88,7 @@ export default function FragmentVault({
 
     const chestIdx = keyData.taskIndex !== undefined ? keyData.taskIndex : collectedCount;
     setActiveChestIndex(chestIdx);
+    setRevealedChestIndices((prev) => new Set(prev).add(chestIdx));
 
     // Extract the fragment from keyData or fallback
     const frag = keyData.unlockedBlock ||
@@ -95,13 +96,18 @@ export default function FragmentVault({
       (fragments[chestIdx]) ||
       null;
 
+    // Immediately notify parent to unlock the key, clear pendingKey, and advance the task!
+    if (onUnlockKey) {
+      onUnlockKey(keyData);
+    }
+
     // Launch front-and-center heroic cinematic chest modal!
     setHeroModal({
       keyData,
       chestIndex: chestIdx,
       fragment: frag,
     });
-  }, [collectedCount, fragments]);
+  }, [collectedCount, fragments, onUnlockKey]);
 
   // Watch for external opening trigger
   useEffect(() => {
@@ -124,8 +130,17 @@ export default function FragmentVault({
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (pendingKey && !isOpeningAnimation) {
-      triggerChestUnlock(pendingKey);
+
+    let keyDataToUnlock = pendingKey;
+    try {
+      const dataStr = e.dataTransfer.getData('mindcraft-key');
+      if (dataStr) {
+        keyDataToUnlock = JSON.parse(dataStr);
+      }
+    } catch (_) {}
+
+    if (keyDataToUnlock && !isOpeningAnimation) {
+      triggerChestUnlock(keyDataToUnlock);
     }
   };
 
@@ -175,15 +190,15 @@ export default function FragmentVault({
         </span>
       </div>
 
-      {/* ── MULTI-TREASURE BOX SELECTOR (HANDLES 4 TO 7+ CHESTS) ── */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] font-mono text-purple-300/60 font-bold px-1">
-          <span>CHOOSE TREASURE CHEST:</span>
-          <span className="text-purple-300 font-bold">Chest #{activeChestIndex + 1} Active</span>
+      {/* ── SLEEK COMPACT CHEST SELECTOR TABS ── */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-[10px] font-mono text-purple-300/70 font-bold px-0.5">
+          <span>CHEST SELECTION:</span>
+          <span className="text-purple-300">Chest #{activeChestIndex + 1} Selected</span>
         </div>
 
-        {/* Scrollable / Grid Chest Row */}
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-4 gap-2">
+        {/* Compact Chest Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {Array.from({ length: totalCount }).map((_, i) => {
             const isTarget = pendingKey && pendingKey.taskIndex === i;
             const isUnlocked = revealedChestIndices.has(i) || i < collectedCount;
@@ -193,8 +208,8 @@ export default function FragmentVault({
               <motion.button
                 key={i}
                 type="button"
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => {
@@ -204,43 +219,18 @@ export default function FragmentVault({
                     setActiveChestIndex(i);
                   }
                 }}
-                className={`relative p-2 rounded-xl border flex flex-col items-center justify-between text-center transition-all min-h-[74px] ${
+                className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-center transition-all cursor-pointer shrink-0 font-mono text-xs ${
                   isTarget
-                    ? 'border-2 border-amber-400 bg-amber-950/60 shadow-[0_0_20px_rgba(245,158,11,0.5)] ring-2 ring-amber-400 animate-pulse cursor-pointer'
+                    ? 'border-2 border-amber-400 bg-amber-950/70 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-1 ring-amber-400 animate-pulse'
+                    : isSelected
+                    ? 'border-purple-400 bg-purple-900/80 text-white shadow-[0_0_12px_rgba(168,85,247,0.35)]'
                     : isUnlocked
-                    ? `border-purple-500/40 bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 cursor-pointer ${
-                        isSelected ? 'ring-2 ring-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)] bg-purple-900/70' : ''
-                      }`
-                    : `border-purple-500/20 bg-[#07080D]/80 text-slate-500 hover:border-purple-500/40 cursor-pointer ${
-                        isSelected ? 'ring-2 ring-purple-500/50' : ''
-                      }`
+                    ? 'border-purple-500/30 bg-purple-950/40 text-purple-300 hover:bg-purple-900/50'
+                    : 'border-purple-500/15 bg-[#07080D]/70 text-slate-500 hover:border-purple-500/30'
                 }`}
               >
-                {/* Mini Chest Graphic */}
-                <div className="text-2xl mt-0.5">
-                  {isUnlocked ? '📦' : isTarget ? '🎁' : '🔒'}
-                </div>
-
-                <div className="w-full">
-                  <span className="text-[10px] font-black font-mono block leading-tight text-slate-200">
-                    Chest {i + 1}
-                  </span>
-                  <span className="text-[8px] font-bold block uppercase tracking-wider text-purple-300/60">
-                    {isUnlocked ? 'Unlocked' : isTarget ? 'Drop Key!' : 'Locked'}
-                  </span>
-                </div>
-
-                {/* Status Badges */}
-                {isUnlocked && (
-                  <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] font-black shadow-xs">
-                    ✓
-                  </div>
-                )}
-                {isTarget && (
-                  <div className="absolute -top-1.5 -right-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[7px] font-black uppercase tracking-wider animate-bounce shadow">
-                    KEY
-                  </div>
-                )}
+                <span>{isUnlocked ? '✓' : isTarget ? '🎁' : '🔒'}</span>
+                <span className="font-bold text-[11px]">Chest {i + 1}</span>
               </motion.button>
             );
           })}
@@ -252,11 +242,11 @@ export default function FragmentVault({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative p-5 rounded-2xl border-2 transition-all duration-300 text-center flex flex-col items-center justify-center overflow-hidden min-h-[260px] ${
+        className={`relative p-3.5 rounded-2xl border-2 transition-all duration-300 text-center flex flex-col items-center justify-center overflow-hidden min-h-[165px] ${
           isDragOver
             ? 'bg-purple-950/80 border-purple-400 scale-[1.02] shadow-[0_0_40px_rgba(168,85,247,0.6)]'
             : isCurrentChestTarget
-            ? 'bg-gradient-to-b from-[#0D0F18] to-purple-950/40 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] ring-2 ring-amber-400/50'
+            ? 'bg-gradient-to-b from-[#0D0F18] to-purple-950/40 border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.35)] ring-2 ring-amber-400/50'
             : isCurrentChestUnlocked
             ? 'bg-purple-950/20 border-purple-500/30'
             : 'bg-[#07080D]/90 border-purple-500/20'
@@ -266,21 +256,19 @@ export default function FragmentVault({
         <AnimatePresence>
           {isOpeningAnimation && (
             <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center overflow-hidden">
-              {/* Central radiant burst flare */}
               <motion.div
                 initial={{ scale: 0, opacity: 1 }}
                 animate={{ scale: [0, 2.5, 3], opacity: [1, 0.7, 0] }}
                 transition={{ duration: 1.4, ease: 'easeOut' }}
-                className="absolute w-48 h-48 rounded-full bg-gradient-to-t from-yellow-300 via-amber-400 to-amber-200 blur-xl"
+                className="absolute w-44 h-44 rounded-full bg-gradient-to-t from-yellow-300 via-amber-400 to-amber-200 blur-xl"
               />
 
-              {/* 24 Confetti & Gold Coin Particles bursting upward */}
-              {Array.from({ length: 24 }).map((_, i) => {
-                const angle = (i * 360) / 24;
-                const distance = 80 + (i % 3) * 35;
+              {Array.from({ length: 20 }).map((_, i) => {
+                const angle = (i * 360) / 20;
+                const distance = 70 + (i % 3) * 30;
                 const rad = (angle * Math.PI) / 180;
                 const x = Math.cos(rad) * distance;
-                const y = Math.sin(rad) * distance - 30; // Bias upwards
+                const y = Math.sin(rad) * distance - 25;
                 const colors = ['#f59e0b', '#fbbf24', '#10b981', '#38bdf8', '#ec4899', '#ffffff'];
 
                 return (
@@ -289,14 +277,14 @@ export default function FragmentVault({
                     initial={{ x: 0, y: 0, scale: 0, opacity: 1, rotate: 0 }}
                     animate={{
                       x: [0, x * 0.6, x],
-                      y: [0, y - 40, y + 20],
-                      scale: [0, 1.3, 0],
+                      y: [0, y - 35, y + 15],
+                      scale: [0, 1.2, 0],
                       opacity: [1, 1, 0],
                       rotate: [0, 360 * ((i % 2 === 0 ? 1 : -1))],
                     }}
                     transition={{ duration: 1.4, ease: 'easeOut' }}
                     style={{ backgroundColor: colors[i % colors.length] }}
-                    className="absolute w-3 h-3 rounded-md shadow-md"
+                    className="absolute w-2.5 h-2.5 rounded shadow-sm"
                   />
                 );
               })}
@@ -304,39 +292,39 @@ export default function FragmentVault({
           )}
         </AnimatePresence>
 
-        {/* 3D Chest Container with Opening Animation */}
+        {/* 3D Chest Container */}
         <div className="relative">
           <motion.div
             animate={{
               scale: isOpeningAnimation
-                ? [1, 1.15, 1.05]
+                ? [1, 1.12, 1.04]
                 : isDragOver
-                ? 1.08
+                ? 1.06
                 : isCurrentChestTarget
                 ? [1, 1.04, 1]
                 : 1,
-              rotate: isOpeningAnimation ? [0, -4, 4, 0] : isDragOver ? [-2, 2, -2] : 0,
+              rotate: isOpeningAnimation ? [0, -3, 3, 0] : isDragOver ? [-2, 2, -2] : 0,
             }}
             transition={{ repeat: isCurrentChestTarget && !isOpeningAnimation ? Infinity : 0, duration: 1.6 }}
-            className={`relative w-44 h-44 max-w-full rounded-2xl overflow-hidden shadow-2xl border-2 transition-all bg-[#07080D] ${
+            className={`relative w-28 h-28 max-w-full rounded-2xl overflow-hidden shadow-xl border transition-all bg-[#07080D] ${
               isCurrentChestUnlocked
-                ? 'border-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.35)]'
+                ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                 : isCurrentChestTarget
-                ? 'border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)] ring-2 ring-amber-300'
+                ? 'border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.45)] ring-2 ring-amber-300'
                 : 'border-purple-500/20'
             }`}
           >
             <img
               src={isCurrentChestUnlocked ? "/treasure-chest-open.png" : "/treasure-chest-closed.png"}
               alt="Treasure Chest"
-              className="w-full h-full object-contain select-none transition-all duration-500 drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
+              className="w-full h-full object-contain select-none transition-all duration-500 drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)]"
             />
 
             {/* Glowing Aura inside Chest when Open */}
             {isCurrentChestUnlocked && (
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0.6, 0.9, 0.6] }}
+                animate={{ opacity: [0.5, 0.8, 0.5] }}
                 transition={{ repeat: Infinity, duration: 2 }}
                 className="absolute inset-0 bg-radial from-purple-400/40 via-indigo-200/20 to-transparent pointer-events-none"
               />
@@ -344,69 +332,68 @@ export default function FragmentVault({
 
             {/* Target Chest Badge */}
             {isCurrentChestTarget && (
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[9px] uppercase tracking-wider animate-bounce shadow">
-                Unlockable!
+              <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[8px] uppercase tracking-wider animate-bounce shadow">
+                Drop Key!
               </div>
             )}
 
             {/* Unlocked Checkmark Badge */}
             {isCurrentChestUnlocked && (
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black text-[9px] uppercase tracking-wider shadow flex items-center gap-1">
+              <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-black text-[8px] uppercase tracking-wider shadow flex items-center gap-0.5">
                 <span>✓</span>
-                <span>Open</span>
               </div>
             )}
           </motion.div>
         </div>
 
         {/* Chest Status Text & Interactive Actions */}
-        <div className="mt-3.5 space-y-1">
+        <div className="mt-2.5 space-y-1">
           {isOpeningAnimation ? (
-            <div className="space-y-1 animate-pulse">
-              <h4 className="text-base font-black text-purple-300 flex items-center justify-center gap-1.5">
-                <Sparkles className="w-5 h-5 text-purple-400 animate-spin" />
-                <span>Opening Treasure Chest #{activeChestIndex + 1}...</span>
+            <div className="space-y-0.5 animate-pulse">
+              <h4 className="text-xs font-black text-purple-300 flex items-center justify-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-purple-400 animate-spin" />
+                <span>Opening Chest #{activeChestIndex + 1}...</span>
               </h4>
-              <p className="text-[11px] text-slate-400 font-semibold">
-                Unlocking code fragment with magical key...
+              <p className="text-[10px] text-slate-400">
+                Unlocking code fragment...
               </p>
             </div>
           ) : isCurrentChestTarget ? (
             <>
-              <h4 className="text-base font-black text-amber-300 flex items-center justify-center gap-1.5 animate-pulse">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+              <h4 className="text-xs font-black text-amber-300 flex items-center justify-center gap-1.5 animate-pulse font-mono">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>Drop Key into Chest #{activeChestIndex + 1}!</span>
               </h4>
-              <p className="text-[11px] text-slate-300 max-w-[270px] mx-auto leading-relaxed">
-                Release Task {pendingKey.taskIndex + 1} golden key here to pop open the chest and reveal the code!
+              <p className="text-[10px] text-slate-300 leading-tight">
+                Release Task {pendingKey.taskIndex + 1} golden key here to reveal code!
               </p>
               <button
                 type="button"
                 onClick={() => triggerChestUnlock(pendingKey)}
-                className="mt-2 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black shadow-[0_0_20px_rgba(168,85,247,0.4)] transition active:scale-95 cursor-pointer"
+                className="mt-1.5 inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[11px] font-bold shadow-[0_0_15px_rgba(168,85,247,0.4)] transition active:scale-95 cursor-pointer"
               >
                 <span>Tap to Open Chest #{activeChestIndex + 1}</span>
-                <Unlock className="w-3.5 h-3.5" />
+                <Unlock className="w-3 h-3" />
               </button>
             </>
           ) : isCurrentChestUnlocked ? (
             <>
-              <h4 className="text-sm font-black text-emerald-400 flex items-center justify-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <h4 className="text-xs font-black text-emerald-400 flex items-center justify-center gap-1 font-mono">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Chest #{activeChestIndex + 1} Unlocked!</span>
               </h4>
-              <p className="text-[11px] text-purple-300/70 max-w-[260px] mx-auto leading-relaxed">
-                Code fragment for Task {activeChestIndex + 1} revealed below.
+              <p className="text-[10px] text-purple-300/70 leading-tight">
+                Code fragment revealed below.
               </p>
             </>
           ) : (
             <>
-              <h4 className="text-base font-black text-slate-200 flex items-center justify-center gap-1.5">
-                <Lock className="w-4 h-4 text-slate-400" />
+              <h4 className="text-xs font-black text-slate-300 flex items-center justify-center gap-1 font-mono">
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
                 <span>Chest #{activeChestIndex + 1} Locked</span>
               </h4>
-              <p className="text-[11px] text-slate-400 max-w-[280px] mx-auto leading-relaxed font-sans">
-                Complete Task {activeChestIndex + 1} to earn its key and open this chest!
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Complete Task {activeChestIndex + 1} to earn its key!
               </p>
             </>
           )}
@@ -429,10 +416,10 @@ export default function FragmentVault({
               <div className="flex items-center gap-2">
                 <span className="text-xl">🎁</span>
                 <div>
-                  <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
                     <span>Fragment #{activeChestIndex + 1} Unlocked!</span>
                   </h4>
-                  <p className="text-[11px] text-slate-500 leading-tight">
+                  <p className="text-[11px] text-purple-300/80 leading-tight">
                     Here is your code revealed from Chest #{activeChestIndex + 1}.
                   </p>
                 </div>
@@ -476,7 +463,7 @@ export default function FragmentVault({
               </div>
 
               {/* Code Lines with Line Numbers */}
-              <div className="p-3.5 overflow-x-auto max-h-56 leading-relaxed text-[11px] bg-[#07080D]">
+              <div className="p-3 overflow-x-auto max-h-36 leading-relaxed text-[11px] bg-[#07080D]">
                 <table className="w-full border-collapse">
                   <tbody>
                     {(displayedFragment.code || '').split('\n').map((line, idx) => (
@@ -521,15 +508,10 @@ export default function FragmentVault({
         keyData={heroModal?.keyData}
         chestIndex={heroModal?.chestIndex ?? activeChestIndex}
         fragment={heroModal?.fragment}
-        onClose={() => setHeroModal(null)}
-        onCollect={(kData) => {
+        onClose={() => {
           const targetIdx = heroModal?.chestIndex ?? activeChestIndex;
           setRevealedChestIndices((prev) => new Set(prev).add(targetIdx));
-          if (onUnlockKey && kData) onUnlockKey(kData);
           setHeroModal(null);
-          if (kData?.allTasksCompleted && onProceedToAssembly) {
-            onProceedToAssembly();
-          }
         }}
         isAllCompleted={allUnlocked}
       />
