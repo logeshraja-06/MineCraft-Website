@@ -218,9 +218,10 @@ exports.runCode = asyncHandler(async (req, res) => {
  */
 exports.submitSolution = asyncHandler(async (req, res) => {
   const language = req.body?.language;
-  const sourceCode = req.body?.sourceCode !== undefined ? req.body.sourceCode : req.body?.code;
+  let sourceCode = req.body?.sourceCode !== undefined ? req.body.sourceCode : req.body?.code;
   const challengeId = req.body?.challengeId || 'ch-05';
   const assembledBlockIds = req.body?.assembledBlockIds || req.body?.blocksUsed || [];
+  const isAutoSubmit = Boolean(req.body?.isAutoSubmit);
 
   if (!language || !isSupportedLanguage(language)) {
     return res.status(400).json({
@@ -229,7 +230,7 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!sourceCode || !sourceCode.trim()) {
+  if (!isAutoSubmit && (!sourceCode || !sourceCode.trim())) {
     return res.status(400).json({
       success: false,
       message: 'Source code cannot be empty',
@@ -266,25 +267,34 @@ exports.submitSolution = asyncHandler(async (req, res) => {
       });
 
       if (session && checkIfSessionExpired(session.startTime, session.durationSeconds)) {
-        session.status = 'EXPIRED';
-        session.isCompleted = true;
-        session.endTime = new Date();
-        await session.save();
-        return res.status(403).json({
-          success: false,
-          message: 'Your challenge session has expired. Submissions are disabled.',
-          isExpired: true,
-        });
+        if (!isAutoSubmit) {
+          session.status = 'EXPIRED';
+          session.isCompleted = true;
+          session.endTime = new Date();
+          await session.save();
+          return res.status(403).json({
+            success: false,
+            message: 'Your challenge session has expired. Submissions are disabled.',
+            isExpired: true,
+          });
+        }
+      }
+
+      // If auto-submitting and sourceCode is empty, fallback to session's assembledCode
+      if (isAutoSubmit && (!sourceCode || !sourceCode.trim()) && session?.assembledCode?.trim()) {
+        sourceCode = session.assembledCode;
       }
 
       // Server-side check that submitted code matches assembled blocks in saved order
       if (session && (session.assemblyOrder?.length > 0 || (session.assembledCode && session.assembledCode.trim()))) {
         const expectedCode = getAssembledCodeFromSession(session);
-        if (expectedCode && normalizeCode(sourceCode) !== normalizeCode(expectedCode)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Submitted code does not match your assembled session blocks.',
-          });
+        if (expectedCode && normalizeCode(sourceCode || '') !== normalizeCode(expectedCode)) {
+          if (!isAutoSubmit) {
+            return res.status(400).json({
+              success: false,
+              message: 'Submitted code does not match your assembled session blocks.',
+            });
+          }
         }
       }
     } catch (sessionErr) {
@@ -310,25 +320,70 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     }));
   }
 
-  // 4. Evaluate test cases
-  const evalResult = await evaluateAllTestCases({
-    sourceCode,
-    language,
-    testCases,
-  });
+  // 4. Evaluate test cases (if empty code on auto-submit, treat as failed)
+  let evalResult;
+  if (!sourceCode || !sourceCode.trim()) {
+    evalResult = {
+      overallStatus: 'WRONG_ANSWER',
+      passedCount: 0,
+      totalCount: testCases.length || 1,
+      executionTimeMs: 0,
+      memoryKb: 0,
+      compileOutput: 'No code assembled at time of auto-submission.',
+      details: testCases.map((tc) => ({
+        testCaseId: tc._id,
+        passed: false,
+        status: 'WRONG_ANSWER',
+        stdout: '',
+        stderr: 'No code submitted',
+      })),
+    };
+  } else {
+    evalResult = await evaluateAllTestCases({
+      sourceCode,
+      language,
+      testCases,
+    });
+  }
 
   const isAccepted = evalResult.overallStatus === 'ACCEPTED';
   const wrongAttempts = (session?.wrongAttemptsCount || 0) + (isAccepted ? 0 : 1);
 
-  // 5. Calculate scores with new points system (0 initial, negative penalties)
+  // 5. Calculate scores with points system
   const sessionStart = session?.startTime ? new Date(session.startTime).getTime() : Date.now();
   const timeTakenSeconds = Math.max(1, Math.floor((Date.now() - sessionStart) / 1000));
   const timeMinutesExhausted = Math.floor(timeTakenSeconds / 60);
-  const timePenaltyPoints = timeMinutesExhausted * 10;
-  const taskPenaltyPoints = session?.taskPenaltyPoints || 0;
-  const runPenaltyPoints = session?.runPenaltyPoints || 0;
-  const totalPenaltyPoints = taskPenaltyPoints + runPenaltyPoints + timePenaltyPoints;
-  const finalScore = -totalPenaltyPoints;
+
+  let timePenaltyPoints = 0;
+  let taskPenaltyPoints = 0;
+  let runPenaltyPoints = 0;
+  let totalPenaltyPoints = 0;
+  let finalScore = 0;
+
+  if (isAutoSubmit) {
+    if (isAccepted) {
+      // Auto-submit correctly assembled: 0 negative points (no penalty)
+      taskPenaltyPoints = 0;
+      runPenaltyPoints = 0;
+      timePenaltyPoints = 0;
+      totalPenaltyPoints = 0;
+      finalScore = 0;
+    } else {
+      // Auto-submit incorrect: -50 negative penalty points
+      taskPenaltyPoints = 0;
+      runPenaltyPoints = 0;
+      timePenaltyPoints = 0;
+      totalPenaltyPoints = 50;
+      finalScore = -50;
+    }
+  } else {
+    // Normal manual submission
+    timePenaltyPoints = timeMinutesExhausted * 10;
+    taskPenaltyPoints = session?.taskPenaltyPoints || 0;
+    runPenaltyPoints = session?.runPenaltyPoints || 0;
+    totalPenaltyPoints = taskPenaltyPoints + runPenaltyPoints + timePenaltyPoints;
+    finalScore = -totalPenaltyPoints;
+  }
 
   let previousChallengesPenalty = 0;
   if (req.user && targetChallengeId) {
@@ -359,7 +414,7 @@ exports.submitSolution = asyncHandler(async (req, res) => {
       sub = await Submission.create({
         userId: req.user?._id || null,
         challengeId: targetChallengeId,
-        code: sourceCode,
+        code: sourceCode || '# Auto-submitted (empty)',
         language,
         assembledBlockIds: session?.assemblyOrder || (Array.isArray(assembledBlockIds) ? assembledBlockIds : []),
         status: evalResult.overallStatus,
@@ -376,7 +431,7 @@ exports.submitSolution = asyncHandler(async (req, res) => {
         timePenaltyPoints,
         totalPenaltyPoints,
         revealPenalty: 0,
-        wrongSubmissionPenalty: 0,
+        wrongSubmissionPenalty: isAutoSubmit && !isAccepted ? 50 : 0,
         testCaseResults: evalResult.details.map((d) => {
           const tc = testCases.find((t) => String(t._id) === String(d.testCaseId));
           return {
@@ -413,6 +468,11 @@ exports.submitSolution = asyncHandler(async (req, res) => {
       session.status = 'COMPLETED';
       session.durationSeconds = timeTakenSeconds;
       session.endTime = new Date();
+    } else if (isAutoSubmit) {
+      session.isCompleted = true;
+      session.status = 'EXPIRED';
+      session.durationSeconds = session.durationSeconds || timeTakenSeconds;
+      session.endTime = new Date();
     }
     session.lastActivityAt = new Date();
     try {
@@ -442,10 +502,14 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     success: isAccepted,
     submissionId: sub?._id || 'local-sub',
     status: evalResult.overallStatus,
-    title: isAccepted ? '🎉 ACCEPTED' : '❌ WRONG ANSWER',
+    title: isAccepted
+      ? '🎉 ACCEPTED'
+      : (isAutoSubmit ? '⌛ TIME EXPIRED (AUTO-SUBMITTED)' : '❌ WRONG ANSWER'),
     message: isAccepted
       ? 'All test cases passed successfully!'
-      : 'Some test cases failed. Re-evaluate your block arrangement.',
+      : (isAutoSubmit
+          ? 'Time expired. Solution was auto-submitted and failed test cases (-50 pts penalty applied).'
+          : 'Some test cases failed. Re-evaluate your block arrangement.'),
     score: finalScore,
     currentScore: finalScore,
     previousChallengesPenalty,
@@ -461,6 +525,7 @@ exports.submitSolution = asyncHandler(async (req, res) => {
     testResults: sanitizedResults,
     executionTime: evalResult.details[0]?.time || '0.04s',
     memory: '12.0 MB',
+    isAutoSubmit,
   });
 });
 

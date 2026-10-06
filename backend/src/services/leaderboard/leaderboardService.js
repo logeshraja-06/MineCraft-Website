@@ -152,6 +152,15 @@ exports.getLeaderboardData = async ({ forceFresh = false } = {}) => {
         if (!lastAcceptedTime || acceptedDate > lastAcceptedTime) {
           lastAcceptedTime = acceptedDate;
         }
+      } else if (subs.length > 0) {
+        // Unaccepted / auto-submitted challenge with penalty
+        const lastSub = subs[subs.length - 1];
+        const session = userSessions.get(cId);
+        const challengePenalty = Number(lastSub?.totalPenaltyPoints) || Number(session?.totalPenaltyPoints) || 0;
+        if (challengePenalty > 0) {
+          totalPenalties += challengePenalty;
+          totalScore += -challengePenalty;
+        }
       }
     });
 

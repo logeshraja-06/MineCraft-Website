@@ -202,10 +202,38 @@ export default function Challenge() {
 
   if (!participant) return null;
 
-  // redirect to result on ACCEPTED
+  const autoSubmittingRef = useRef(false);
+
+  // Auto-submit when countdown expires
+  const handleAutoSubmit = useCallback(async () => {
+    handleTimeExpired();
+    if (autoSubmittingRef.current || finalResult) return;
+    autoSubmittingRef.current = true;
+    showToast('⌛ Time expired! Auto-submitting your solution...', 'info');
+
+    try {
+      const res = await submitSolution(participant, true);
+      setSubmissionResult(res);
+      navigate('/result');
+    } catch (err) {
+      console.error('Auto-submit error:', err);
+      navigate('/result');
+    }
+  }, [handleTimeExpired, finalResult, submitSolution, participant, showToast, navigate]);
+
+  // redirect to result on ACCEPTED or auto-submit completion
   useEffect(() => {
-    if (finalResult?.status === 'ACCEPTED') navigate('/result');
+    if (finalResult && (finalResult.status === 'ACCEPTED' || finalResult.isAutoSubmit)) {
+      navigate('/result');
+    }
   }, [finalResult, navigate]);
+
+  // If already expired on mount/restore and not yet submitted, trigger auto-submit
+  useEffect(() => {
+    if (isTimeExpired && !finalResult && !autoSubmittingRef.current && phase !== 'SETUP' && startTime) {
+      handleAutoSubmit();
+    }
+  }, [isTimeExpired, finalResult, phase, startTime, handleAutoSubmit]);
 
   // start challenge if no startTime and past SETUP
   useEffect(() => {
@@ -224,8 +252,8 @@ export default function Challenge() {
   const { secondsRemaining, timerState } = useTimer(
     startTime,
     challenge.duration || 900,
-    handleTimeExpired,
-    finalResult?.status === 'ACCEPTED'
+    handleAutoSubmit,
+    finalResult?.status === 'ACCEPTED' || isTimeExpired
   );
 
   // ── Real-time points & penalties calculation (including live elapsed minute penalty) ──
@@ -820,9 +848,8 @@ export default function Challenge() {
 
       {/* ── MODALS & TOAST ── */}
       <TimeExpiredModal
-        isOpen={isTimeExpired && (!finalResult || finalResult.status !== 'ACCEPTED')}
+        isOpen={isTimeExpired && !finalResult}
         onAcknowledge={() => navigate('/result')}
-        onRestart={() => startChallenge()}
       />
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage(null)} />
     </div>

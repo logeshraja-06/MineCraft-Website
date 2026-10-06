@@ -68,6 +68,9 @@ export default function Result() {
     return null;
   }
 
+  const isAutoSubmit = Boolean(finalResult?.isAutoSubmit);
+  const hasTimeExpired = isTimeExpired || isAutoSubmit;
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-16 text-center space-y-8 font-mono">
       <div className="space-y-4">
@@ -82,12 +85,14 @@ export default function Result() {
         </div>
 
         <h1 className="text-3xl font-black text-slate-900">
-          {isAccepted ? '🏆 CHALLENGE COMPLETED' : isTimeExpired ? '⌛ TIME EXPIRED' : 'NOT ACCEPTED'}
+          {isAccepted ? '🏆 CHALLENGE COMPLETED' : (hasTimeExpired ? '⌛ TIME EXPIRED (AUTO-SUBMITTED)' : 'NOT ACCEPTED')}
         </h1>
         <p className="text-xs text-slate-600 max-w-md mx-auto">
           {isAccepted
-            ? 'All test cases verified! Your solution and completion duration have been successfully submitted.'
-            : 'Challenge session concluded. Review diagnostics or retry your current challenge below.'}
+            ? 'All test cases verified! Your solution was correctly assembled. 0 negative points applied.'
+            : hasTimeExpired
+            ? 'Time limit expired. Your assembly was automatically submitted and evaluated (-50 pts penalty applied).'
+            : 'Challenge session concluded. Review diagnostics and tournament standings below.'}
         </p>
 
         {isAccepted && allCompleted && (
@@ -99,7 +104,7 @@ export default function Result() {
       </div>
 
       {/* RESULT METRICS CARD */}
-      <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+      <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Participant</span>
           <p className="text-sm font-bold text-slate-800 truncate mt-1">{participant?.name || 'Participant'}</p>
@@ -114,13 +119,19 @@ export default function Result() {
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Status</span>
           <p className={`text-sm font-bold mt-1 ${isAccepted ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {isAccepted ? 'ACCEPTED' : (isTimeExpired ? 'TIME EXPIRED' : 'UNFINISHED')}
+            {isAccepted ? 'ACCEPTED' : (hasTimeExpired ? 'TIME EXPIRED' : 'UNFINISHED')}
           </p>
         </div>
         <div>
           <span className="text-[10px] text-slate-500 uppercase block">Tests Passed</span>
           <p className="text-sm font-bold text-slate-800 mt-1">
             {passedTests} / {totalTests}
+          </p>
+        </div>
+        <div>
+          <span className="text-[10px] text-slate-500 uppercase block">Penalty Applied</span>
+          <p className={`text-sm font-bold mt-1 ${isAccepted ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {isAccepted ? '0 PTS (NO PENALTY)' : '-50 PTS'}
           </p>
         </div>
       </div>
@@ -143,30 +154,16 @@ export default function Result() {
           </Button>
         )}
 
-        {/* On ACCEPTED and ALL completed: primary button */}
-        {isAccepted && allCompleted && (
-          isAdmin ? (
-            <Link to="/admin/leaderboard">
-              <Button
-                variant="primary"
-                size="lg"
-                className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
-              >
-                VIEW LEADERBOARD 🏆
-              </Button>
-            </Link>
-          ) : (
-            <Link to="/challenges">
-              <Button
-                variant="primary"
-                size="lg"
-                className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
-              >
-                MISSION SUMMARY 🏆
-              </Button>
-            </Link>
-          )
-        )}
+        {/* View Standings button */}
+        <Link to={isAdmin ? "/admin/leaderboard" : "/leaderboard"}>
+          <Button
+            variant="primary"
+            size="lg"
+            className="bg-[#F28C0F] hover:bg-orange-500 text-slate-950 font-black shadow-lg shadow-orange-500/20"
+          >
+            VIEW STANDINGS 🏆
+          </Button>
+        </Link>
 
         {/* Roadmap button */}
         <Link to="/challenges">
@@ -174,32 +171,6 @@ export default function Result() {
             MISSION ROADMAP
           </Button>
         </Link>
-
-        {/* Admin only: Leaderboard link if not all completed */}
-        {!allCompleted && isAdmin && (
-          <Link to="/admin/leaderboard">
-            <Button variant="secondary" size="lg">
-              LEADERBOARD →
-            </Button>
-          </Link>
-        )}
-
-        {/* RETRY button only when NOT accepted (no restart when accepted) */}
-        {!isAccepted && (
-          <Button
-            variant="primary"
-            size="lg"
-            className="bg-rose-500 hover:bg-rose-600 text-white font-bold"
-            onClick={async () => {
-              try {
-                if (startChallenge) await startChallenge();
-              } catch (_) {}
-              navigate(`/challenge?id=${challenge?.slug || challenge?.id}`);
-            }}
-          >
-            <RotateCcw className="w-4 h-4 mr-1.5" /> RETRY CHALLENGE
-          </Button>
-        )}
       </div>
     </div>
   );

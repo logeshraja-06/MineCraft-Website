@@ -146,8 +146,8 @@ export async function runCode(language, sourceCode, stdin = '', challengeId = nu
  * Submit solution for official judging against hidden test cases
  * POST /api/submissions/submit
  */
-export async function submitSolution(language, sourceCode, challengeId) {
-  if (!sourceCode || !sourceCode.trim()) {
+export async function submitSolution(language, sourceCode, challengeId, isAutoSubmit = false) {
+  if (!isAutoSubmit && (!sourceCode || !sourceCode.trim())) {
     return {
       success: false,
       status: 'WRONG_ANSWER',
@@ -164,8 +164,9 @@ export async function submitSolution(language, sourceCode, challengeId) {
   try {
     const response = await api.post('/submissions/submit', {
       language,
-      sourceCode,
+      sourceCode: sourceCode || '',
       challengeId,
+      isAutoSubmit,
     });
 
     const data = response.data;
@@ -180,6 +181,17 @@ export async function submitSolution(language, sourceCode, challengeId) {
       executionTime: data.executionTime || '0.00s',
       memory: data.memory || '0.0 MB',
       compileOutput: data.compileOutput || '',
+      score: data.score,
+      currentScore: data.currentScore,
+      previousChallengesPenalty: data.previousChallengesPenalty,
+      overallTotalPenaltyPoints: data.overallTotalPenaltyPoints,
+      overallScore: data.overallScore,
+      penalties: data.penalties,
+      taskPenaltyPoints: data.taskPenaltyPoints,
+      runPenaltyPoints: data.runPenaltyPoints,
+      timePenaltyPoints: data.timePenaltyPoints,
+      totalPenaltyPoints: data.totalPenaltyPoints,
+      isAutoSubmit: !!data.isAutoSubmit,
     };
   } catch (error) {
     if (error.response?.data) {
@@ -187,26 +199,34 @@ export async function submitSolution(language, sourceCode, challengeId) {
       return {
         success: false,
         status: errData.status || 'WRONG_ANSWER',
-        title: errData.title || '⚠️ SUBMISSION FAILED',
+        title: errData.title || (isAutoSubmit ? '⌛ TIME EXPIRED (AUTO-SUBMITTED)' : '⚠️ SUBMISSION FAILED'),
         message: errData.message || 'Unable to evaluate submission. Please try again.',
         passedCount: typeof errData.passedCount === 'number' ? errData.passedCount : 0,
         totalCount: typeof errData.totalCount === 'number' ? errData.totalCount : 3,
         testResults: Array.isArray(errData.testResults) ? errData.testResults : [],
         executionTime: errData.executionTime || '0.00s',
         memory: errData.memory || '0.0 MB',
+        score: errData.score !== undefined ? errData.score : (isAutoSubmit ? -50 : 0),
+        currentScore: errData.currentScore !== undefined ? errData.currentScore : (isAutoSubmit ? -50 : 0),
+        totalPenaltyPoints: errData.totalPenaltyPoints !== undefined ? errData.totalPenaltyPoints : (isAutoSubmit ? 50 : 0),
+        isAutoSubmit,
       };
     }
 
     return {
       success: false,
       status: 'WRONG_ANSWER',
-      title: '⚠️ CONNECTION ERROR',
+      title: isAutoSubmit ? '⌛ TIME EXPIRED (AUTO-SUBMITTED)' : '⚠️ CONNECTION ERROR',
       message: 'Unable to evaluate submission. Execution server is currently unreachable. Please try again.',
       passedCount: 0,
       totalCount: 3,
       testResults: [],
       executionTime: '0.00s',
       memory: '0.0 MB',
+      score: isAutoSubmit ? -50 : 0,
+      currentScore: isAutoSubmit ? -50 : 0,
+      totalPenaltyPoints: isAutoSubmit ? 50 : 0,
+      isAutoSubmit,
     };
   }
 }

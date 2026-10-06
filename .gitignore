@@ -21,7 +21,10 @@ out/
 judge0/.env
 
 # Editor & OS files
-.vscode/
+.vscode/*
+!.vscode/settings.json
+frontend/.vscode/*
+!frontend/.vscode/settings.json
 .idea/
 *.suo
 *.ntvs*

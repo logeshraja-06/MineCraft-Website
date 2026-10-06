@@ -655,7 +655,7 @@ export function ChallengeProvider({ children }) {
     }
   }, [language, assembledCode, challenge.sampleInput, challengeId]);
 
-  const submitSolution = useCallback(async (participant) => {
+  const submitSolution = useCallback(async (participant, isAutoSubmit = false) => {
     if (submittingRef.current) return null;
     submittingRef.current = true;
     setIsValidating(true);
@@ -667,9 +667,9 @@ export function ChallengeProvider({ children }) {
         challengeId,
         assemblyOrder,
         assembledCode,
-      });
+      }).catch(() => {});
 
-      const outcome = await apiSubmitSolution(language, assembledCode, challengeId);
+      const outcome = await apiSubmitSolution(language, assembledCode, challengeId, isAutoSubmit);
       const isAccepted = outcome.status === 'ACCEPTED' || outcome.success;
 
       if (outcome && outcome.totalPenaltyPoints !== undefined) {
@@ -689,8 +689,8 @@ export function ChallengeProvider({ children }) {
       const record = {
         ...outcome,
         passed: isAccepted,
-        finalScore: outcome.score !== undefined ? outcome.score : (isAccepted ? challenge.points : 0),
-        score: outcome.score !== undefined ? outcome.score : (isAccepted ? challenge.points : 0),
+        finalScore: outcome.score !== undefined ? outcome.score : (isAccepted ? 0 : (isAutoSubmit ? -50 : 0)),
+        score: outcome.score !== undefined ? outcome.score : (isAccepted ? 0 : (isAutoSubmit ? -50 : 0)),
         participantName: participant?.name || '',
         participantId: participant?.participantId || '',
         challengeId,
@@ -701,9 +701,10 @@ export function ChallengeProvider({ children }) {
         penaltySeconds,
         fragmentCount: collectedFragments.length,
         quizAttempts,
+        isAutoSubmit,
       };
 
-      if (isAccepted) {
+      if (isAccepted || isAutoSubmit) {
         setFinalResult(record);
         setPhase('DONE');
       }
@@ -712,22 +713,30 @@ export function ChallengeProvider({ children }) {
       if (err.response?.status === 403 && err.response?.data?.code === 'CHALLENGE_LOCKED') {
         setLockedNotice(err.response.data.message || 'This challenge is locked.');
       }
-      return {
+      const errRecord = {
         success: false,
         status: 'WRONG_ANSWER',
-        title: '⚠️ EVALUATION ERROR',
+        title: isAutoSubmit ? '⌛ TIME EXPIRED (AUTO-SUBMITTED)' : '⚠️ EVALUATION ERROR',
         message: err.response?.data?.message || 'Unable to evaluate submission.',
         passedCount: 0,
         totalCount: 3,
         testResults: [],
         executionTime: '0.00s',
         memory: '0.0 MB',
+        isAutoSubmit,
+        finalScore: isAutoSubmit ? -50 : 0,
+        score: isAutoSubmit ? -50 : 0,
       };
+      if (isAutoSubmit) {
+        setFinalResult(errRecord);
+        setPhase('DONE');
+      }
+      return errRecord;
     } finally {
       setIsValidating(false);
       submittingRef.current = false;
     }
-  }, [challengeId, assemblyOrder, assembledCode, language, challenge.points, challenge.title, submissionAttempts, penaltySeconds, collectedFragments.length, quizAttempts]);
+  }, [challengeId, assemblyOrder, assembledCode, language, challenge.title, submissionAttempts, penaltySeconds, collectedFragments.length, quizAttempts]);
 
   const handleTimeExpired = useCallback(() => setIsTimeExpired(true), []);
 
