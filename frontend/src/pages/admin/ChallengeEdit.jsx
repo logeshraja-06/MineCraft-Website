@@ -283,10 +283,13 @@ export default function ChallengeEdit() {
         },
         blocks: primaryLang.blocks.map((b, i) => ({
           blockId: b.blockId,
+          code: b.code,
           codeSnippet: b.code,
+          correctOrder: b.order || i + 1,
           originalOrder: b.order || i + 1,
           displayOrder: b.order || i + 1,
           orderHint: b.order || i + 1,
+          type: b.role || 'LOGIC',
           blockType: b.role || 'LOGIC',
           language: primaryLang.language,
         })),

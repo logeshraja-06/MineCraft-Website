@@ -206,6 +206,7 @@ const ALLOWED_CHALLENGE_FIELDS = [
   'timeLimitSeconds', 'duration', 'sampleInput', 'sampleOutput',
   'supportedLanguages', 'sourceLanguage', 'sourceCode', 'splitStrategy',
   'blockConfig', 'tasks', 'status', 'isActive', 'tags', 'sequenceOrder',
+  'languageConfigs', 'instructions', 'inputFormat', 'outputFormat', 'constraints', 'maxAttempts',
 ];
 
 function filterChallengeFields(body) {
@@ -216,8 +217,103 @@ function filterChallengeFields(body) {
   return clean;
 }
 
+/**
+ * Builds fully normalized QRBlock documents with both canonical fields (code, correctOrder, qrToken, type)
+ * and legacy/helper aliases (codeSnippet, originalOrder, qrHash, blockType).
+ */
+function buildQRBlockDocs(challenge, languageConfigs, blocks) {
+  const blockDocs = [];
+  const challengeId = challenge._id || challenge.slug;
+
+  if (Array.isArray(languageConfigs) && languageConfigs.length > 0) {
+    languageConfigs.forEach((lc) => {
+      if (Array.isArray(lc.blocks)) {
+        lc.blocks.forEach((b, idx) => {
+          const blockId = b.blockId || `B${String(idx + 1).padStart(2, '0')}`;
+          const codeVal = b.code !== undefined && b.code !== null && b.code !== ''
+            ? b.code
+            : (b.codeSnippet !== undefined ? b.codeSnippet : '');
+          const orderVal = b.correctOrder !== undefined
+            ? b.correctOrder
+            : (b.originalOrder !== undefined
+              ? b.originalOrder
+              : (b.order !== undefined ? b.order : idx + 1));
+          const lang = (lc.language || challenge.sourceLanguage || 'python').toLowerCase();
+          const token = b.qrToken || b.qrHash || generateQRToken(challengeId, blockId, lang);
+          const typeVal = b.role || b.type || b.blockType || 'LOGIC';
+
+          blockDocs.push({
+            challengeId,
+            blockId,
+            title: b.title || `${challenge.title} - ${lang.toUpperCase()} Block ${orderVal}`,
+            language: lang,
+            code: codeVal,
+            codeSnippet: codeVal,
+            type: typeVal,
+            blockType: typeVal,
+            isDecoy: !!b.isDecoy,
+            correctOrder: orderVal,
+            originalOrder: orderVal,
+            displayOrder: lc.revealOrder && lc.revealOrder.indexOf(blockId) !== -1
+              ? lc.revealOrder.indexOf(blockId) + 1
+              : (b.displayOrder !== undefined ? b.displayOrder : idx + 1),
+            orderHint: orderVal,
+            qrToken: token,
+            qrHash: token,
+            points: b.points || 10,
+            hint: b.hint || '',
+            isInitiallyVisible: !!b.isInitiallyVisible,
+            isLocked: !!b.isLocked,
+            taskId: b.taskId,
+          });
+        });
+      }
+    });
+  } else if (Array.isArray(blocks) && blocks.length > 0) {
+    blocks.forEach((b, idx) => {
+      const blockId = b.blockId || `B${String(idx + 1).padStart(2, '0')}`;
+      const codeVal = b.code !== undefined && b.code !== null && b.code !== ''
+        ? b.code
+        : (b.codeSnippet !== undefined ? b.codeSnippet : '');
+      const orderVal = b.correctOrder !== undefined
+        ? b.correctOrder
+        : (b.originalOrder !== undefined
+          ? b.originalOrder
+          : (b.order !== undefined ? b.order : idx + 1));
+      const lang = (b.language || challenge.sourceLanguage || 'python').toLowerCase();
+      const token = b.qrToken || b.qrHash || generateQRToken(challengeId, blockId, lang);
+      const typeVal = b.type || b.blockType || b.role || 'LOGIC';
+
+      blockDocs.push({
+        challengeId,
+        blockId,
+        title: b.title || `${challenge.title} - Block ${orderVal}`,
+        language: lang,
+        code: codeVal,
+        codeSnippet: codeVal,
+        type: typeVal,
+        blockType: typeVal,
+        isDecoy: !!b.isDecoy,
+        correctOrder: orderVal,
+        originalOrder: orderVal,
+        displayOrder: b.displayOrder !== undefined ? b.displayOrder : idx + 1,
+        orderHint: orderVal,
+        qrToken: token,
+        qrHash: token,
+        points: b.points || 10,
+        hint: b.hint || '',
+        isInitiallyVisible: !!b.isInitiallyVisible,
+        isLocked: !!b.isLocked,
+        taskId: b.taskId,
+      });
+    });
+  }
+
+  return blockDocs;
+}
+
 exports.createChallenge = asyncHandler(async (req, res) => {
-  const { blocks, testCases } = req.body || {};
+  const { blocks, testCases, languageConfigs } = req.body || {};
   const challengeData = filterChallengeFields(req.body || {});
 
   // Validate sequenceOrder if supplied
@@ -251,28 +347,21 @@ exports.createChallenge = asyncHandler(async (req, res) => {
 
   const challenge = await Challenge.create(challengeData);
 
-
-  // If blocks are provided explicitly or generated from sourceCode
-  if (Array.isArray(blocks) && blocks.length > 0) {
-    const blockDocs = blocks.map((b, idx) => ({
-      challengeId: challenge._id,
-      blockId: b.blockId || `B${String(idx + 1).padStart(2, '0')}`,
-      codeSnippet: b.code || b.codeSnippet,
-      originalOrder: b.originalOrder !== undefined ? b.originalOrder : idx + 1,
-      displayOrder: b.displayOrder !== undefined ? b.displayOrder : idx + 1,
-      orderHint: b.originalOrder !== undefined ? b.originalOrder : idx + 1,
-      blockType: b.blockType || 'LOGIC',
-      language: b.language || challenge.sourceLanguage || 'java',
-      qrHash: b.qrHash || `MC-${challenge.slug.toUpperCase()}-B${idx + 1}-${Math.random().toString(36).substring(2, 7)}`,
-      points: b.points || 10,
-      isDecoy: !!b.isDecoy,
-      hint: b.hint || '',
-      isInitiallyVisible: !!b.isInitiallyVisible,
-      isLocked: !!b.isLocked,
-      taskId: b.taskId,
-    }));
-    await QRBlock.insertMany(blockDocs);
-    await Challenge.findByIdAndUpdate(challenge._id, { 'blockConfig.totalBlocks': blockDocs.length });
+  // If blocks or languageConfigs are provided explicitly or generated from sourceCode
+  const activeLanguageConfigs = languageConfigs || challengeData.languageConfigs;
+  if (Array.isArray(activeLanguageConfigs) && activeLanguageConfigs.length > 0) {
+    const blockDocs = buildQRBlockDocs(challenge, activeLanguageConfigs, null);
+    if (blockDocs.length > 0) {
+      await QRBlock.insertMany(blockDocs);
+      const totalBlocks = activeLanguageConfigs[0]?.blocks?.length || blockDocs.length;
+      await Challenge.findByIdAndUpdate(challenge._id, { 'blockConfig.totalBlocks': totalBlocks });
+    }
+  } else if (Array.isArray(blocks) && blocks.length > 0) {
+    const blockDocs = buildQRBlockDocs(challenge, null, blocks);
+    if (blockDocs.length > 0) {
+      await QRBlock.insertMany(blockDocs);
+      await Challenge.findByIdAndUpdate(challenge._id, { 'blockConfig.totalBlocks': blockDocs.length });
+    }
   } else if (challenge.sourceCode && challenge.sourceCode.trim()) {
     // Automatically generate blocks and reveal tasks
     const { blocks: generated, tasks: generatedTasks } = generateCodeBlocks({
@@ -312,7 +401,7 @@ exports.createChallenge = asyncHandler(async (req, res) => {
 });
 
 exports.updateChallenge = asyncHandler(async (req, res) => {
-  const { blocks, testCases } = req.body || {};
+  const { blocks, testCases, languageConfigs } = req.body || {};
   const updateData = filterChallengeFields(req.body || {});
 
   const existing = await findAdminChallenge(req.params.id);
@@ -352,29 +441,29 @@ exports.updateChallenge = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Challenge not found' });
   }
 
-  // Update blocks if provided
-  if (Array.isArray(blocks)) {
-    await QRBlock.deleteMany({ challengeId: challenge._id });
-    const blockDocs = blocks.map((b, idx) => ({
-      challengeId: challenge._id,
-      blockId: b.blockId || `B${String(idx + 1).padStart(2, '0')}`,
-      codeSnippet: b.code || b.codeSnippet,
-      originalOrder: b.originalOrder !== undefined ? b.originalOrder : idx + 1,
-      displayOrder: b.displayOrder !== undefined ? b.displayOrder : idx + 1,
-      orderHint: b.originalOrder !== undefined ? b.originalOrder : idx + 1,
-      blockType: b.blockType || 'LOGIC',
-      language: b.language || challenge.sourceLanguage || 'java',
-      qrHash: b.qrHash || `MC-${challenge.slug.toUpperCase()}-B${idx + 1}-${Math.random().toString(36).substring(2, 7)}`,
-      points: b.points || 10,
-      isDecoy: !!b.isDecoy,
-      hint: b.hint || '',
-      isInitiallyVisible: !!b.isInitiallyVisible,
-      isLocked: !!b.isLocked,
-      taskId: b.taskId,
-    }));
+  // Update blocks if languageConfigs or blocks provided
+  const activeLanguageConfigs = languageConfigs || updateData.languageConfigs;
+  if (Array.isArray(activeLanguageConfigs) && activeLanguageConfigs.length > 0) {
+    await QRBlock.deleteMany({
+      $or: [{ challengeId: challenge._id }, { challengeId: challenge.slug }],
+    });
+    const blockDocs = buildQRBlockDocs(challenge, activeLanguageConfigs, null);
     if (blockDocs.length > 0) {
       await QRBlock.insertMany(blockDocs);
     }
+    const targetBlockCount = activeLanguageConfigs[0]?.blocks?.length || blockDocs.length;
+    challenge.blockConfig = challenge.blockConfig || {};
+    challenge.blockConfig.totalBlocks = targetBlockCount;
+    await challenge.save();
+  } else if (Array.isArray(blocks)) {
+    await QRBlock.deleteMany({
+      $or: [{ challengeId: challenge._id }, { challengeId: challenge.slug }],
+    });
+    const blockDocs = buildQRBlockDocs(challenge, null, blocks);
+    if (blockDocs.length > 0) {
+      await QRBlock.insertMany(blockDocs);
+    }
+    challenge.blockConfig = challenge.blockConfig || {};
     challenge.blockConfig.totalBlocks = blockDocs.length;
     await challenge.save();
   }
@@ -464,7 +553,10 @@ exports.duplicateChallenge = asyncHandler(async (req, res) => {
       const obj = b.toObject();
       delete obj._id;
       obj.challengeId = clonedChallenge._id;
-      obj.qrHash = `MC-${clonedChallenge.slug.toUpperCase()}-${b.blockId}-${Math.random().toString(36).substring(2, 7)}`;
+      const lang = (b.language || 'python').toLowerCase();
+      const token = generateQRToken(clonedChallenge._id, b.blockId, lang);
+      obj.qrToken = token;
+      obj.qrHash = token;
       return obj;
     });
     await QRBlock.insertMany(clonedBlocks);
@@ -525,29 +617,22 @@ exports.updateChallengeBlocks = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Blocks array required' });
   }
 
-  await QRBlock.deleteMany({ challengeId });
-  const blockDocs = blocks.map((b, idx) => ({
-    challengeId,
-    blockId: b.blockId || `B${String(idx + 1).padStart(2, '0')}`,
-    codeSnippet: b.code || b.codeSnippet,
-    originalOrder: b.originalOrder !== undefined ? b.originalOrder : idx + 1,
-    displayOrder: b.displayOrder !== undefined ? b.displayOrder : idx + 1,
-    orderHint: b.originalOrder !== undefined ? b.originalOrder : idx + 1,
-    blockType: b.blockType || 'LOGIC',
-    language: b.language || 'java',
-    qrHash: b.qrHash || `MC-B${idx + 1}-${Math.random().toString(36).substring(2, 7)}`,
-    points: b.points || 10,
-    isDecoy: !!b.isDecoy,
-    hint: b.hint || '',
-    isInitiallyVisible: !!b.isInitiallyVisible,
-    isLocked: !!b.isLocked,
-  }));
+  const challenge = await findAdminChallenge(challengeId);
+  const targetId = challenge ? challenge._id : challengeId;
+
+  await QRBlock.deleteMany({
+    $or: [{ challengeId: targetId }, { challengeId }],
+  });
+
+  const blockDocs = buildQRBlockDocs(challenge || { _id: targetId, slug: 'CH' }, null, blocks);
 
   if (blockDocs.length > 0) {
     await QRBlock.insertMany(blockDocs);
   }
 
-  await Challenge.findByIdAndUpdate(challengeId, { 'blockConfig.totalBlocks': blockDocs.length });
+  if (challenge) {
+    await Challenge.findByIdAndUpdate(challenge._id, { 'blockConfig.totalBlocks': blockDocs.length });
+  }
 
   res.json({ success: true, blocks: blockDocs });
 });
