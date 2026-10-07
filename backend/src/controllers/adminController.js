@@ -394,6 +394,19 @@ exports.createChallenge = asyncHandler(async (req, res) => {
       description: tc.description || '',
     }));
     await TestCase.insertMany(testDocs);
+
+    // Keep challenge sampleInput and sampleOutput in sync with sample test case
+    const sampleTc = testDocs.find((tc) => !tc.isHidden && tc.isEnabled !== false) ||
+                     testDocs.find((tc) => tc.isEnabled !== false) ||
+                     testDocs[0];
+    if (sampleTc) {
+      const updates = {};
+      if (!challenge.sampleInput) updates.sampleInput = sampleTc.input || '';
+      if (!challenge.sampleOutput) updates.sampleOutput = sampleTc.expectedOutput || '';
+      if (Object.keys(updates).length > 0) {
+        await Challenge.findByIdAndUpdate(challenge._id, updates);
+      }
+    }
   }
 
   const finalChallenge = await Challenge.findById(challenge._id);
@@ -484,6 +497,16 @@ exports.updateChallenge = asyncHandler(async (req, res) => {
     }));
     if (testDocs.length > 0) {
       await TestCase.insertMany(testDocs);
+
+      // Keep challenge sampleInput and sampleOutput synchronized with test cases
+      const sampleTc = testDocs.find((tc) => !tc.isHidden && tc.isEnabled !== false) ||
+                       testDocs.find((tc) => tc.isEnabled !== false) ||
+                       testDocs[0];
+      if (sampleTc) {
+        challenge.sampleInput = sampleTc.input || '';
+        challenge.sampleOutput = sampleTc.expectedOutput || '';
+        await challenge.save();
+      }
     }
   }
 
@@ -668,6 +691,17 @@ exports.updateTestCases = asyncHandler(async (req, res) => {
 
   if (docs.length > 0) {
     await TestCase.insertMany(docs);
+
+    // Keep challenge sampleInput and sampleOutput in sync
+    const sampleTc = docs.find((tc) => !tc.isHidden && tc.isEnabled !== false) ||
+                     docs.find((tc) => tc.isEnabled !== false) ||
+                     docs[0];
+    if (sampleTc) {
+      await Challenge.findOneAndUpdate(
+        { $or: [{ _id: challengeId }, { slug: challengeId }] },
+        { sampleInput: sampleTc.input || '', sampleOutput: sampleTc.expectedOutput || '' }
+      );
+    }
   }
 
   res.json({ success: true, testCases: docs });

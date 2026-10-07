@@ -235,6 +235,15 @@ export function ChallengeProvider({ children }) {
       ? raw.supportedLanguages
       : ['python', 'c', 'cpp', 'java'];
 
+    const firstVisible = Array.isArray(raw.visibleTestCases) && raw.visibleTestCases[0];
+    const firstTest = firstVisible || (Array.isArray(raw.testCases) && raw.testCases[0]);
+    const resolvedInput = (raw.sampleInput !== undefined && raw.sampleInput !== null && raw.sampleInput !== '')
+      ? raw.sampleInput
+      : (firstTest?.input || '');
+    const resolvedOutput = (raw.sampleOutput !== undefined && raw.sampleOutput !== null && raw.sampleOutput !== '')
+      ? raw.sampleOutput
+      : (firstTest?.expectedOutput || '');
+
     return {
       id: raw._id || raw.id || challengeId || 'challenge',
       slug: raw.slug || challengeId || 'challenge',
@@ -243,11 +252,12 @@ export function ChallengeProvider({ children }) {
       difficulty: raw.difficulty || 'Medium',
       points: Number(raw.points) || 100,
       category: raw.category || 'Algorithms',
-      sampleInput: raw.sampleInput || '',
-      sampleOutput: raw.sampleOutput || '',
+      sampleInput: resolvedInput,
+      sampleOutput: resolvedOutput,
       duration: raw.timeLimitSeconds || raw.duration || 1200,
       supportedLanguages: supportedLangs,
       tasks: raw.tasks || [],
+      visibleTestCases: raw.visibleTestCases || (firstTest ? [firstTest] : []),
     };
   }, [activeChallengeInfo, challengeId]);
 

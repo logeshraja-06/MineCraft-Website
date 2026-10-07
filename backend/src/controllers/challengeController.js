@@ -16,9 +16,93 @@ const findChallengeByIdOrSlug = async (idOrSlug) => {
   });
 };
 
-function sanitizePublicChallenge(challengeDoc, visibleTests = null) {
+async function resolveChallengeTestCases(challenge) {
+  if (!challenge) return { visibleTests: [], sampleInput: '', sampleOutput: '' };
+
+  const testCases = await TestCase.find({
+    $or: [{ challengeId: challenge._id }, { challengeId: challenge.slug }],
+    isEnabled: true,
+  }).sort({ orderIndex: 1 });
+
+  if (!testCases || testCases.length === 0) {
+    return {
+      visibleTests: [],
+      sampleInput: challenge.sampleInput || '',
+      sampleOutput: challenge.sampleOutput || '',
+    };
+  }
+
+  // Find explicitly visible test cases
+  const explicitlyVisible = testCases.filter((tc) => !tc.isHidden);
+
+  // Check if current challenge.sampleInput matches any test case in DB
+  const rawInput = (challenge.sampleInput || '').trim();
+  const matchedSample = testCases.find((tc) => (tc.input || '').trim() === rawInput);
+
+  // Determine authoritative sample test case:
+  // 1. If challenge.sampleInput matched a test case in DB, that's valid
+  // 2. Otherwise first explicitly visible test case
+  // 3. Otherwise test case whose description includes 'sample'
+  // 4. Otherwise first test case in DB
+  const sampleTc =
+    (matchedSample ? matchedSample : null) ||
+    explicitlyVisible[0] ||
+    testCases.find((tc) => (tc.description || '').toLowerCase().includes('sample')) ||
+    testCases[0];
+
+  const resolvedSampleInput = sampleTc ? (sampleTc.input || '').replace(/\r\n/g, '\n').trim() : (challenge.sampleInput || '');
+  const resolvedSampleOutput = sampleTc ? (sampleTc.expectedOutput || '').replace(/\r\n/g, '\n').trim() : (challenge.sampleOutput || '');
+
+  // Visible tests to expose to user:
+  let visibleTests = explicitlyVisible.map((tc) => ({
+    input: tc.input || '',
+    expectedOutput: tc.expectedOutput || '',
+    weight: tc.weight || 20,
+    description: tc.description || '',
+  }));
+
+  // If no test cases are explicitly visible, provide at least the sample test case
+  if (visibleTests.length === 0 && sampleTc) {
+    visibleTests = [
+      {
+        input: sampleTc.input || '',
+        expectedOutput: sampleTc.expectedOutput || '',
+        weight: sampleTc.weight || 20,
+        description: sampleTc.description || 'Sample Test Case',
+      },
+    ];
+  }
+
+  // If the challenge doc in DB has stale or empty sampleInput/sampleOutput, sync asynchronously
+  if (
+    challenge._id &&
+    (!matchedSample || !challenge.sampleInput || !challenge.sampleOutput) &&
+    resolvedSampleInput &&
+    (challenge.sampleInput !== resolvedSampleInput || challenge.sampleOutput !== resolvedSampleOutput)
+  ) {
+    Challenge.findByIdAndUpdate(challenge._id, {
+      sampleInput: resolvedSampleInput,
+      sampleOutput: resolvedSampleOutput,
+    }).catch((err) => console.warn('[resolveChallengeTestCases] DB sync warning:', err.message));
+  }
+
+  return {
+    visibleTests,
+    sampleInput: resolvedSampleInput,
+    sampleOutput: resolvedSampleOutput,
+  };
+}
+
+function sanitizePublicChallenge(challengeDoc, visibleTests = null, sampleInput = null, sampleOutput = null) {
   const raw = challengeDoc.toObject ? challengeDoc.toObject() : { ...challengeDoc };
   delete raw.sourceCode;
+
+  if (sampleInput !== null && sampleInput !== undefined) {
+    raw.sampleInput = sampleInput;
+  }
+  if (sampleOutput !== null && sampleOutput !== undefined) {
+    raw.sampleOutput = sampleOutput;
+  }
 
   if (Array.isArray(raw.tasks)) {
     raw.tasks = raw.tasks.map((t) => ({
@@ -87,11 +171,14 @@ exports.getChallenges = asyncHandler(async (req, res) => {
       .select('-sourceCode');
   }
 
-  const sanitized = challenges.map((c, idx) => {
-    const s = sanitizePublicChallenge(c);
-    if (!s.sequenceOrder) s.sequenceOrder = idx + 1;
-    return s;
-  });
+  const sanitized = await Promise.all(
+    challenges.map(async (c, idx) => {
+      const { visibleTests, sampleInput, sampleOutput } = await resolveChallengeTestCases(c);
+      const s = sanitizePublicChallenge(c, visibleTests, sampleInput, sampleOutput);
+      if (!s.sequenceOrder) s.sequenceOrder = idx + 1;
+      return s;
+    })
+  );
   res.json({ success: true, challenges: sanitized });
 });
 
@@ -123,14 +210,11 @@ exports.getChallengeById = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Challenge not found' });
   }
 
-  // Include sample/visible test cases only
-  const visibleTests = await TestCase.find({ challengeId: challenge._id, isHidden: false })
-    .select('input expectedOutput weight description')
-    .sort({ orderIndex: 1 });
+  const { visibleTests, sampleInput, sampleOutput } = await resolveChallengeTestCases(challenge);
 
   res.json({
     success: true,
-    challenge: sanitizePublicChallenge(challenge, visibleTests),
+    challenge: sanitizePublicChallenge(challenge, visibleTests, sampleInput, sampleOutput),
   });
 });
 
@@ -139,7 +223,11 @@ exports.getActiveChallenge = asyncHandler(async (req, res) => {
   if (!challenge) {
     return res.status(404).json({ success: false, message: 'No active challenge found' });
   }
-  res.json({ success: true, challenge: sanitizePublicChallenge(challenge) });
+  const { visibleTests, sampleInput, sampleOutput } = await resolveChallengeTestCases(challenge);
+  res.json({
+    success: true,
+    challenge: sanitizePublicChallenge(challenge, visibleTests, sampleInput, sampleOutput),
+  });
 });
 
 /**

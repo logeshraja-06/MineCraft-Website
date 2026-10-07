@@ -24,11 +24,11 @@ export default function OutputPanel({ compileOutput, submissionResult, sampleInp
         <div className="grid grid-cols-2 gap-3 pt-1">
           <div>
             <span className="text-slate-400 block text-[10px]">Input:</span>
-            <code className="text-purple-300 text-xs font-bold">{sampleInput || '5'}</code>
+            <code className="text-purple-300 text-xs font-bold whitespace-pre-wrap">{sampleInput || 'N/A'}</code>
           </div>
           <div>
             <span className="text-slate-400 block text-[10px]">Expected Output:</span>
-            <code className="text-emerald-400 text-xs font-bold">{sampleOutput || '15'}</code>
+            <code className="text-emerald-400 text-xs font-bold whitespace-pre-wrap">{sampleOutput || 'N/A'}</code>
           </div>
         </div>
       </div>

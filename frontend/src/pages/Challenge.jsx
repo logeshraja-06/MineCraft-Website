@@ -626,13 +626,13 @@ export default function Challenge() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 flex-1">
                   <div className="p-3 bg-[#07080D]/90 border border-purple-500/20 rounded-xl space-y-1">
                     <span className="text-[10px] text-slate-400 block font-mono font-semibold">Standard Input:</span>
-                    <div className="text-slate-200 text-xs font-mono font-medium overflow-x-auto">
+                    <div className="text-slate-200 text-xs font-mono font-medium overflow-x-auto whitespace-pre-wrap">
                       {challenge.sampleInput || 'N/A'}
                     </div>
                   </div>
                   <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-xl space-y-1">
                     <span className="text-[10px] text-emerald-400/80 block font-mono font-semibold">Expected Output:</span>
-                    <div className="text-emerald-300 text-xs font-mono font-bold overflow-x-auto">
+                    <div className="text-emerald-300 text-xs font-mono font-bold overflow-x-auto whitespace-pre-wrap">
                       {challenge.sampleOutput || 'N/A'}
                     </div>
                   </div>
@@ -792,13 +792,13 @@ export default function Challenge() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
               <div>
                 <span className="text-[10px] text-purple-300/70 block mb-1 font-bold">Input:</span>
-                <div className="p-2.5 bg-[#07080D]/90 border border-purple-500/20 rounded-lg text-slate-200 text-[11px] font-mono">
+                <div className="p-2.5 bg-[#07080D]/90 border border-purple-500/20 rounded-lg text-slate-200 text-[11px] font-mono whitespace-pre-wrap">
                   {challenge.sampleInput || 'N/A'}
                 </div>
               </div>
               <div>
                 <span className="text-[10px] text-purple-300/70 block mb-1 font-bold">Expected Output:</span>
-                <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-lg text-emerald-300 font-bold text-[11px] font-mono">
+                <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-lg text-emerald-300 font-bold text-[11px] font-mono whitespace-pre-wrap">
                   {challenge.sampleOutput || 'N/A'}
                 </div>
               </div>
