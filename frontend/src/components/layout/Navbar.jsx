@@ -2,18 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useParticipant } from '../../context/ParticipantContext';
 import { useAuthContext } from '../../context/AuthContext';
-import { ArrowRight, Shield, LogOut, Trash2, ChevronDown, User, AlertTriangle, X, RefreshCw } from 'lucide-react';
+import { ArrowRight, Shield, LogOut, ChevronDown, User, X } from 'lucide-react';
 
 export default function Navbar() {
-  const { participant, clearParticipant, logoutAndDeleteParticipant } = useParticipant();
+  const { participant, clearParticipant } = useParticipant();
   const { role, user, logout } = useAuthContext() || {};
   const isAdmin = role === 'admin' || user?.role === 'admin';
   const location = useLocation();
   const navigate = useNavigate();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const menuRef = useRef(null);
 
@@ -50,28 +48,6 @@ export default function Navbar() {
       logout();
     }
     navigate('/');
-  };
-
-  const handleConfirmDelete = async () => {
-    try {
-      setIsDeleting(true);
-      if (logoutAndDeleteParticipant) {
-        await logoutAndDeleteParticipant();
-      } else if (clearParticipant) {
-        clearParticipant();
-      }
-      setShowDeleteModal(false);
-      setMenuOpen(false);
-      navigate('/register');
-    } catch (err) {
-      console.error('Failed to delete participant details:', err);
-      if (clearParticipant) clearParticipant();
-      setShowDeleteModal(false);
-      setMenuOpen(false);
-      navigate('/register');
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   const navLinks = [
@@ -178,24 +154,6 @@ export default function Navbar() {
                         <LogOut className="w-4 h-4 text-slate-400" />
                         <span>Log Out</span>
                       </button>
-
-                      {/* Delete Participant & Reset for Multi Testing (only for participants) */}
-                      {!isAdmin && (
-                        <button
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setShowDeleteModal(true);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl transition-colors text-left group"
-                          title="Wipes this participant record from DB so you can test again with the same ID"
-                        >
-                          <Trash2 className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
-                          <div className="flex-1">
-                            <span className="block font-bold">Logout & Delete Details</span>
-                            <span className="block text-[10px] text-rose-400 font-normal">Test reset: wipe participant & re-test</span>
-                          </div>
-                        </button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -212,65 +170,6 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-
-      {/* Confirmation Modal for Logout & Delete Participant Details */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 font-sans">
-          <div className="bg-[#0D0F18] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-purple-500/30 space-y-5">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-500/40 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">
-                  Delete Participant & Reset?
-                </h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  This will permanently delete participant <span className="font-bold text-purple-300">"{currentDisplayName}"</span> ({currentParticipantId}) and all test progress, attempts, and submissions from the database.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-500/30 text-xs text-purple-200 space-y-1">
-              <p className="font-bold flex items-center gap-1.5 text-purple-300">
-                <RefreshCw className="w-3.5 h-3.5" /> For Multi-Time Testing:
-              </p>
-              <p className="text-[11px] leading-relaxed text-slate-400">
-                After deleting, you can immediately register again using the same Participant ID or email to test challenges from scratch!
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="px-4 py-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 hover:bg-slate-800 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md hover:shadow-rose-600/30 flex items-center gap-2 disabled:opacity-50"
-              >
-                {isDeleting ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Deleting & Resetting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Yes, Delete & Logout
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

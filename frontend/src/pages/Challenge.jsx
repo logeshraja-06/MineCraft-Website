@@ -27,12 +27,12 @@ import MissionStepper from '../components/challenge/MissionStepper';
 import TaskPanel from '../components/gameplay/TaskPanel';
 
 import {
-  User, Blocks, BookOpen, Terminal, RotateCcw, Shuffle, Trash2,
+  User, Blocks, BookOpen, Terminal, RotateCcw, Shuffle,
 } from 'lucide-react';
 import { USE_MOCK_JUDGE } from '../utils/constants';
 
 export default function Challenge() {
-  const { participant, logoutAndDeleteParticipant } = useParticipant();
+  const { participant } = useParticipant();
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -538,25 +538,6 @@ export default function Challenge() {
             <span className="text-slate-400">Contestant:</span>
             <span className="text-purple-200 font-bold">{participant?.name || 'Registered Participant'} {participant?.participantId ? `(${participant.participantId})` : ''}</span>
           </div>
-
-          {participant && (
-            <button
-              onClick={async () => {
-                if (window.confirm(`Delete participant "${participant.name}" (${participant.participantId}) and reset all challenge progress to test again fresh?`)) {
-                  if (logoutAndDeleteParticipant) {
-                    await logoutAndDeleteParticipant();
-                  }
-                  navigate('/register');
-                }
-              }}
-              title="Delete participant details and reset for testing"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all shadow-sm active:scale-95"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-              <span className="hidden sm:inline">Delete Details & Exit</span>
-              <span className="sm:hidden">Reset</span>
-            </button>
-          )}
 
           <Timer secondsRemaining={secondsRemaining} timerState={timerState} />
 
